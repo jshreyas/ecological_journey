@@ -1,0 +1,52 @@
+[
+  {
+    "id": "1",
+    "title": "Guard pass with Alex",
+    "youtube_url": "https://www.youtube.com/watch?v=lUW9R9xdGhQ",
+    "partner": "Alex",
+    "type": "Rolling",
+    "positions": ["Guard", "Side Control"],
+    "date": "2024-10-01",
+    "notes": "Worked on tight pressure passing."
+  },
+  {
+    "id": "2",
+    "title": "Sweeps with Jamie",
+    "youtube_url": "https://www.youtube.com/watch?v=m_IA2Wn8HuE",
+    "partner": "Jamie",
+    "type": "Game",
+    "positions": ["Open Guard", "Mount"],
+    "date": "2024-10-05",
+    "notes": "Single leg x-entry drills."
+  },
+  {
+    "id": "3",
+    "title": "Leg entanglements with Raj",
+    "youtube_url": "https://www.youtube.com/watch?v=vIXPFugZbgw",
+    "partner": "Raj",
+    "type": "Rolling",
+    "positions": ["Ashigarami", "50/50"],
+    "date": "2024-11-10",
+    "notes": "Control focus from saddle."
+  },
+  {
+    "id": "4",
+    "title": "Passing spider guard - Leo",
+    "youtube_url": "https://www.youtube.com/watch?v=i41wadv6nBg",
+    "partner": "Leo",
+    "type": "Game",
+    "positions": ["Spider Guard", "Knee Cut"],
+    "date": "2025-01-12",
+    "notes": "Grip fighting focus."
+  },
+  {
+    "id": "5",
+    "title": "Back control retention - Mina",
+    "youtube_url": "https://www.youtube.com/watch?v=DsZ2Ky7kaLk",
+    "partner": "Mina",
+    "type": "Rolling",
+    "positions": ["Back", "Body Triangle"],
+    "date": "2025-03-20",
+    "notes": "Practicing back attacks flow."
+  }
+]
