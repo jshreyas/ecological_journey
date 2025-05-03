@@ -1,55 +1,42 @@
+# app.py (Landing Page)
 import streamlit as st
+import pandas as pd
 import json
-import datetime
+# from utils import load_videos
 
 # VIDEOS_JSON_FILE = "videos.json"
 VIDEOS_JSON_FILE = "fetch_videos.json"
 
-# Load video metadata
-with open(VIDEOS_JSON_FILE) as f:
-    videos = json.load(f)
 
-# Convert date strings to datetime.date objects
-for v in videos:
-    v["date"] = datetime.datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ").date()
+def load_videos(path=VIDEOS_JSON_FILE):
+    with open(path) as f:
+        return json.load(f)
 
-# Sidebar filters
-st.sidebar.title("Filter Videos")
 
-partners = sorted(list(set(v["partner"] for v in videos)))
-types = sorted(list(set(v["type"] for v in videos)))
-positions = sorted(list({p for v in videos for p in v["positions"]}))
-dates = sorted(list(set(v["date"] for v in videos)))
+videos = load_videos()
+df = pd.DataFrame(videos)
+df["date"] = pd.to_datetime(df["date"])
 
-selected_partner = st.sidebar.selectbox("Training Partner", ["All"] + partners)
-selected_type = st.sidebar.selectbox("Video Type", ["All"] + types)
-selected_positions = st.sidebar.multiselect("Positions", positions)
-selected_date = st.sidebar.date_input("Filter by Date", value=None)
+st.title("🤼 Grappling Portfolio Dashboard")
+st.markdown("Welcome to your personalized grappling journey.")
 
-# Filter logic
-def filter_video(video):
-    if selected_partner != "All" and video["partner"] != selected_partner:
-        return False
-    if selected_type != "All" and video["type"] != selected_type:
-        return False
-    if selected_positions and not any(pos in video["positions"] for pos in selected_positions):
-        return False
-    if selected_date and video["date"] != selected_date:
-        return False
-    return True
+# Summary stats
+col1, col2, col3 = st.columns(3)
+col1.metric("📹 Total Videos", len(df))
+col2.metric("🧑‍🤝‍🧑 Training Partners", df['partner'].nunique())
+col3.metric("📍 Unique Positions", len(set(p for v in videos for p in v['positions'])))
 
-filtered_videos = list(filter(filter_video, videos))
+# Videos per day chart
+st.subheader("Activity Over Time")
+daily_counts = df.groupby(df["date"].dt.date).size()
+st.bar_chart(daily_counts)
 
-# Main area display
-st.title("🎥 Grappling Video Archive")
-
-if not filtered_videos:
-    st.write("No videos match the selected filters.")
-else:
-    for v in filtered_videos:
-        st.subheader(v["title"])
-        st.video(v["youtube_url"])
-        st.markdown(f"**Partner:** {v['partner']} | **Type:** {v['type']} | **Date:** {v['date'].isoformat()}")
-        st.markdown(f"**Positions:** {', '.join(v['positions'])}")
-        st.markdown(f"_Notes:_ {v['notes']}")
-        st.markdown("---")
+# Quick preview
+st.subheader("Latest Uploads")
+latest_videos = df.sort_values("date", ascending=False).head(5)
+for _, v in latest_videos.iterrows():
+    st.markdown(f"**{v['title']}** ({v['date'].date()})")
+    st.video(v['youtube_url'])
+    st.markdown(f"Partner: {v['partner']} | Type: {v['type']} | Positions: {', '.join(v['positions'])}")
+    st.markdown(f"_Notes:_ {v['notes']}")
+    st.markdown("---")
