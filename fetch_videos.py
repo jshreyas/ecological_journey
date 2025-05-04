@@ -8,7 +8,7 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 PLAYLIST_ID = "PLHXvJ_QLQWhXuOo2HcwsL4sysM79x8Id8"
 BASE_URL = "https://www.googleapis.com/youtube/v3"
-FETCH_VIDEOS_COUNT = 50
+FETCH_VIDEOS_COUNT = None
 
 def fetch_playlist_items(count=None):
     videos = []
