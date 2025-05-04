@@ -1,6 +1,6 @@
 # app.py (Landing Page)
-import streamlit as st
-import pandas as pd
+import streamlit as st # type: ignore
+import pandas as pd # type: ignore
 import json
 # from utils import load_videos
 

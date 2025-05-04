@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st # type: ignore
 import json
 from collections import defaultdict
 
