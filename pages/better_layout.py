@@ -352,14 +352,11 @@ with tab_add_clip:
                     "type": "clip",
                     "start": start_time,
                     "end": end_time,
-                    "label": label
+                    "title": label
                 })
                 save_segments(segments)
                 st.success("✅ Clip saved!")
                 st.rerun()
-
-import streamlit as st
-import json
 
 # --- Utility Functions ---
 def format_time_to_seconds(time_str):
@@ -466,31 +463,33 @@ def convert_segments_to_raw_text(segments):
     return raw_text
 
 # --- Streamlit Interface ---
-with st.expander("Edit Segments in Raw Text Format"):
-    st.markdown("### 📄 Edit Segments in Raw Text Format")
+# with st.expander("Edit Segments in Raw Text Format"):
+with tab_raw_text_editor:
+    with st.expander("📄 Edit Segments in Raw Text Format", expanded=True):
+    # st.markdown("### 📄 Edit Segments in Raw Text Format")
 
-    # Load existing segments (for editing)
-    try:
-        with open("segments.json", "r") as f:
-            segments = json.load(f)
-    except FileNotFoundError:
-        segments = []
+        # Load existing segments (for editing)
+        try:
+            with open("segments.json", "r") as f:
+                segments = json.load(f)
+        except FileNotFoundError:
+            segments = []
 
-    # Convert segments to raw text format
-    raw_text = convert_segments_to_raw_text(segments)
-    
-    updated_raw_text = st.text_area("Edit Raw Text Format", value=raw_text, height=400)
+        # Convert segments to raw text format
+        raw_text = convert_segments_to_raw_text(segments)
+        
+        updated_raw_text = st.text_area("Edit Raw Text Format", value=raw_text, height=400)
 
-# Save Changes Button
-if st.button("💾 Save Changes"):
-    try:
-        # Convert updated raw text back to segments
-        new_segments = parse_raw_text_to_segments(updated_raw_text)
+    # Save Changes Button
+    if st.button("💾 Save Changes"):
+        try:
+            # Convert updated raw text back to segments
+            new_segments = parse_raw_text_to_segments(updated_raw_text)
 
-        # Save to segments.json
-        with open("segments.json", "w") as f:
-            json.dump(new_segments, f, indent=4)
+            # Save to segments.json
+            with open("segments.json", "w") as f:
+                json.dump(new_segments, f, indent=4)
 
-        st.success("✅ Raw Text saved successfully!")
-    except Exception as e:
-        st.error(f"Error: {e}")
+            st.success("✅ Raw Text saved successfully!")
+        except Exception as e:
+            st.error(f"Error: {e}")
