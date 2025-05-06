@@ -1,0 +1,90 @@
+[
+    {
+        "start": 0,
+        "end": 120,
+        "title": "Introduction to Grappling",
+        "type": "chapter",
+        "icon": "\ud83d\udcd8"
+    },
+    {
+        "start": 120,
+        "end": 300,
+        "title": "Warm-Up and Drills",
+        "type": "chapter",
+        "icon": "\ud83d\udd25"
+    },
+    {
+        "start": 300,
+        "end": 420,
+        "title": "Techniques Breakdown",
+        "type": "chapter",
+        "icon": "\ud83e\udde0"
+    },
+    {
+        "start": 420,
+        "end": 513,
+        "title": "Sparring and Q&A",
+        "type": "chapter"
+    },
+    {
+        "start": 573,
+        "end": 579,
+        "title": "Bloody empty buddy",
+        "type": "chapter"
+    },
+    {
+        "start": 579,
+        "end": 584,
+        "title": "serf",
+        "type": "chapter"
+    },
+    {
+        "start": 150,
+        "end": 180,
+        "title": "Single Leg Takedowns",
+        "type": "clip",
+        "icon": "\ud83c\udfac"
+    },
+    {
+        "start": 250,
+        "end": 270,
+        "title": "Escape from Side Control",
+        "type": "clip",
+        "icon": "\ud83c\udfac"
+    },
+    {
+        "start": 310,
+        "end": 330,
+        "title": "Triangle Submission Setup",
+        "type": "clip",
+        "icon": "\ud83c\udfac"
+    },
+    {
+        "start": 450,
+        "end": 480,
+        "title": "Guard Retention Drill",
+        "type": "clip",
+        "icon": "\ud83c\udfac"
+    },
+    {
+        "start": 513,
+        "end": 561,
+        "title": "Outror",
+        "type": "chapter",
+        "skip": true
+    },
+    {
+        "start": 561,
+        "end": 573,
+        "title": "bnlsdh",
+        "type": "chapter",
+        "skip": true
+    },
+    {
+        "start": 584,
+        "end": 588,
+        "title": "sefserf",
+        "type": "chapter",
+        "skip": true
+    }
+]
