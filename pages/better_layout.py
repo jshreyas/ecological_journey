@@ -1,6 +1,8 @@
 import streamlit as st
 import json
+import math
 import os
+import re
 import streamlit.components.v1 as components
 
 # Constants
@@ -17,6 +19,28 @@ SEGMENT_ICONS = {
     "default": ("🔹", "#E5E8E8"),
     "skip": ("🚫", "#F5B7B1"),
 }
+
+def parse_clip_line(line):
+    try:
+        time_pattern = r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})'
+        match = re.match(f"{time_pattern}\s*\|\s*(.*?)\s*\|\s*(.*)", line)
+        if not match:
+            return None
+        start_str, end_str, title, description = match.groups()
+
+        def to_seconds(t):
+            minutes, seconds = map(int, t.strip().split(":"))
+            return minutes * 60 + seconds
+
+        return {
+            "start": to_seconds(start_str),
+            "end": to_seconds(end_str),
+            "title": title.strip(),
+            "description": description.strip(),
+            "type": "clip"
+        }
+    except Exception as e:
+        return None
 
 # Load and save segments
 def load_segments():
@@ -85,21 +109,28 @@ def embed_youtube_player(start, end, speed):
     """
     components.html(html_code, height=400)
 
-
-# Utility function for human-readable time
+# --- Utility Functions ---
 def format_time(seconds):
-    seconds = int(seconds)
-    h = seconds // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
-    if h > 0:
-        return f"{h:02}:{m:02}:{s:02}"
-    else:
-        return f"{m:02}:{s:02}"
+    minutes = seconds // 60
+    sec = seconds % 60
+    return f"{int(minutes):02}:{int(sec):02}"
+
+def convert_clips_to_raw_text(clips):
+    lines = []
+    for clip in clips:
+        if clip.get("type") != "clip":
+            continue
+        start = format_time(clip["start"])
+        end = format_time(clip["end"])
+        title = clip.get("title", "")
+        description = clip.get("description", "")
+        lines.append(f"{start} - {end} | {title} | {description}")
+    return "\n".join(lines)
+
 
 # --- UI Layout ---
 st.set_page_config(layout="wide")
-st.title("🎞️ Video Segment Navigator")
+st.title("🎞️ Video Reviewer")
 
 segments = load_segments()
 
@@ -124,74 +155,74 @@ with col1:
             # Embed video player
             embed_youtube_player(start, end, speed)
 
-        # Unified, low-footprint speed slider just below video
-        slider_cols = st.columns([1, 5])
-        with slider_cols[0]:
-            st.caption("⏩ Speed")
-        with slider_cols[1]:
-            new_speed = st.slider(
-                label="",
-                min_value=0.25,
-                max_value=2.0,
-                value=st.session_state.playback_speed,
-                step=0.25,
-                key="playback_speed",
-                label_visibility="collapsed"
-            )
+        new_speed = st.slider(
+            label="",
+            min_value=0.25,
+            max_value=2.0,
+            value=st.session_state.playback_speed,
+            step=0.25,
+            key="playback_speed",
+            label_visibility="collapsed"
+        )
 
         # Manual rerun if changed
         if new_speed != st.session_state.playback_speed:
             st.session_state.playback_speed = new_speed
             st.rerun()
 
-
     else:
-        st.warning("No segments found in segments.json!")
+        st.warning(f"No segments found in {SEGMENTS_FILE}!")
 
-# --- Segment List (Col2) ---
+# --- Clipper (Col2) ---
 with col2:
-    # Use tabs for Chapters, Clips, and Skipped
-    tab_chapters, tab_clips, tab_skipped = st.tabs(["📘 Chapters", "🎞️ Clips", "🚫 Skipped"])
+    with st.form("clipper"):
 
-    # Chapter List
-    with tab_chapters:
-        chapter_container = st.container()
-        with chapter_container:
-            for i, seg in enumerate(segments):
-                if seg['type'] != 'chapter' or seg.get('skip', False):
-                    continue
-                key = next((k for k in SEGMENT_ICONS if k in seg.get('title', '').lower()), "default")
-                emoji, _ = SEGMENT_ICONS[key]
-                start_str = format_time(seg['start'])
-                end_str = f" → {format_time(seg['end'])}" if seg.get('end') else ""
+        # Load existing segments (for editing)
+        try:
+            with open(SEGMENTS_FILE, "r") as f:
+                segments = json.load(f)
+        except FileNotFoundError:
+            segments = []
 
-                is_selected = i == st.session_state.selected_segment_idx
-                highlight_style = "**" if is_selected else ""
-                label = f"{highlight_style}{emoji} {seg['title']} ({start_str}{end_str}){highlight_style}"
+        # Convert segments to raw text format
+        raw_text = convert_clips_to_raw_text(segments)
+        
+        updated_raw_text = st.text_area("✏️ Clipper", value=raw_text, height=400)
 
-                if st.button(label, key=f"chapter_{i}"):
-                    st.session_state.selected_segment_idx = i
-                    st.rerun()
+        # Save Changes Button
+        submit = st.form_submit_button("💾 Save Changes")
+        if submit:
+            try:
+                # Convert updated raw text back to segments
+                clip_lines = updated_raw_text.strip().split("\n")
+                new_clips = [parse_clip_line(line) for line in clip_lines if parse_clip_line(line)]
 
-        if len(segments) > 5:
-            chapter_container.markdown(
-                f"""
-                <style>
-                    .stContainer {{
-                        max-height: 300px;
-                        overflow-y: auto;
-                    }}
-                </style>
-                """, unsafe_allow_html=True
-            )
+                # Save to SEGMENTS_FILE
+                with open(SEGMENTS_FILE, "w") as f:
+                    json.dump(new_clips, f, indent=4)
 
-    # Clip List
-    with tab_clips:
-        clip_container = st.container()
-        with clip_container:
-            for i, seg in enumerate(segments):
-                if seg['type'] != 'clip':
-                    continue
+                st.success("✅ Raw Text saved successfully!")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+st.markdown("## 🎞️ Clipboard")
+
+# --- Clipboard Interface ---
+clip_container = st.container()
+with clip_container:
+
+    # Customize number of columns based on screen size or fixed value
+    NUM_COLUMNS = 3
+
+    clip_buttons = [seg for seg in segments if seg["type"] == "clip"]
+    num_rows = math.ceil(len(clip_buttons) / NUM_COLUMNS)
+
+    for row in range(num_rows):
+        cols = st.columns(NUM_COLUMNS)
+        for col_idx in range(NUM_COLUMNS):
+            i = row * NUM_COLUMNS + col_idx
+            if i < len(clip_buttons):
+                seg = clip_buttons[i]
                 key = next((k for k in SEGMENT_ICONS if k in seg.get('title', '').lower()), "default")
                 emoji, _ = SEGMENT_ICONS[key]
 
@@ -199,297 +230,6 @@ with col2:
                 highlight_style = "**" if is_selected else ""
                 label = f"{highlight_style}{emoji} {seg['title']} ({format_time(seg['start'])} → {format_time(seg['end'])}){highlight_style}"
 
-                if st.button(label, key=f"clip_{i}"):
+                if cols[col_idx].button(label, key=f"clip_{i}"):
                     st.session_state.selected_segment_idx = i
                     st.rerun()
-
-        if len(segments) > 5:
-            clip_container.markdown(
-                f"""
-                <style>
-                    .stContainer {{
-                        max-height: 300px;
-                        overflow-y: auto;
-                    }}
-                </style>
-                """, unsafe_allow_html=True
-            )
-
-    # Skipped Chapters
-    with tab_skipped:
-        skipped_container = st.container()
-        with skipped_container:
-            for i, seg in enumerate(segments):
-                if seg['type'] != 'chapter' or not seg.get('skip', False):
-                    continue
-                key = next((k for k in SEGMENT_ICONS if k in seg.get('title', '').lower()), "skip")
-                emoji, _ = SEGMENT_ICONS[key]
-                start_str = format_time(seg['start'])
-                end_str = f" → {format_time(seg['end'])}" if seg.get('end') else ""
-
-                is_selected = i == st.session_state.selected_segment_idx
-                highlight_style = "**" if is_selected else ""
-                label = f"{highlight_style}{emoji} {seg['title']} ({start_str}{end_str}){highlight_style}"
-
-                if st.button(label, key=f"skipped_{i}"):
-                    st.session_state.selected_segment_idx = i
-                    st.rerun()
-
-        if len(segments) > 5:
-            skipped_container.markdown(
-                f"""
-                <style>
-                    .stContainer {{
-                        max-height: 300px;
-                        overflow-y: auto;
-                    }}
-                </style>
-                """, unsafe_allow_html=True
-            )
-
-st.markdown("## 🛠️ Segment Editor")
-
-tab_add_chapter, tab_update_chapter, tab_add_clip, tab_raw_text_editor= st.tabs([
-    "➕ Add Chapter",
-    "✏️ Update Chapter",
-    "🎞️ Add Clip",
-    "📄 Raw Text Editor"
-])
-
-# --- Add Chapter Tab ---
-with tab_add_chapter:
-    last_chapter = next((seg for seg in reversed(segments) if seg["type"] == "chapter"), None)
-    default_start = last_chapter["end"] if last_chapter else 0
-    default_end = default_start + 10
-    available_times = [format_time(s) for s in range(int(default_start + 1), 644)] # this is hardcoded duration for the video
-    default_end_label = format_time(default_end)
-    if default_end_label not in available_times:
-        default_end_label = available_times[0]
-
-    with st.expander("➕ Add Chapter Form", expanded=True):
-        with st.form("add_chapter_form"):
-            st.caption(f"Start Time: {format_time(default_start)}")
-            end_label = st.select_slider("Select Chapter End Time", options=available_times, value=default_end_label)
-            end_time = int(end_label.split(":")[0]) * 60 + int(end_label.split(":")[1])
-
-            title = st.text_input("Chapter Title")
-            skip = st.checkbox("Mark as Skipped", value=False)
-
-            submit = st.form_submit_button("💾 Save Chapter")
-
-            if submit:
-                new_chapter = {
-                    "type": "chapter",
-                    "start": default_start,
-                    "end": end_time,
-                    "title": title,
-                    "skip": skip
-                }
-                segments.append(new_chapter)
-                save_segments(segments)
-                st.success("✅ New chapter added!")
-                st.rerun()
-
-# --- Update Chapter Tab ---
-with tab_update_chapter:
-    last_chapter = next((seg for seg in reversed(segments) if seg["type"] == "chapter"), None)
-    if not last_chapter:
-        st.info("No chapters to update.")
-    else:
-        default_start = last_chapter["start"]
-        default_end = last_chapter["end"]
-        default_title = last_chapter.get("title", "")
-        default_skip = last_chapter.get("skip", False)
-
-        available_times = [format_time(s) for s in range(int(default_start + 1), 644)] # this is hardcoded duration for the video
-        default_end_label = format_time(default_end)
-        if default_end_label not in available_times:
-            default_end_label = available_times[0]
-
-        with st.expander("✏️ Update Last Chapter", expanded=True):
-            with st.form("update_chapter_form"):
-                st.caption(f"Start Time: {format_time(default_start)}")
-                end_label = st.select_slider("Select Chapter End Time", options=available_times, value=default_end_label)
-                end_time = int(end_label.split(":")[0]) * 60 + int(end_label.split(":")[1])
-
-                title = st.text_input("Chapter Title", value=default_title)
-                skip = st.checkbox("Mark as Skipped", value=default_skip)
-
-                submit = st.form_submit_button("💾 Update Chapter")
-
-                if submit:
-                    updated_chapter = {
-                        "type": "chapter",
-                        "start": default_start,
-                        "end": end_time,
-                        "title": title,
-                        "skip": skip
-                    }
-
-                    idx = segments.index(last_chapter)
-                    segments[idx] = updated_chapter
-                    save_segments(segments)
-                    st.success("✅ Chapter updated!")
-                    st.rerun()
-
-            if st.button("🚫 Delete Last Chapter"):
-                segments.remove(last_chapter)
-                save_segments(segments)
-                st.success("❌ Chapter deleted!")
-                st.rerun()
-
-# --- Add Clip Tab ---
-with tab_add_clip:
-    with st.expander("🎞️ Add New Clip", expanded=True):
-        with st.form("add_clip_form"):
-            start_time = st.number_input("Start Time (s)", min_value=0.0, step=0.1)
-            end_time = st.number_input("End Time (s)", min_value=0.1, step=0.1)
-            label = st.text_input("Label (e.g., 'guard pass')")
-            submitted = st.form_submit_button("Save Clip")
-
-            if submitted and end_time > start_time:
-                segments.append({
-                    "type": "clip",
-                    "start": start_time,
-                    "end": end_time,
-                    "title": label
-                })
-                save_segments(segments)
-                st.success("✅ Clip saved!")
-                st.rerun()
-
-# --- Utility Functions ---
-def format_time_to_seconds(time_str):
-    """Convert a MM:SS time format string to total seconds."""
-    try:
-        minutes, seconds = map(int, time_str.split(":"))
-        return minutes * 60 + seconds
-    except ValueError:
-        return None
-
-def parse_raw_text_to_segments(raw_text):
-    """Parse raw text into segments as a list of dictionaries."""
-    lines = raw_text.splitlines()
-    new_segments = []
-    section = None
-
-    for line in lines:
-        # Skip empty lines
-        if not line.strip():
-            continue
-        
-        # Check section (Chapters, Clips, Skipped)
-        if line.startswith("# "):
-            section = line.strip().lower()
-            continue
-        
-        # Attempt to split line into time range and title
-        try:
-            time_range, title = line.split("|", 1)
-        except ValueError:
-            st.warning(f"Skipping invalid line (missing '|'): {line}")
-            continue
-        
-        # Split the time range into start and end times
-        try:
-            start_time, end_time = time_range.split("-")
-            start_time = start_time.strip()
-            end_time = end_time.strip()
-
-            start_total_seconds = format_time_to_seconds(start_time)
-            end_total_seconds = format_time_to_seconds(end_time)
-
-            # Validate time format
-            if start_total_seconds is None or end_total_seconds is None:
-                st.error(f"Invalid time format in line: {line}")
-                continue
-
-            # Check if start is before end
-            if start_total_seconds >= end_total_seconds:
-                st.error(f"Invalid time range: {start_time} - {end_time}")
-                continue
-        except ValueError:
-            st.error(f"Invalid time format in line: {line}")
-            continue
-
-        # Set skip flag to True if this is in the Skipped section
-        skip = section == "skipped"
-
-        # Check if it's a clip or chapter based on the section
-        seg_type = "clip" if section == "clips" else "chapter"
-
-        # Append new segment
-        new_segments.append({
-            "start": start_total_seconds,
-            "end": end_total_seconds,
-            "title": title.strip(),
-            "type": seg_type,
-            "skip": skip
-        })
-    
-    return new_segments
-
-def convert_segments_to_raw_text(segments):
-    """Convert segments (list of dicts) to raw text format."""
-    chapter_lines = []
-    clip_lines = []
-    skipped_lines = []
-
-    for seg in segments:
-        start = seg.get("start")
-        end = seg.get("end")
-        seg_type = seg.get("type", "skipped")
-        title = seg.get("title", "")
-        skip = seg.get("skip", False)
-
-        start_str = f"{int(start // 60):02}:{int(start % 60):02}"
-        end_str = f"{int(end // 60):02}:{int(end % 60):02}"
-        line = f"{start_str} - {end_str} | {title.strip()}"
-
-        if seg_type == "chapter" and not skip:
-            chapter_lines.append(line)
-        elif seg_type == "clip":
-            clip_lines.append(line)
-        elif skip:
-            skipped_lines.append(line)
-
-    if not skipped_lines:
-        skipped_lines.append("# (none)")
-
-    raw_text = "# Chapters\n" + "\n".join(chapter_lines)
-    raw_text += "\n\n# Clips\n" + "\n".join(clip_lines)
-    raw_text += "\n\n# Skipped\n" + "\n".join(skipped_lines)
-    
-    return raw_text
-
-# --- Streamlit Interface ---
-# with st.expander("Edit Segments in Raw Text Format"):
-with tab_raw_text_editor:
-    with st.expander("📄 Edit Segments in Raw Text Format", expanded=True):
-    # st.markdown("### 📄 Edit Segments in Raw Text Format")
-
-        # Load existing segments (for editing)
-        try:
-            with open("segments.json", "r") as f:
-                segments = json.load(f)
-        except FileNotFoundError:
-            segments = []
-
-        # Convert segments to raw text format
-        raw_text = convert_segments_to_raw_text(segments)
-        
-        updated_raw_text = st.text_area("Edit Raw Text Format", value=raw_text, height=400)
-
-    # Save Changes Button
-    if st.button("💾 Save Changes"):
-        try:
-            # Convert updated raw text back to segments
-            new_segments = parse_raw_text_to_segments(updated_raw_text)
-
-            # Save to segments.json
-            with open("segments.json", "w") as f:
-                json.dump(new_segments, f, indent=4)
-
-            st.success("✅ Raw Text saved successfully!")
-        except Exception as e:
-            st.error(f"Error: {e}")
