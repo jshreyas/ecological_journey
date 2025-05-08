@@ -6,26 +6,10 @@ import os
 import re
 import streamlit.components.v1 as components # type: ignore
 from hydralit import HydraHeadApp # type: ignore
-from utils import load_videos
+from utils import load_videos, load_clips, save_clips
 
 
-# Constants
-SEGMENTS_FILE = "segments.json"
-SEGMENTS_DIR = "."
-VIDEO_ID = "i41wadv6nBg"  # Replace with your actual video ID
-
-SEGMENT_ICONS = {
-    "intro": ("📘", "#D6EAF8"),
-    "warm": ("🔥", "#F9E79F"),
-    "concept": ("🧠", "#D5F5E3"),
-    "demo": ("🎬", "#FADBD8"),
-    "q&a": ("❓", "#E8DAEF"),
-    "outro": ("🏋️", "#D7DBDD"),
-    "default": ("🔹", "#E5E8E8"),
-    "skip": ("🚫", "#F5B7B1"),
-}
-
-def parse_clip_line(line):
+def parse_clip_line(line): # TODO: check if 'start' and 'end' are in video's duration
     try:
         time_pattern = r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})'
         match = re.match(f"{time_pattern}\s*\|\s*(.*?)\s*\|\s*(.*)", line)
@@ -121,20 +105,6 @@ def convert_clips_to_raw_text(clips):
         lines.append(f"{start} - {end} | {title} | {description}")
     return "\n".join(lines)
 
-# Load segments per video
-def load_segments(video_id):
-    file_path = os.path.join(SEGMENTS_DIR, f"segments_{video_id}.json")
-    if os.path.exists(file_path):
-        with open(file_path) as f:
-            return json.load(f)
-    return []
-
-# Save segments per video
-def save_segments(video_id, segments):
-    file_path = os.path.join(SEGMENTS_DIR, f"segments_{video_id}.json")
-    with open(file_path, "w") as f:
-        json.dump(segments, f, indent=2)
-
 
 class VRApp(HydraHeadApp):
 
@@ -150,7 +120,7 @@ class VRApp(HydraHeadApp):
 
         if selected_video_id:
             selected_video = next((v for v in videos if v["video_id"] == selected_video_id), None)
-            segments = load_segments(selected_video_id)
+            segments = load_clips(selected_video_id)
 
 
         col11, col12 = st.columns([11, 1])
@@ -196,14 +166,14 @@ class VRApp(HydraHeadApp):
                     st.rerun()
 
             else:
-                st.warning(f"No segments found in {SEGMENTS_FILE}!")
+                st.warning(f"No clips found for the video: {selected_video_id}!")
 
         # --- Clipper (Col2) ---
         with col2:
             with st.form("clipper"):
 
                 # Load existing segments (for editing)
-                segments = load_segments(selected_video_id)
+                segments = load_clips(selected_video_id)
 
                 # Convert segments to raw text format
                 raw_text = convert_clips_to_raw_text(segments)
@@ -217,7 +187,7 @@ class VRApp(HydraHeadApp):
                         # Convert updated raw text back to segments
                         clip_lines = updated_raw_text.strip().split("\n")
                         new_clips = [parse_clip_line(line) for line in clip_lines if parse_clip_line(line)]
-                        save_segments(selected_video_id, new_clips)
+                        save_clips(selected_video_id, new_clips)
                         st.success("✅ Raw Text saved successfully!")
                     except Exception as e:
                         st.error(f"Error: {e}")
@@ -240,12 +210,10 @@ class VRApp(HydraHeadApp):
                     i = row * NUM_COLUMNS + col_idx
                     if i < len(clip_buttons):
                         seg = clip_buttons[i]
-                        key = next((k for k in SEGMENT_ICONS if k in seg.get('title', '').lower()), "default")
-                        emoji, _ = SEGMENT_ICONS[key]
 
                         is_selected = i == st.session_state.selected_segment_idx
                         highlight_style = "**" if is_selected else ""
-                        label = f"{highlight_style}{emoji} {seg['title']} ({format_time(seg['start'])} → {format_time(seg['end'])}){highlight_style}"
+                        label = f"{highlight_style}{seg['title']} ({format_time(seg['start'])} → {format_time(seg['end'])}){highlight_style}"
 
                         if cols[col_idx].button(label, key=f"clip_{i}"):
                             st.session_state.selected_segment_idx = i
