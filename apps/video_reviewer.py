@@ -1,29 +1,15 @@
 # apps/video_reviewer.py
-import streamlit as st
+import streamlit as st # type: ignore
 import json
 import math
 import os
 import re
-import streamlit.components.v1 as components
-from hydralit import HydraHeadApp
+import streamlit.components.v1 as components # type: ignore
+from hydralit import HydraHeadApp # type: ignore
+from utils import load_videos, load_clips, save_clips
 
 
-# Constants
-SEGMENTS_FILE = "segments.json"
-VIDEO_ID = "i41wadv6nBg"  # Replace with your actual video ID
-
-SEGMENT_ICONS = {
-    "intro": ("📘", "#D6EAF8"),
-    "warm": ("🔥", "#F9E79F"),
-    "concept": ("🧠", "#D5F5E3"),
-    "demo": ("🎬", "#FADBD8"),
-    "q&a": ("❓", "#E8DAEF"),
-    "outro": ("🏋️", "#D7DBDD"),
-    "default": ("🔹", "#E5E8E8"),
-    "skip": ("🚫", "#F5B7B1"),
-}
-
-def parse_clip_line(line):
+def parse_clip_line(line): # TODO: check if 'start' and 'end' are in video's duration
     try:
         time_pattern = r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})'
         match = re.match(f"{time_pattern}\s*\|\s*(.*?)\s*\|\s*(.*)", line)
@@ -45,19 +31,8 @@ def parse_clip_line(line):
     except Exception as e:
         return None
 
-# Load and save segments
-def load_segments():
-    if os.path.exists(SEGMENTS_FILE):
-        with open(SEGMENTS_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_segments(segments):
-    with open(SEGMENTS_FILE, "w") as f:
-        json.dump(segments, f, indent=2)
-
 # Embed a single YouTube player with start/end/speed
-def embed_youtube_player(start, end, speed):
+def embed_youtube_player(video_id, start, end, speed):
     end_js = f"{end}" if end else "null"
     html_code = f"""
     <div id="player"></div>
@@ -75,7 +50,7 @@ def embed_youtube_player(start, end, speed):
         player = new YT.Player('player', {{
           height: '360',
           width: '100%',
-          videoId: '{VIDEO_ID}',
+          videoId: '{video_id}',
           playerVars: {{
             'rel': 0,
             'modestbranding': 1
@@ -135,6 +110,19 @@ class VRApp(HydraHeadApp):
 
     def run(self):
 
+        videos = load_videos()
+        video_options = {f"{v['title']} ({v['video_id']})": v["video_id"] for v in videos}
+        selected_label = st.selectbox("Choose a video", list(video_options.keys()))
+
+        if selected_label:
+            selected_video_id = video_options[selected_label]
+            st.session_state.selected_video = selected_video_id #TODO: test
+
+        if selected_video_id:
+            selected_video = next((v for v in videos if v["video_id"] == selected_video_id), None)
+            segments = load_clips(selected_video_id)
+
+
         col11, col12 = st.columns([11, 1])
         with col11:
             st.title("🎞️ Video Reviewer")
@@ -143,8 +131,6 @@ class VRApp(HydraHeadApp):
         ratios = {"3:1": [3,1], "2:1": [2,1], "1:1": [1,1], "1:2": [1,2], "1:3": [1,3]}
         # Radio sizable Layout: Video | Clipper
         col1, col2 = st.columns(ratios[layout_ratio])
-
-        segments = load_segments()
 
         # Default state
         if "selected_segment_idx" not in st.session_state:
@@ -162,7 +148,7 @@ class VRApp(HydraHeadApp):
 
                 with st.container():
                     # Embed video player
-                    embed_youtube_player(start, end, speed)
+                    embed_youtube_player(selected_video_id, start, end, speed)
 
                 new_speed = st.slider(
                     label="",
@@ -180,18 +166,14 @@ class VRApp(HydraHeadApp):
                     st.rerun()
 
             else:
-                st.warning(f"No segments found in {SEGMENTS_FILE}!")
+                st.warning(f"No clips found for the video: {selected_video_id}!")
 
         # --- Clipper (Col2) ---
         with col2:
             with st.form("clipper"):
 
                 # Load existing segments (for editing)
-                try:
-                    with open(SEGMENTS_FILE, "r") as f:
-                        segments = json.load(f)
-                except FileNotFoundError:
-                    segments = []
+                segments = load_clips(selected_video_id)
 
                 # Convert segments to raw text format
                 raw_text = convert_clips_to_raw_text(segments)
@@ -205,11 +187,7 @@ class VRApp(HydraHeadApp):
                         # Convert updated raw text back to segments
                         clip_lines = updated_raw_text.strip().split("\n")
                         new_clips = [parse_clip_line(line) for line in clip_lines if parse_clip_line(line)]
-
-                        # Save to SEGMENTS_FILE
-                        with open(SEGMENTS_FILE, "w") as f:
-                            json.dump(new_clips, f, indent=4)
-
+                        save_clips(selected_video_id, new_clips)
                         st.success("✅ Raw Text saved successfully!")
                     except Exception as e:
                         st.error(f"Error: {e}")
@@ -232,12 +210,10 @@ class VRApp(HydraHeadApp):
                     i = row * NUM_COLUMNS + col_idx
                     if i < len(clip_buttons):
                         seg = clip_buttons[i]
-                        key = next((k for k in SEGMENT_ICONS if k in seg.get('title', '').lower()), "default")
-                        emoji, _ = SEGMENT_ICONS[key]
 
                         is_selected = i == st.session_state.selected_segment_idx
                         highlight_style = "**" if is_selected else ""
-                        label = f"{highlight_style}{emoji} {seg['title']} ({format_time(seg['start'])} → {format_time(seg['end'])}){highlight_style}"
+                        label = f"{highlight_style}{seg['title']} ({format_time(seg['start'])} → {format_time(seg['end'])}){highlight_style}"
 
                         if cols[col_idx].button(label, key=f"clip_{i}"):
                             st.session_state.selected_segment_idx = i
