@@ -1,5 +1,5 @@
 # app.py
-from hydralit import HydraApp
+from hydralit import HydraApp # type: ignore
 from apps.about import AboutApp
 from apps.video_reviewer import VRApp
 from apps.home import HomeApp
@@ -10,4 +10,3 @@ app.add_app("🏠 Dashboard", app=HomeApp())
 app.add_app("🎞️ Video Review", app=VRApp())
 app.add_app("ℹ️ About", app=AboutApp())
 app.run()
-
