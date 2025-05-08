@@ -1,0 +1,72 @@
+[
+  {
+    "start": 5,
+    "end": 72,
+    "title": "guard recovery",
+    "description": "resetting posture after sweep",
+    "type": "clip",
+    "partners": [
+      "abc",
+      "frefd"
+    ],
+    "labels": [
+      "hde",
+      "treew"
+    ]
+  },
+  {
+    "start": 90,
+    "end": 135,
+    "title": "arm drag entry",
+    "description": "inside control to drag",
+    "type": "clip",
+    "partners": [
+      "karla"
+    ],
+    "labels": [
+      "gripfight"
+    ]
+  },
+  {
+    "start": 140,
+    "end": 190,
+    "title": "tripod sweep",
+    "description": "using hip bump and post",
+    "type": "clip",
+    "partners": [
+      "tommy",
+      "leo"
+    ],
+    "labels": [
+      "sweep",
+      "balance"
+    ]
+  },
+  {
+    "start": 195,
+    "end": 240,
+    "title": "passing guard",
+    "description": "knee cut sequence after frame break",
+    "type": "clip",
+    "partners": [
+      "maya"
+    ],
+    "labels": [
+      "guardpass"
+    ]
+  },
+  {
+    "start": 245,
+    "end": 280,
+    "title": "back take",
+    "description": "seatbelt to hook entry",
+    "type": "clip",
+    "partners": [
+      "milo"
+    ],
+    "labels": [
+      "backcontrol",
+      "transition"
+    ]
+  }
+]

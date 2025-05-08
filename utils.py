@@ -1,6 +1,8 @@
 import json
 import os
+import re
 import requests
+import streamlit.components.v1 as components # type: ignore
 
 
 CLIPS_DIR = "data/clips"
@@ -69,3 +71,151 @@ def get_video_orientation_internal(video_id: str) -> str:
         return "Unknown (no resolution data found)"
     except Exception as e:
         return f"Error: {str(e)}"
+
+def format_time(seconds):
+    minutes = seconds // 60
+    sec = seconds % 60
+    return f"{int(minutes):02}:{int(sec):02}"
+
+def convert_clips_to_raw_text(clips):
+    lines = []
+    for clip in clips:
+        if clip.get("type") != "clip":
+            continue
+        start = format_time(clip["start"])
+        end = format_time(clip["end"])
+        title = clip.get("title", "")
+        description = clip.get("description", "")
+
+        # Append @partners and #labels to the description
+        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
+        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
+        full_desc = " ".join(part for part in [description, partners, labels] if part)
+
+        lines.append(f"{start} - {end} | {title} | {full_desc}")
+    return "\n".join(lines)
+
+def parse_clip_line(line):
+    try:
+        # Match the timestamp, title, and optional description
+        match = re.match(r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s*\|\s*([^|]+)\s*(?:\|\s*(.*))?', line)
+        if not match:
+            return None
+        start_str, end_str, title, full_desc = match.groups()
+
+        def to_seconds(t):
+            minutes, seconds = map(int, t.strip().split(":"))
+            return minutes * 60 + seconds
+
+        # Default description if missing
+        full_desc = full_desc or ""
+
+        # Extract @partners and #labels
+        partners = re.findall(r'@(\w+)', full_desc)
+        labels = re.findall(r'#(\w+)', full_desc)
+        # Remove the tags from the actual description
+        description = re.sub(r'[@#]\w+', '', full_desc).strip()
+
+        return {
+            "start": to_seconds(start_str),
+            "end": to_seconds(end_str),
+            "title": title.strip(),
+            "description": description,
+            "type": "clip",
+            "partners": partners,
+            "labels": labels
+        }
+    except Exception as e:
+        return None
+
+def find_clips_by_partner(partner):
+    result = []
+    for filename in os.listdir(CLIPS_DIR):
+        if not filename.endswith(".json"):
+            continue
+        video_id = filename.removesuffix(".json")
+        filepath = os.path.join(CLIPS_DIR, filename)
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                clips = json.load(f)
+                for clip in clips:
+                    if clip.get("type") == "clip" and partner in clip.get("partners", []):
+                        result.append({
+                            "video_id": video_id,
+                            **clip
+                        })
+        except Exception as e:
+            print(f"Error reading {filepath}: {e}")
+    return result
+
+def get_all_partners():
+    partners_set = set()
+    for filename in os.listdir(CLIPS_DIR):
+        if not filename.endswith(".json"):
+            continue
+        filepath = os.path.join(CLIPS_DIR, filename)
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                clips = json.load(f)
+                for clip in clips:
+                    if clip.get("type") == "clip":
+                        partners = clip.get("partners", [])
+                        partners_set.update(partners)
+        except Exception as e:
+            print(f"Error reading {filepath}: {e}")
+    return sorted(partners_set)
+
+def embed_youtube_player(video_id, start, end, speed):
+    end_js = f"{end}" if end else "null"
+    html_code = f"""
+    <div id="player"></div>
+    <script>
+      // Load the YouTube iframe API once
+      if (!window.YT) {{
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      }}
+
+      // Wait for the API to be ready
+      function createPlayer() {{
+        player = new YT.Player('player', {{
+          height: '360',
+          width: '100%',
+          videoId: '{video_id}',
+          playerVars: {{
+            'rel': 0,
+            'modestbranding': 1
+          }},
+          events: {{
+            'onReady': function(event) {{
+              player.seekTo({start}, true);
+              player.setPlaybackRate({speed});
+              player.playVideo();
+
+              if ({end_js}) {{
+                const stopInterval = setInterval(() => {{
+                  if (player.getCurrentTime() >= {end_js}) {{
+                    player.pauseVideo();
+                    clearInterval(stopInterval);
+                  }}
+                }}, 200);
+              }}
+            }}
+          }}
+        }});
+      }}
+
+      // Attach to global scope so API can find it
+      window.onYouTubeIframeAPIReady = function() {{
+        createPlayer();
+      }};
+
+      // If API is already loaded, call directly
+      if (window.YT && window.YT.Player) {{
+        createPlayer();
+      }}
+    </script>
+    """
+    components.html(html_code, height=400)
