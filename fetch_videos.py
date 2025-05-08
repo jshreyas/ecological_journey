@@ -1,3 +1,4 @@
+# fetch_videos.py
 import os
 import json
 import re
@@ -5,6 +6,7 @@ import requests  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 from datetime import datetime, time
 import pytz  # type: ignore
+import isodate  # for parsing ISO 8601 durations
 
 # Load API key from environment
 load_dotenv()
@@ -31,6 +33,21 @@ def fetch_video_upload_date(video_id):
             "%Y-%m-%dT%H:%M:%SZ"
         )
         return published_utc.replace(tzinfo=pytz.utc).astimezone(pst).date()
+    except (IndexError, KeyError, ValueError):
+        return None
+
+def fetch_video_duration(video_id):
+    """Fetch video duration (in seconds) from YouTube Data API."""
+    url = f"{BASE_URL}/videos?part=contentDetails&id={video_id}&key={API_KEY}"
+    response = requests.get(url)
+    if not response.ok:
+        return None
+
+    try:
+        duration_str = response.json()['items'][0]['contentDetails']['duration']
+        # Convert ISO 8601 duration string to total seconds
+        video_duration = isodate.parse_duration(duration_str).total_seconds()
+        return video_duration
     except (IndexError, KeyError, ValueError):
         return None
 
@@ -88,6 +105,12 @@ def fetch_playlist_items(count=None):
                 "description": snippet.get("description", ""),
                 "published_at": snippet["publishedAt"]
             }
+
+            # Fetch video duration and add it to the video data
+            video_duration = fetch_video_duration(video_id)
+            if video_duration:
+                video_data["duration_seconds"] = video_duration
+
             video_data = check_update_date_title_mismatch(video_data)
             videos.append(video_data)
 
@@ -119,6 +142,7 @@ def main():
             "video_id": v["video_id"],
             "youtube_url": v["url"],
             "date": v["published_at"],
+            "duration_seconds": v.get("duration_seconds", None),  # Add duration data here
             **meta
         })
 
