@@ -112,7 +112,13 @@ class VRApp(HydraHeadApp):
 
         videos = load_videos()
         video_options = {f"{v['title']} ({v['video_id']})": v["video_id"] for v in videos}
-        selected_label = st.selectbox("Choose a video", list(video_options.keys()))
+        col11, col12 = st.columns([11, 1])
+        with col11:
+            selected_label = st.selectbox("Choose a video", list(video_options.keys()))
+        with col12:
+            layout_ratio = st.selectbox("", ["3:1", "2:1", "1:1", "1:2", "1:3"])
+        ratios = {"3:1": [3,1], "2:1": [2,1], "1:1": [1,1], "1:2": [1,2], "1:3": [1,3]}
+        col1, col2 = st.columns(ratios[layout_ratio])
 
         if selected_label:
             selected_video_id = video_options[selected_label]
@@ -121,16 +127,6 @@ class VRApp(HydraHeadApp):
         if selected_video_id:
             selected_video = next((v for v in videos if v["video_id"] == selected_video_id), None)
             segments = load_clips(selected_video_id)
-
-
-        col11, col12 = st.columns([11, 1])
-        with col11:
-            st.title("🎞️ Video Reviewer")
-        with col12:
-            layout_ratio = st.selectbox("", ["3:1", "2:1", "1:1", "1:2", "1:3"])
-        ratios = {"3:1": [3,1], "2:1": [2,1], "1:1": [1,1], "1:2": [1,2], "1:3": [1,3]}
-        # Radio sizable Layout: Video | Clipper
-        col1, col2 = st.columns(ratios[layout_ratio])
 
         # Default state
         if "selected_segment_idx" not in st.session_state:
@@ -144,29 +140,29 @@ class VRApp(HydraHeadApp):
                 seg = segments[st.session_state.selected_segment_idx]
                 start = seg.get("start", 0)
                 end = seg.get("end", 0)
-                speed = st.session_state.playback_speed
-
-                with st.container():
-                    # Embed video player
-                    embed_youtube_player(selected_video_id, start, end, speed)
-
-                new_speed = st.slider(
-                    label="",
-                    min_value=0.25,
-                    max_value=2.0,
-                    value=st.session_state.playback_speed,
-                    step=0.25,
-                    key="playback_speed",
-                    label_visibility="collapsed"
-                )
-
-                # Manual rerun if changed
-                if new_speed != st.session_state.playback_speed:
-                    st.session_state.playback_speed = new_speed
-                    st.rerun()
-
             else:
-                st.warning(f"No clips found for the video: {selected_video_id}!")
+                start = 0
+                end = None
+            speed = st.session_state.playback_speed
+
+            with st.container():
+                # Embed video player
+                embed_youtube_player(selected_video_id, start, end, speed)
+
+            new_speed = st.slider(
+                label="",
+                min_value=0.25,
+                max_value=2.0,
+                value=st.session_state.playback_speed,
+                step=0.25,
+                key="playback_speed",
+                label_visibility="collapsed"
+            )
+
+            # Manual rerun if changed
+            if new_speed != st.session_state.playback_speed:
+                st.session_state.playback_speed = new_speed
+                st.rerun()
 
         # --- Clipper (Col2) ---
         with col2:
@@ -188,7 +184,7 @@ class VRApp(HydraHeadApp):
                         clip_lines = updated_raw_text.strip().split("\n")
                         new_clips = [parse_clip_line(line) for line in clip_lines if parse_clip_line(line)]
                         save_clips(selected_video_id, new_clips)
-                        st.success("✅ Raw Text saved successfully!")
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
 
@@ -218,5 +214,6 @@ class VRApp(HydraHeadApp):
                         if cols[col_idx].button(label, key=f"clip_{i}"):
                             st.session_state.selected_segment_idx = i
                             st.rerun()
-
+            if not clip_buttons:
+                st.warning(f"No clips found for the video: {selected_video_id}!")
 
