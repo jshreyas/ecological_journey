@@ -1,14 +1,17 @@
 # apps/home.py
-import streamlit as st
-import pandas as pd
+import streamlit as st # type: ignore
+import pandas as pd # type: ignore
 import json
-from hydralit import HydraHeadApp
+from hydralit import HydraHeadApp # type: ignore
 
-VIDEOS_JSON_FILE = "fetch_videos.json"
+VIDEOS_JSON_FILE = ["fetch_videos.json", "home_training.json"]
 
-def load_videos(path=VIDEOS_JSON_FILE):
-    with open(path) as f:
-        return json.load(f)
+def load_videos():
+    loaded_videos = []
+    for path in VIDEOS_JSON_FILE:
+        with open(path) as f:
+            loaded_videos = loaded_videos + json.load(f)
+    return loaded_videos
 
 
 class HomeApp(HydraHeadApp):

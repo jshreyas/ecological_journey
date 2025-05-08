@@ -6,7 +6,7 @@ import requests  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 from datetime import datetime, time
 import pytz  # type: ignore
-import isodate  # for parsing ISO 8601 durations
+import isodate  # type: ignore # for parsing ISO 8601 durations
 
 # Load API key from environment
 load_dotenv()
@@ -14,7 +14,10 @@ API_KEY = os.getenv("API_KEY")
 if not API_KEY:
     raise ValueError("Missing API_KEY in environment variables")
 
-PLAYLIST_ID = "PLHXvJ_QLQWhXuOo2HcwsL4sysM79x8Id8"
+PLAYLIST_ID = "PLHXvJ_QLQWhXuOo2HcwsL4sysM79x8Id8" # Grappling Journal
+PLAYLIST_ID = "PLHXvJ_QLQWhWfwGejBdQE8LjHHToMMCge" # Home Training Journal
+FETCH_VIDEOS_JSON = "fetch_videos.json" # Grappling Journal
+FETCH_VIDEOS_JSON = "home_training.json" # Home Training Journal
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 FETCH_VIDEOS_COUNT = None  # Set to an integer to limit fetched items
 
@@ -146,10 +149,10 @@ def main():
             **meta
         })
 
-    with open("fetch_videos.json", "w") as f:
+    with open(FETCH_VIDEOS_JSON, "w") as f:
         json.dump(parsed_videos, f, indent=2)
 
-    print(f"Saved {len(parsed_videos)} videos to fetch_videos.json")
+    print(f"Saved {len(parsed_videos)} videos to {FETCH_VIDEOS_JSON}")
 
 if __name__ == "__main__":
     main()

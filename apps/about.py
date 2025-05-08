@@ -1,6 +1,6 @@
 # apps/about.py
-import streamlit as st
-from hydralit import HydraHeadApp
+import streamlit as st # type: ignore
+from hydralit import HydraHeadApp # type: ignore
 
 
 class AboutApp(HydraHeadApp):
