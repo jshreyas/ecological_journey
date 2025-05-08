@@ -72,11 +72,10 @@ class VRApp(HydraHeadApp):
         with col2:
             with st.form("clipper"):
 
-                # Load existing segments (for editing)
-                segments = load_clips(selected_video_id)
+                # Load existing clips (for editing)
+                clips = load_clips(selected_video_id)
 
-                # Convert segments to raw text format
-                raw_text = convert_clips_to_raw_text(segments)
+                raw_text = convert_clips_to_raw_text(clips, video_duration=selected_video["duration_seconds"])
                 
                 updated_raw_text = st.text_area("✏️ Clipper", value=raw_text, height=400)
 
@@ -84,7 +83,7 @@ class VRApp(HydraHeadApp):
                 submit = st.form_submit_button("💾 Save Changes")
                 if submit:
                     try:
-                        # Convert updated raw text back to segments
+                        # Convert updated raw text back to clips
                         clip_lines = updated_raw_text.strip().split("\n")
                         new_clips = [parse_clip_line(line) for line in clip_lines if parse_clip_line(line)]
                         save_clips(selected_video_id, new_clips)

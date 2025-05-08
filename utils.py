@@ -1,7 +1,7 @@
 import json
 import os
 import re
-import requests
+import requests # type: ignore
 import streamlit.components.v1 as components # type: ignore
 
 
@@ -77,27 +77,47 @@ def format_time(seconds):
     sec = seconds % 60
     return f"{int(minutes):02}:{int(sec):02}"
 
-def convert_clips_to_raw_text(clips):
+def convert_clips_to_raw_text(clips, video_duration=None):
     lines = []
+
+    # If no clips, show header and insert autogen clip
+    if not clips and video_duration is not None:
+        # Instructional header only shown for empty clips
+        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
+
+        clips = [{
+            "start": 0,
+            "end": video_duration,
+            "type": "autogen"
+        }]
+
     for clip in clips:
         if clip.get("type") != "clip":
+            # Autogen or unknown type – show as placeholder
+            start = format_time(clip["start"])
+            end = format_time(clip["end"])
+            lines.append(f"{start} - {end} | Full video | @autogen")
             continue
+
+        # Legit user-defined clip
         start = format_time(clip["start"])
         end = format_time(clip["end"])
         title = clip.get("title", "")
         description = clip.get("description", "")
-
-        # Append @partners and #labels to the description
         partners = " ".join(f"@{p}" for p in clip.get("partners", []))
         labels = " ".join(f"#{l}" for l in clip.get("labels", []))
         full_desc = " ".join(part for part in [description, partners, labels] if part)
 
         lines.append(f"{start} - {end} | {title} | {full_desc}")
+
     return "\n".join(lines)
 
 def parse_clip_line(line):
     try:
-        # Match the timestamp, title, and optional description
+        # Ignore instructional header or autogen clip
+        if "Clip Title Here" in line or "@autogen" in line:
+            return None
+
         match = re.match(r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s*\|\s*([^|]+)\s*(?:\|\s*(.*))?', line)
         if not match:
             return None
@@ -107,13 +127,9 @@ def parse_clip_line(line):
             minutes, seconds = map(int, t.strip().split(":"))
             return minutes * 60 + seconds
 
-        # Default description if missing
         full_desc = full_desc or ""
-
-        # Extract @partners and #labels
         partners = re.findall(r'@(\w+)', full_desc)
         labels = re.findall(r'#(\w+)', full_desc)
-        # Remove the tags from the actual description
         description = re.sub(r'[@#]\w+', '', full_desc).strip()
 
         return {
@@ -125,8 +141,9 @@ def parse_clip_line(line):
             "partners": partners,
             "labels": labels
         }
-    except Exception as e:
+    except Exception:
         return None
+
 
 def find_clips_by_partner(partner):
     result = []
