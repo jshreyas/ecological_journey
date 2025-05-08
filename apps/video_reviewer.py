@@ -6,7 +6,7 @@ import os
 import re
 import streamlit.components.v1 as components # type: ignore
 from hydralit import HydraHeadApp # type: ignore
-from utils import load_videos, load_clips, save_clips, convert_clips_to_raw_text, format_time, embed_youtube_player, load_clip_template
+from utils import load_videos, load_clips, save_clips, convert_clips_to_raw_text, format_time, embed_youtube_player
 from utils import parse_clip_line # TODO: check if 'start' and 'end' are in video's duration
 
 
@@ -75,10 +75,7 @@ class VRApp(HydraHeadApp):
                 # Load existing clips (for editing)
                 clips = load_clips(selected_video_id)
 
-                if not clips:
-                    raw_text = load_clip_template()
-                else:
-                    raw_text = convert_clips_to_raw_text(clips)
+                raw_text = convert_clips_to_raw_text(clips, video_duration=selected_video["duration_seconds"])
                 
                 updated_raw_text = st.text_area("✏️ Clipper", value=raw_text, height=400)
 

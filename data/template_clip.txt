@@ -1,2 +1,0 @@
-00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2
-00:30 - 01:00 | Another Clip | More details here @partner3 #label3
