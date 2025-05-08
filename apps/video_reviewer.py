@@ -5,6 +5,7 @@ import math
 import os
 import re
 import streamlit.components.v1 as components
+from hydralit import HydraHeadApp
 
 
 # Constants
@@ -129,14 +130,19 @@ def convert_clips_to_raw_text(clips):
         lines.append(f"{start} - {end} | {title} | {description}")
     return "\n".join(lines)
 
-from hydralit import HydraHeadApp
-
 
 class VRApp(HydraHeadApp):
 
     def run(self):
 
-        st.title("🎞️ Video Reviewer")
+        col11, col12 = st.columns([11, 1])
+        with col11:
+            st.title("🎞️ Video Reviewer")
+        with col12:
+            layout_ratio = st.selectbox("", ["3:1", "2:1", "1:1", "1:2", "1:3"])
+        ratios = {"3:1": [3,1], "2:1": [2,1], "1:1": [1,1], "1:2": [1,2], "1:3": [1,3]}
+        # Radio sizable Layout: Video | Clipper
+        col1, col2 = st.columns(ratios[layout_ratio])
 
         segments = load_segments()
 
@@ -145,9 +151,6 @@ class VRApp(HydraHeadApp):
             st.session_state.selected_segment_idx = 0
         if "playback_speed" not in st.session_state:
             st.session_state.playback_speed = 1.0
-
-        # Layout: Video | Segment Navigation
-        col1, col2 = st.columns([3, 1])
 
         # --- Main Video Player (Col1) ---
         with col1:
