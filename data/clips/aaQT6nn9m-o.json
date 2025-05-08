@@ -1,0 +1,131 @@
+[
+  {
+    "start": 5,
+    "end": 72,
+    "title": "guard recovery",
+    "description": "resetting posture after sweep",
+    "type": "clip",
+    "partners": [
+      "abc",
+      "frefd"
+    ],
+    "labels": [
+      "hde",
+      "treew"
+    ]
+  },
+  {
+    "start": 90,
+    "end": 135,
+    "title": "arm drag entry",
+    "description": "inside control to drag",
+    "type": "clip",
+    "partners": [
+      "karla"
+    ],
+    "labels": [
+      "gripfight"
+    ]
+  },
+  {
+    "start": 140,
+    "end": 190,
+    "title": "tripod sweep",
+    "description": "using hip bump and post",
+    "type": "clip",
+    "partners": [
+      "tommy",
+      "leo"
+    ],
+    "labels": [
+      "sweep",
+      "balance"
+    ]
+  },
+  {
+    "start": 195,
+    "end": 240,
+    "title": "passing guard",
+    "description": "knee cut sequence after frame break",
+    "type": "clip",
+    "partners": [
+      "maya"
+    ],
+    "labels": [
+      "guardpass"
+    ]
+  },
+  {
+    "start": 245,
+    "end": 280,
+    "title": "back take",
+    "description": "seatbelt to hook entry",
+    "type": "clip",
+    "partners": [
+      "milo"
+    ],
+    "labels": [
+      "backcontrol",
+      "transition"
+    ]
+  },
+  {
+    "start": 300,
+    "end": 330,
+    "title": "posture drill",
+    "description": "",
+    "type": "clip",
+    "partners": [],
+    "labels": []
+  },
+  {
+    "start": 360,
+    "end": 405,
+    "title": "no tags clip",
+    "description": "just clean movement description",
+    "type": "clip",
+    "partners": [],
+    "labels": []
+  },
+  {
+    "start": 420,
+    "end": 480,
+    "title": "tricky timing",
+    "description": "description with extra spaces",
+    "type": "clip",
+    "partners": [
+      "a1",
+      "b2"
+    ],
+    "labels": [
+      "x",
+      "y"
+    ]
+  },
+  {
+    "start": 485,
+    "end": 535,
+    "title": "edge case",
+    "description": "",
+    "type": "clip",
+    "partners": [
+      "solo"
+    ],
+    "labels": [
+      "single"
+    ]
+  },
+  {
+    "start": 540,
+    "end": 585,
+    "title": "weird symbols",
+    "description": "look at this: \ud83e\udd38\ud83c\udffd\u200d\u2642\ufe0f\ud83d\udd25",
+    "type": "clip",
+    "partners": [
+      "zen"
+    ],
+    "labels": [
+      "flow"
+    ]
+  }
+]
