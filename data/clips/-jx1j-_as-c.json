@@ -68,5 +68,30 @@
       "backcontrol",
       "transition"
     ]
+  },
+  {
+    "type": "clip",
+    "start": 60,
+    "end": 90,
+    "title": "No Label Clip 1",
+    "partners": ["John Doe"]
+  },
+  {
+    "type": "clip",
+    "start": 120,
+    "end": 150,
+    "title": "No Label Clip 2",
+    "partners": ["John Doe"]
+  },
+  {
+    "type": "clip",
+    "start": 200,
+    "end": 230,
+    "title": "No Label Clip 3",
+    "labels": [
+      "backcontrol",
+      "transition"
+    ],
+    "partners": ["John Doe"]
   }
 ]
