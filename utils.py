@@ -1,10 +1,12 @@
 import json
 import os
 import re
-import requests
+import requests # type: ignore
 import streamlit.components.v1 as components # type: ignore
 
 
+METADATA_PATH = "data"
+CLIP_TEMPLATE_FILE = "template_clip.txt"
 CLIPS_DIR = "data/clips"
 VIDEOS_DIR = "data/videos"
 GRAPPLING_JSON_FILE = "fetch_videos.json"
@@ -219,3 +221,11 @@ def embed_youtube_player(video_id, start, end, speed):
     </script>
     """
     components.html(html_code, height=400)
+
+def load_clip_template():
+    template_path = os.path.join(METADATA_PATH, CLIP_TEMPLATE_FILE)
+    try:
+        with open(template_path, "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""  # Fail gracefully
