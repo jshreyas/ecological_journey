@@ -74,18 +74,15 @@ class PartnerApp(HydraHeadApp):
 
         with col2:
             st.markdown("### Filter by Labels")
-            updated_filter = {}
+
             for label in all_labels:
-                updated_filter[label] = st.checkbox(
+                st.session_state.label_filter[label] = st.checkbox(
                     label,
                     value=st.session_state.label_filter.get(label, True),
                     key=f"filter_{label}"
                 )
 
-        # Store updated filters
-        st.session_state.label_filter = updated_filter
-
-        selected_labels = [label for label, checked in updated_filter.items() if checked]
+        selected_labels = [label for label, checked in st.session_state.label_filter.items() if checked]
 
         def is_clip_visible(clip):
             labels = clip.get("labels") or []
