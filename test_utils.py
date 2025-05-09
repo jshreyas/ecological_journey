@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 from unittest.mock import patch, mock_open
 from utils import (
     parse_clip_line,
@@ -42,7 +42,7 @@ notes: test
         "labels": ["drill"]
      }], {
          "partners": ["carla"],
-         "positions": ["mount"],
+         "labels": ["mount"],
          "type": "drilling",
          "notes": "test"
      })
@@ -52,7 +52,7 @@ type: positional
 notes: metadata only""",
      ([], {
          "partners": ["ana"],
-         "positions": ["guard"],
+         "labels": ["guard"],
          "type": "positional",
          "notes": "metadata only"
      })
@@ -68,7 +68,7 @@ def test_convert_clips_to_raw_text(mock_load_videos, mock_load_clips):
     mock_load_videos.return_value = [{
         "video_id": "abc123",
         "partners": ["carla"],
-        "positions": ["mount"],
+        "labels": ["mount"],
         "type": "rolling",
         "notes": "test note",
         "duration_seconds": 120
@@ -88,7 +88,7 @@ def test_convert_clips_to_raw_text(mock_load_videos, mock_load_clips):
     assert "#mount" in result
     assert "type: rolling" in result
     assert "notes: test note" in result
-    assert "00:00 - 00:30 | Clip Title" in result
+    assert "00:00 - 00:30 | Clip Title | desc @carla #drill" in result
 
 # 4. Test for format_time
 @pytest.mark.parametrize("seconds,expected", [

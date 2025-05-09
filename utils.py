@@ -146,7 +146,7 @@ def parse_raw_text(raw_text):
     clips = []
     video_metadata = {
         "partners": [],
-        "positions": [],
+        "labels": [],
         "type": "",
         "notes": ""
     }
@@ -157,13 +157,13 @@ def parse_raw_text(raw_text):
             continue
 
         # Video-level metadata parsing
-        if re.match(r'^@[\w\s@#]*$', line):  # Only @ and # tokens
-            tokens = line.split()
+        tokens = line.split()
+        if all(token.startswith('@') or token.startswith('#') for token in tokens):
             for token in tokens:
                 if token.startswith("@"):
                     video_metadata["partners"].append(token[1:].strip())
                 elif token.startswith("#"):
-                    video_metadata["positions"].append(token[1:].strip())
+                    video_metadata["labels"].append(token[1:].strip())
         elif line.lower().startswith("type:"):
             video_metadata["type"] = line.split(":", 1)[1].strip()
         elif line.lower().startswith("notes:"):
@@ -180,7 +180,6 @@ def parse_raw_text(raw_text):
 
 def parse_and_save_clips(video_id, raw_text):
     clips, video_meta = parse_raw_text(raw_text)
-    
     # Save segment clips
     save_clips(video_id, clips)
 
@@ -196,15 +195,15 @@ def convert_clips_to_raw_text(video_id, video_duration=None):
     lines = []
 
     # Determine if video-level metadata exists
-    has_metadata = any(video_metadata.get(k) for k in ["partners", "positions", "type", "notes"])
+    has_metadata = any(video_metadata.get(k) for k in ["partners", "labels", "type", "notes"])
     has_clips = bool(clips)
 
     # Scenario 1, 2, 3, or 4
     if has_metadata:
         if video_metadata.get("partners"):
             lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
-        if video_metadata.get("positions"):
-            lines.append(" ".join(f"#{pos}" for pos in video_metadata["positions"]))
+        if video_metadata.get("labels"):
+            lines.append(" ".join(f"#{pos}" for pos in video_metadata["labels"]))
         if video_metadata.get("type"):
             lines.append(f"type: {video_metadata['type']}")
         if video_metadata.get("notes"):
@@ -250,7 +249,6 @@ def convert_clips_to_raw_text(video_id, video_duration=None):
 
     return "\n".join(lines)
 
-
 def find_clips_by_partner(partner):
     result = []
     videos = load_videos()  # video-level metadata
@@ -271,11 +269,17 @@ def find_clips_by_partner(partner):
                 for clip in clips:
                     clip_partners = clip.get("partners", [])
                     if partner in clip_partners or partner in video_partners:
-                        result.append({
+                        # Merge clip and video labels (deduplicated)
+                        merged_labels = list(set(video_meta.get("labels", []) + clip.get("labels", [])))
+
+                        # Combine metadata and override 'labels' explicitly
+                        combined = {
                             "video_id": video_id,
                             **video_meta,
-                            **clip
-                        })
+                            **clip,
+                            "labels": merged_labels
+                        }
+                        result.append(combined)
         except Exception as e:
             print(f"Error reading {filepath}: {e}")
 
