@@ -34,27 +34,37 @@ def save_clips(video_id, clips):
         json.dump(clips, f, indent=2)
 
 def save_video_metadata(video_id, updated_metadata):
-    file_path = os.path.join(VIDEOS_DIR, GRAPPLING_JSON_FILE) #TODO: this doesnt work for hometraining videos
-
-    # Load all videos
-    with open(file_path, "r", encoding="utf-8") as f:
-        videos = json.load(f)
-
-    # Update matching video
     updated = False
-    for video in videos:
-        if video.get("video_id") == video_id:
-            video.update(updated_metadata)
-            updated = True
-            break
+    target_file = None
+    videos_data = None
 
-    if not updated:
-        raise ValueError(f"Video with ID '{video_id}' not found.")
+    # Scan all JSON files in VIDEOS_DIR
+    for filename in os.listdir(VIDEOS_DIR):
+        if filename.endswith(".json"):
+            file_path = os.path.join(VIDEOS_DIR, filename)
+            with open(file_path, "r", encoding="utf-8") as f:
+                try:
+                    videos = json.load(f)
+                    # Find and update the matching video
+                    for video in videos:
+                        if video.get("video_id") == video_id:
+                            video.update(updated_metadata)
+                            updated = True
+                            target_file = file_path
+                            videos_data = videos
+                            break
+                    if updated:
+                        break  # Stop scanning once found
+                except json.JSONDecodeError:
+                    print(f"Skipping malformed JSON file: {filename}")
+                    continue
 
-    # Save back
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(videos, f, indent=2, ensure_ascii=False)
+    if not updated or not target_file:
+        raise ValueError(f"Video with ID '{video_id}' not found in any metadata file.")
 
+    # Save back to the same file
+    with open(target_file, "w", encoding="utf-8") as f:
+        json.dump(videos_data, f, indent=2, ensure_ascii=False)
 
 # TODO: update the video embed window based on the orientation
 def get_video_orientation_internal(video_id: str) -> str:
