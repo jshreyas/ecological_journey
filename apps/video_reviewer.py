@@ -6,8 +6,8 @@ import os
 import re
 import streamlit.components.v1 as components # type: ignore
 from hydralit import HydraHeadApp # type: ignore
-from utils import load_videos, load_clips, save_clips, convert_clips_to_raw_text, format_time, embed_youtube_player
-from utils import parse_clip_line # TODO: check if 'start' and 'end' are in video's duration
+from utils import load_videos, load_clips, convert_clips_to_raw_text, format_time, embed_youtube_player, parse_and_save_clips
+# from utils import parse_clip_line # TODO: check if 'start' and 'end' are in video's duration
 
 
 class VRApp(HydraHeadApp):
@@ -72,10 +72,7 @@ class VRApp(HydraHeadApp):
         with col2:
             with st.form("clipper"):
 
-                # Load existing clips (for editing)
-                clips = load_clips(selected_video_id)
-
-                raw_text = convert_clips_to_raw_text(clips, video_duration=selected_video["duration_seconds"])
+                raw_text = convert_clips_to_raw_text(selected_video_id, video_duration=selected_video["duration_seconds"])
                 
                 updated_raw_text = st.text_area("✏️ Clipper", value=raw_text, height=400)
 
@@ -83,10 +80,7 @@ class VRApp(HydraHeadApp):
                 submit = st.form_submit_button("💾 Save Changes")
                 if submit:
                     try:
-                        # Convert updated raw text back to clips
-                        clip_lines = updated_raw_text.strip().split("\n")
-                        new_clips = [parse_clip_line(line) for line in clip_lines if parse_clip_line(line)]
-                        save_clips(selected_video_id, new_clips)
+                        parse_and_save_clips(selected_video_id, updated_raw_text)
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")

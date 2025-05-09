@@ -33,6 +33,29 @@ def save_clips(video_id, clips):
     with open(file_path, "w") as f:
         json.dump(clips, f, indent=2)
 
+def save_video_metadata(video_id, updated_metadata):
+    file_path = os.path.join(VIDEOS_DIR, GRAPPLING_JSON_FILE) #TODO: this doesnt work for hometraining videos
+
+    # Load all videos
+    with open(file_path, "r", encoding="utf-8") as f:
+        videos = json.load(f)
+
+    # Update matching video
+    updated = False
+    for video in videos:
+        if video.get("video_id") == video_id:
+            video.update(updated_metadata)
+            updated = True
+            break
+
+    if not updated:
+        raise ValueError(f"Video with ID '{video_id}' not found.")
+
+    # Save back
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(videos, f, indent=2, ensure_ascii=False)
+
+
 # TODO: update the video embed window based on the orientation
 def get_video_orientation_internal(video_id: str) -> str:
     url = "https://www.youtube.com/youtubei/v1/player"
@@ -77,41 +100,6 @@ def format_time(seconds):
     sec = seconds % 60
     return f"{int(minutes):02}:{int(sec):02}"
 
-def convert_clips_to_raw_text(clips, video_duration=None):
-    lines = []
-
-    # If no clips, show header and insert autogen clip
-    if not clips and video_duration is not None:
-        # Instructional header only shown for empty clips
-        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
-
-        clips = [{
-            "start": 0,
-            "end": video_duration,
-            "type": "autogen"
-        }]
-
-    for clip in clips:
-        if clip.get("type") != "clip":
-            # Autogen or unknown type – show as placeholder
-            start = format_time(clip["start"])
-            end = format_time(clip["end"])
-            lines.append(f"{start} - {end} | Full video | @autogen")
-            continue
-
-        # Legit user-defined clip
-        start = format_time(clip["start"])
-        end = format_time(clip["end"])
-        title = clip.get("title", "")
-        description = clip.get("description", "")
-        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
-        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
-        full_desc = " ".join(part for part in [description, partners, labels] if part)
-
-        lines.append(f"{start} - {end} | {title} | {full_desc}")
-
-    return "\n".join(lines)
-
 def parse_clip_line(line):
     try:
         # Ignore instructional header or autogen clip
@@ -144,43 +132,171 @@ def parse_clip_line(line):
     except Exception:
         return None
 
+def parse_raw_text(raw_text):
+    clips = []
+    video_metadata = {
+        "partners": [],
+        "positions": [],
+        "type": "",
+        "notes": ""
+    }
+
+    for line in raw_text.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        # Video-level metadata parsing
+        if re.match(r'^@[\w\s@#]*$', line):  # Only @ and # tokens
+            tokens = line.split()
+            for token in tokens:
+                if token.startswith("@"):
+                    video_metadata["partners"].append(token[1:].strip())
+                elif token.startswith("#"):
+                    video_metadata["positions"].append(token[1:].strip())
+        elif line.lower().startswith("type:"):
+            video_metadata["type"] = line.split(":", 1)[1].strip()
+        elif line.lower().startswith("notes:"):
+            video_metadata["notes"] = line.split(":", 1)[1].strip()
+
+        # Clip line
+        elif re.match(r'\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}', line):
+            clip = parse_clip_line(line)
+            if clip:
+                clips.append(clip)
+
+        # Ignore anything else silently
+    return clips, video_metadata
+
+def parse_and_save_clips(video_id, raw_text):
+    clips, video_meta = parse_raw_text(raw_text)
+    
+    # Save segment clips
+    save_clips(video_id, clips)
+
+    # Save updated video metadata
+    if video_meta:
+        save_video_metadata(video_id, video_meta)
+
+def convert_clips_to_raw_text(video_id, video_duration=None):
+    clips = load_clips(video_id)
+    videos = load_videos()
+    video_metadata = next((v for v in videos if v["video_id"] == video_id), {})
+
+    lines = []
+
+    # Determine if video-level metadata exists
+    has_metadata = any(video_metadata.get(k) for k in ["partners", "positions", "type", "notes"])
+    has_clips = bool(clips)
+
+    # Scenario 1, 2, 3, or 4
+    if has_metadata:
+        if video_metadata.get("partners"):
+            lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
+        if video_metadata.get("positions"):
+            lines.append(" ".join(f"#{pos}" for pos in video_metadata["positions"]))
+        if video_metadata.get("type"):
+            lines.append(f"type: {video_metadata['type']}")
+        if video_metadata.get("notes"):
+            lines.append(f"notes: {video_metadata['notes']}")
+        lines.append("")  # spacer
+    elif not has_metadata:
+        # Insert placeholder metadata
+        lines.append("@partner1 @partner2 #position1 #position2")
+        lines.append("type: positional/sparring/rolling/instructional")
+        lines.append("notes: optional general notes about this video")
+        lines.append("")  # spacer
+
+    # Scenario 1 or 3 (no clips)
+    if not has_clips and video_duration is not None:
+        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
+        clips = [{
+            "start": 0,
+            "end": video_duration,
+            "type": "autogen"
+        }]
+
+    # Scenarios 2 and 4 (render actual clips)
+    for clip in clips:
+        start = clip.get("start", 0)
+        end = clip.get("end", 0)
+
+        if not video_duration:
+            video_duration = video_metadata.get("duration_seconds", None)
+        if video_duration and end > video_duration:
+            end = video_duration
+
+        if clip.get("type") != "clip":
+            lines.append(f"{format_time(start)} - {format_time(end)} | Full video | @autogen")
+            continue
+
+        title = clip.get("title", "")
+        description = clip.get("description", "")
+        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
+        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
+        full_desc = " ".join(part for part in [description, partners, labels] if part)
+
+        lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
+
+    return "\n".join(lines)
+
 
 def find_clips_by_partner(partner):
     result = []
+    videos = load_videos()  # video-level metadata
+    video_meta_lookup = {v["video_id"]: v for v in videos}
+
     for filename in os.listdir(CLIPS_DIR):
         if not filename.endswith(".json"):
             continue
         video_id = filename.removesuffix(".json")
         filepath = os.path.join(CLIPS_DIR, filename)
+
+        video_meta = video_meta_lookup.get(video_id, {})
+        video_partners = video_meta.get("partners", [])
+
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 clips = json.load(f)
                 for clip in clips:
-                    if clip.get("type") == "clip" and partner in clip.get("partners", []):
+                    clip_partners = clip.get("partners", [])
+                    if partner in clip_partners or partner in video_partners:
                         result.append({
                             "video_id": video_id,
+                            **video_meta,
                             **clip
                         })
         except Exception as e:
             print(f"Error reading {filepath}: {e}")
+
     return result
 
 def get_all_partners():
     partners_set = set()
+    videos = load_videos()  # load once
+
     for filename in os.listdir(CLIPS_DIR):
         if not filename.endswith(".json"):
             continue
+        video_id = filename.removesuffix(".json")
         filepath = os.path.join(CLIPS_DIR, filename)
+
+        # Add video-level partners
+        video_meta = next((v for v in videos if v["video_id"] == video_id), {})
+        video_partners = video_meta.get("partners", [])
+        partners_set.update(video_partners)
+
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 clips = json.load(f)
                 for clip in clips:
                     if clip.get("type") == "clip":
-                        partners = clip.get("partners", [])
-                        partners_set.update(partners)
+                        partners_set.update(clip.get("partners", []))
         except Exception as e:
             print(f"Error reading {filepath}: {e}")
+
     return sorted(partners_set)
+
 
 def embed_youtube_player(video_id, start, end, speed):
     end_js = f"{end}" if end else "null"
