@@ -1,0 +1,7 @@
+# ---------------- requirements.txt ----------------
+fastapi
+uvicorn
+motor
+python-dotenv
+pydantic
+PyJWT
