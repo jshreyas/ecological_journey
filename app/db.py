@@ -5,6 +5,5 @@ import os
 
 load_dotenv()
 
-MONGO_URL = os.getenv("MONGO_URL")
-client = AsyncIOMotorClient(MONGO_URL)
-db = client["video_db"]
+client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
+db = client["ecological_journey"]

@@ -1,7 +1,7 @@
 import jwt
 import datetime
 
-SECRET_KEY = "supersecret"  # The same secret used in your FastAPI app
+JWT_SECRET = "supersecret"  # The same secret used in your FastAPI app
 expiration = datetime.datetime.utcnow() + datetime.timedelta(days=2)  # Token expiration time
 
 # Create the token with payload and expiration
@@ -11,5 +11,5 @@ payload = {
 }
 
 # Generate the JWT token
-token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 print(token)  # Copy this token for use in Swagger UI

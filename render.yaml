@@ -8,6 +8,6 @@ services:
     envVars:
       - key: MONGODB_URI
         value: your-mongodb-uri-here
-      - key: SECRET_KEY
+      - key: JWT_SECRET
         value: your-secret-key-here
     plan: free
