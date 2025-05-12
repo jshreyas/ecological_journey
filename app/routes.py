@@ -178,6 +178,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": token, "token_type": "bearer"}
 
 # book keeping
+@router.get("/teams")
+async def get_teams(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
+    query = {}
+    teams = await db.teams.find(query).to_list(length=None)
+    return convert_objectid(teams)
+
 @router.post("/teams")
 async def create_team(team: Team, user=Depends(get_current_user)):
     # Default owner_id to authenticated user
