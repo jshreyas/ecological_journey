@@ -4,6 +4,7 @@ from typing import List, Optional, Literal
 from bson import ObjectId
 from .auth_models import PyObjectId
 
+
 class Clip(BaseModel):
     start: int
     end: int
@@ -12,6 +13,7 @@ class Clip(BaseModel):
     title: str
     labels: List[str] = []
     partners: List[str] = []  # Usernames or IDs
+
 
 class Video(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
@@ -31,6 +33,7 @@ class Video(BaseModel):
         allow_population_by_field_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
+
 
 class Playlist(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")

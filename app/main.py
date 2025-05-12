@@ -1,12 +1,12 @@
 # app/main.py
 from fastapi import FastAPI
-from .routes import router
 from fastapi.middleware.cors import CORSMiddleware
+from .routes import router
 
 app = FastAPI(
     title="Ecological Journey API",
     description="Video and Clip management with team-scoped access",
-    security=[{"bearerAuth": []}]
+    security=[{"bearerAuth": []}],
 )
 
 app.add_middleware(
