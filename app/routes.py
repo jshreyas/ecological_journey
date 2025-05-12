@@ -15,7 +15,7 @@ from fastapi.security.utils import get_authorization_scheme_param
 from datetime import datetime, timedelta
 
 
-SECRET_KEY = os.getenv("JWT_SECRET", "supersecret")
+SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 

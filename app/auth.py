@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 import os
 
-JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
+JWT_SECRET = os.getenv("JWT_SECRET")
 auth_scheme = HTTPBearer()
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)):
