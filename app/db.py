@@ -5,5 +5,5 @@ import os
 
 load_dotenv()
 
-client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
+client: AsyncIOMotorClient = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
 db = client["ecological_journey"]

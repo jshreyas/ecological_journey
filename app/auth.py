@@ -7,6 +7,7 @@ import os
 JWT_SECRET = os.getenv("JWT_SECRET")
 auth_scheme = HTTPBearer()
 
+
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)):
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
