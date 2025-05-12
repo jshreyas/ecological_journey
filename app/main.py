@@ -1,13 +1,12 @@
-# ---------------- app/main.py ----------------
+# app/main.py
 from fastapi import FastAPI
 from .routes import router
 from fastapi.middleware.cors import CORSMiddleware
 
-# Define security globally (optional)
 app = FastAPI(
-    title="My API",
-    description="API with JWT Auth",
-    security=[{"bearerAuth": []}]  # This adds the 'Authorization' input field in Swagger UI
+    title="Ecological Journey API",
+    description="Video and Clip management with team-scoped access",
+    security=[{"bearerAuth": []}]
 )
 
 app.add_middleware(
