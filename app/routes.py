@@ -54,7 +54,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 # Optional auth scheme
 async def auth_scheme_optional(request: Request) -> HTTPAuthorizationCredentials | None:
-    authorization: str = request.headers.get("Authorization")
+    authorization: str | None = request.headers.get("Authorization")
     if not authorization:
         return None
     scheme, credentials = get_authorization_scheme_param(authorization)
@@ -85,8 +85,7 @@ async def get_playlist_by_name(name: str):
 
 
 async def get_all_playlists() -> list:
-    query = {}
-    playlists = await db.playlists.find(query).to_list(length=None)
+    playlists = await db.playlists.find().to_list(length=None)
     return playlists
 
 
@@ -156,8 +155,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def get_teams(
     credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
-    query = {}
-    teams = await db.teams.find(query).to_list(length=None)
+    teams = await db.teams.find().to_list(length=None)
     return convert_objectid(teams)
 
 
