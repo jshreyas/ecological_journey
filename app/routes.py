@@ -151,18 +151,6 @@ def check_playlist_access(playlist, user_id, team_ids):
 
 # Routes
 # auth
-# @router.post("/auth/register")
-# async def register(user: User):
-#     # import pdb; pdb.set_trace()
-#     existing = await db.users.find_one({"email": user.email})
-#     if existing:
-#         raise HTTPException(status_code=400, detail="Email already registered")
-#     user.password = get_password_hash(user.password)
-#     result = await db.users.insert_one(user.dict(by_alias=True))
-#     return {"id": str(result.inserted_id)}
-
-
-
 @router.post("/auth/register")
 async def register(user_data: RegisterUser):
     existing = await db.users.find_one({"email": user_data.email})
@@ -183,7 +171,6 @@ async def register(user_data: RegisterUser):
 
 @router.post("/auth/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # import pdb; pdb.set_trace()
     user = await db.users.find_one({"email": form_data.username}) #TODO: check username or email?
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
@@ -240,8 +227,8 @@ async def create_playlist(playlist: Playlist, user=Depends(verify_token)):
 
     # Default owner_id to authenticated user
     if not playlist.owner_id:
-        playlist_dict["owner_id"] = ObjectId(user["sub"])
-    
+        playlist_dict["owner_id"] = ObjectId(user["sub"]) #TODO: test this?
+
     # Default owner_type to "user" (already handled by model default)
 
     await db.playlists.insert_one(playlist_dict)
@@ -255,26 +242,33 @@ async def get_playlist(playlist_name: str, credentials: HTTPAuthorizationCredent
     return convert_objectid(playlist)
 
 @router.post("/playlists/{playlist_name}/videos")
-async def create_video(playlist_name: str, video: Video, user=Depends(verify_token)):
+async def create_video(playlist_name: str, video: Video, user=Depends(get_current_user)): # credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)
+
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found.")
-    if not can_edit_playlist(playlist, user["user_id"], user.get("team_ids", [])):
-        raise HTTPException(status_code=403, detail="Not authorized to add video.")
-    
+
+    if not playlist["owner_id"] == user["_id"]:
+        raise HTTPException(status_code=403, detail="Access denied to this playlist.")
+
     existing_video = await get_video_by_id(playlist_name, video.video_id)
     if existing_video:
         raise HTTPException(status_code=400, detail="Video already exists.")
-    
+
     await insert_video(playlist_name, video)
     return {"msg": "Video added to playlist!"} #TODO: return video object or something?
 
 @router.post("/playlists/{playlist_name}/videos/{video_id}/clips")
-async def create_clip(playlist_name: str, video_id: str, clip: Clip, user=Depends(verify_token)):
+async def create_clip(playlist_name: str, video_id: str, clip: Clip, user=Depends(get_current_user)):
+    playlist = await get_playlist_by_name(playlist_name)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found.")
+    if not playlist["owner_id"] == user["_id"]:
+        raise HTTPException(status_code=403, detail="Access denied to this playlist.")
+
     video = await get_video_by_id(playlist_name, video_id)
     if not video:
         raise HTTPException(status_code=404, detail="Video not found.")
-    check_playlist_access(video, user["user_id"], user.get("team_ids", []))
 
     await insert_clip(playlist_name, video_id, clip)
     return {"msg": "Clip added to video!"}
