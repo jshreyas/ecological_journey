@@ -220,7 +220,7 @@ async def get_playlists(credentials: HTTPAuthorizationCredentials = Depends(auth
     return convert_objectid(playlists)
 
 @router.post("/playlists")
-async def create_playlist(playlist: Playlist, user=Depends(verify_token)):
+async def create_playlist(playlist: Playlist, user=Depends(verify_token)): #TODO: get rid of verify_token(), replace with get_current_user()?
     existing_playlist = await get_playlist_by_name(playlist.name)
     if existing_playlist:
         raise HTTPException(status_code=400, detail="Playlist already exists.")
@@ -303,3 +303,32 @@ async def update_video(playlist_name: str, updated_video: Video, user=Depends(ge
             return {"msg": "Video updated successfully!"}
 
     raise HTTPException(status_code=404, detail="Video not found in playlist.")
+
+@router.put("/playlists/{playlist_name}/assign-team")
+async def assign_playlist_to_team(
+    playlist_name: str,
+    team_id: str,
+    user=Depends(get_current_user)
+):
+    user_id = user["_id"]
+
+    # 1. Check if playlist exists and is owned by the user
+    playlist = await get_playlist_by_name(playlist_name)
+    # await db.playlists.find_one({"_id": ObjectId(playlist_id), "owner_id": user_id})
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found or not owned by user.")
+    if not playlist["owner_id"] == user_id:
+        raise HTTPException(status_code=403, detail="Access denied to this playlist.")
+
+    # 2. Check if the team exists and user is a member
+    team = await db.teams.find_one({"_id": ObjectId(team_id), "member_ids": user_id})
+    if not team:
+        raise HTTPException(status_code=403, detail="User not a member of this team.")
+
+    # 3. Assign playlist to team
+    await db.playlists.update_one(
+        {"name": playlist_name},
+        {"$set": {"team_id": ObjectId(team_id)}}
+    )
+
+    return {"msg": "Playlist assigned to team successfully."}
