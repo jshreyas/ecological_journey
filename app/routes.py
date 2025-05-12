@@ -1,7 +1,7 @@
 # ---------------- app/routes.py ----------------
 from fastapi import APIRouter, HTTPException, Depends, Request
 from .models import Playlist, Video, Clip
-from .auth_models import Team, User
+from .auth_models import Team, User, RegisterUser
 from typing import List
 from bson import ObjectId
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -161,7 +161,7 @@ def check_playlist_access(playlist, user_id, team_ids):
 #     result = await db.users.insert_one(user.dict(by_alias=True))
 #     return {"id": str(result.inserted_id)}
 
-from .auth_models import RegisterUser  # also import this
+
 
 @router.post("/auth/register")
 async def register(user_data: RegisterUser):
@@ -248,11 +248,10 @@ async def create_playlist(playlist: Playlist, user=Depends(verify_token)):
     return {"msg": "Playlist created successfully!"}
 
 @router.get("/playlists/{playlist_name}")
-async def get_playlist(playlist_name: str, user=Depends(verify_token)):
+async def get_playlist(playlist_name: str, credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found.")
-    check_playlist_access(playlist, user["user_id"], user.get("team_ids", []))
     return convert_objectid(playlist)
 
 @router.post("/playlists/{playlist_name}/videos")
