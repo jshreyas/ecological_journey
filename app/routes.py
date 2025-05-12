@@ -189,6 +189,7 @@ async def create_team(team: Team, user=Depends(get_current_user)):
 
 @router.post("/teams/{team_id}/add_user/{user_id}")
 async def add_user_to_team(team_id: str, user_id: str, user=Depends(get_current_user)):
+    #TODO: Check if the user is already in the team? or doesnt matter
     team = await db.teams.find_one({"_id": ObjectId(team_id)})
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
@@ -207,7 +208,7 @@ async def get_team_members(team_id: str, user=Depends(get_current_user)):
     if user["_id"] not in team["member_ids"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     members = await db.users.find({"_id": {"$in": team["member_ids"]}}).to_list(length=None)
-    return [{"id": str(m["_id"]), "email": m["email"], "name": m["name"]} for m in members]
+    return [{"id": str(m["_id"]), "email": m["email"], "username": m["username"]} for m in members]
 
 
 # playlist
