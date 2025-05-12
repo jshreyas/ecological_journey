@@ -1,7 +1,7 @@
 # app/main.py
 from fastapi import FastAPI
-from .routes import router
 from fastapi.middleware.cors import CORSMiddleware
+from .routes import router
 
 app = FastAPI(
     title="Ecological Journey API",

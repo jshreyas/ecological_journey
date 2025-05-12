@@ -1,21 +1,20 @@
 # ---------------- app/routes.py ----------------
+import os
+from datetime import datetime, timedelta
+import jwt
 from fastapi import APIRouter, HTTPException, Depends, Request
-from .models import Playlist, Video, Clip
-from .auth_models import Team, User, RegisterUser
-from bson import ObjectId
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     OAuth2PasswordBearer,
     OAuth2PasswordRequestForm,
 )
-import jwt
-import os
-from .db import db
+from fastapi.security.utils import get_authorization_scheme_param
+from bson import ObjectId
 from passlib.context import CryptContext
 
-
-from fastapi.security.utils import get_authorization_scheme_param
-from datetime import datetime, timedelta
+from .models import Playlist, Video, Clip
+from .auth_models import Team, User, RegisterUser
+from .db import db
 
 
 SECRET_KEY = os.getenv("JWT_SECRET")
@@ -67,8 +66,6 @@ async def auth_scheme_optional(request: Request) -> HTTPAuthorizationCredentials
 router = APIRouter()
 
 # Utility functions
-
-
 def convert_objectid(data):
     if isinstance(data, list):
         return [convert_objectid(item) for item in data]
@@ -132,7 +129,7 @@ async def register(user_data: RegisterUser):
 
 @router.get("/users")
 async def get_users(
-    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
     projection = {"_id": 1, "username": 1, "team_ids": 1}
     users = await db.users.find({}, projection).to_list(length=None)
@@ -153,7 +150,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 # book keeping
 @router.get("/teams")
 async def get_teams(
-    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
     teams = await db.teams.find().to_list(length=None)
     return convert_objectid(teams)
@@ -208,7 +205,7 @@ async def get_team_members(team_id: str, user=Depends(get_current_user)):
 # playlist
 @router.get("/playlists")
 async def get_playlists(
-    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+    _ : HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
 
     playlists = await get_all_playlists()
@@ -234,7 +231,7 @@ async def create_playlist(playlist: Playlist, user=Depends(get_current_user)):
 @router.get("/playlists/{playlist_name}")
 async def get_playlist(
     playlist_name: str,
-    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+    _ : HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:

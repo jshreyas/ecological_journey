@@ -1,8 +1,8 @@
 # ---------------- app/auth.py ----------------
+import os
+import jwt
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
-import os
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 auth_scheme = HTTPBearer()
