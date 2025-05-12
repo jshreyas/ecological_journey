@@ -274,11 +274,13 @@ async def create_clip(playlist_name: str, video_id: str, clip: Clip, user=Depend
     return {"msg": "Clip added to video!"}
 
 @router.put("/playlists/{playlist_name}/videos")
-async def update_video(playlist_name: str, updated_video: Video, user=Depends(verify_token)):
+async def update_video(playlist_name: str, updated_video: Video, user=Depends(get_current_user)):
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found.")
-    check_playlist_access(playlist, user["user_id"], user.get("team_ids", []))
+    # check_playlist_access(playlist, user["user_id"], user.get("team_ids", []))
+    if not playlist["owner_id"] == user["_id"]: #TODO: check if the user is in the team mapped to playlist
+        raise HTTPException(status_code=403, detail="Access denied to this playlist.")
 
     videos = playlist.get("videos", [])
     for i, video in enumerate(videos):
