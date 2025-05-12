@@ -3,15 +3,12 @@ import os
 from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, Depends, Request
+from fastapi import Request
 from fastapi.security import (
     HTTPBearer,
     HTTPAuthorizationCredentials,
-    OAuth2PasswordBearer,
-    OAuth2PasswordRequestForm,
 )
 from fastapi.security.utils import get_authorization_scheme_param
-from bson import ObjectId
 from dotenv import load_dotenv
 
 load_dotenv()
