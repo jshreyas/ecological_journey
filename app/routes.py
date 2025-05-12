@@ -1,46 +1,36 @@
 # ---------------- app/routes.py ----------------
 import os
-from datetime import datetime, timedelta
 import jwt
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import (
     HTTPAuthorizationCredentials,
-    OAuth2PasswordBearer,
     OAuth2PasswordRequestForm,
+    OAuth2PasswordBearer,
 )
-from fastapi.security.utils import get_authorization_scheme_param
 from bson import ObjectId
-from passlib.context import CryptContext
 
 from .models import Playlist, Video, Clip
 from .auth_models import Team, User, RegisterUser
+from .auth import (
+    auth_scheme_optional,
+    get_password_hash,
+    verify_password,
+    create_access_token,
+)
 from .db import db
+from dotenv import load_dotenv
 
+load_dotenv()
 
 SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
-def verify_password(plain_password, hashed):
-    return pwd_context.verify(plain_password, hashed)
-
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+):  # This line enables Swagger auth
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
@@ -49,17 +39,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         return user
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-
-# Optional auth scheme
-async def auth_scheme_optional(request: Request) -> HTTPAuthorizationCredentials | None:
-    authorization: str | None = request.headers.get("Authorization")
-    if not authorization:
-        return None
-    scheme, credentials = get_authorization_scheme_param(authorization)
-    if scheme.lower() != "bearer":
-        return None
-    return HTTPAuthorizationCredentials(scheme=scheme, credentials=credentials)
 
 
 # APIRouter
@@ -110,8 +89,7 @@ async def insert_clip(playlist_name: str, video_id: str, clip: Clip):
     )
 
 
-# Routes
-# auth
+# auth Routes
 @router.post("/auth/register")
 async def register(user_data: RegisterUser):
     existing = await db.users.find_one({"email": user_data.email})
@@ -325,7 +303,6 @@ async def assign_playlist_to_team(
 
     # 1. Check if playlist exists and is owned by the user
     playlist = await get_playlist_by_name(playlist_name)
-    # await db.playlists.find_one({"_id": ObjectId(playlist_id), "owner_id": user_id})
     if not playlist:
         raise HTTPException(
             status_code=404, detail="Playlist not found or not owned by user."
