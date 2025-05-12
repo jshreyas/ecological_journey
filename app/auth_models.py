@@ -70,7 +70,7 @@ class User(BaseModel):
 class Team(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
     name: str
-    owner_id: PyObjectId
+    owner_id: Optional[PyObjectId] = None  # will be filled in route if not provided
     member_ids: List[PyObjectId] = []
 
     class Config:

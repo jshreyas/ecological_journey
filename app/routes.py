@@ -180,8 +180,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 # book keeping
 @router.post("/teams")
 async def create_team(team: Team, user=Depends(get_current_user)):
+    # Default owner_id to authenticated user
     team.owner_id = user["_id"]
-    team.member_ids = [user["_id"]]  # Owner is also a member
+    team.member_ids = [user["_id"]]
     result = await db.teams.insert_one(team.dict(by_alias=True))
     await db.users.update_one({"_id": user["_id"]}, {"$push": {"team_ids": result.inserted_id}})
     return {"id": str(result.inserted_id)}
