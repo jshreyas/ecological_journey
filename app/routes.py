@@ -65,6 +65,7 @@ async def auth_scheme_optional(request: Request) -> HTTPAuthorizationCredentials
 # APIRouter
 router = APIRouter()
 
+
 # Utility functions
 def convert_objectid(data):
     if isinstance(data, list):
@@ -205,7 +206,7 @@ async def get_team_members(team_id: str, user=Depends(get_current_user)):
 # playlist
 @router.get("/playlists")
 async def get_playlists(
-    _ : HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
 
     playlists = await get_all_playlists()
@@ -231,7 +232,7 @@ async def create_playlist(playlist: Playlist, user=Depends(get_current_user)):
 @router.get("/playlists/{playlist_name}")
 async def get_playlist(
     playlist_name: str,
-    _ : HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
