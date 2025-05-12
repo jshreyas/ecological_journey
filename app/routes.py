@@ -44,19 +44,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-##
-JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
-auth_scheme = HTTPBearer()
-
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-    try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
-        return payload  # payload contains user_id and possibly team_ids
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
 
 # Optional auth scheme
 async def auth_scheme_optional(request: Request) -> HTTPAuthorizationCredentials | None:
@@ -68,19 +55,7 @@ async def auth_scheme_optional(request: Request) -> HTTPAuthorizationCredentials
         return None
     return HTTPAuthorizationCredentials(scheme=scheme, credentials=credentials)
 
-# Safe token decoder
-async def try_decode_token(credentials: HTTPAuthorizationCredentials | None) -> dict | None:
-    if not credentials:
-        return None
-    try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
-        return payload
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
-
-
+# APIRouter
 router = APIRouter()
 
 # Utility functions
@@ -103,16 +78,6 @@ async def get_playlist_by_name(name: str):
     return await db.playlists.find_one({"name": name})
 
 async def get_all_playlists() -> list:
-    # if user_id:
-    #     query = {
-    #         "$or": [
-    #             {"owner": user_id},
-    #             {"team_id": {"$in": team_ids}},
-    #             {"public": True}
-    #         ]
-    #     }
-    # else:
-    #     query = {"public": True}
     query = {}
     playlists = await db.playlists.find(query).to_list(length=None)
     return playlists
@@ -135,19 +100,6 @@ async def insert_clip(playlist_name: str, video_id: str, clip: Clip):
         {"name": playlist_name, "videos.video_id": video_id},
         {"$push": {"videos.$.clips": clip.dict()}}
     )
-
-def can_edit_playlist(playlist, user_id: str, team_ids: List[str]):
-    return playlist["user_id"] == user_id or playlist.get("team_id") in team_ids
-
-def can_view_playlist(playlist):
-    # Everyone can view (public)
-    return True
-
-
-def check_playlist_access(playlist, user_id, team_ids):
-    if playlist["user_id"] == user_id or playlist["team_id"] in team_ids:
-        return True
-    raise HTTPException(status_code=403, detail="Access denied to this playlist.")
 
 # Routes
 # auth
@@ -221,12 +173,11 @@ async def get_team_members(team_id: str, user=Depends(get_current_user)):
 @router.get("/playlists")
 async def get_playlists(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
 
-    # user = await try_decode_token(credentials) #TODO: do i need this if read access is for everyone?
     playlists = await get_all_playlists()
     return convert_objectid(playlists)
 
 @router.post("/playlists")
-async def create_playlist(playlist: Playlist, user=Depends(verify_token)): #TODO: get rid of verify_token(), replace with get_current_user()?
+async def create_playlist(playlist: Playlist, user=Depends(get_current_user)):
     existing_playlist = await get_playlist_by_name(playlist.name)
     if existing_playlist:
         raise HTTPException(status_code=400, detail="Playlist already exists.")
@@ -235,9 +186,7 @@ async def create_playlist(playlist: Playlist, user=Depends(verify_token)): #TODO
 
     # Default owner_id to authenticated user
     if not playlist.owner_id:
-        playlist_dict["owner_id"] = ObjectId(user["sub"]) #TODO: test this?
-
-    # Default owner_type to "user" (already handled by model default)
+        playlist_dict["owner_id"] = user["_id"]
 
     await db.playlists.insert_one(playlist_dict)
     return {"msg": "Playlist created successfully!"}
@@ -250,7 +199,7 @@ async def get_playlist(playlist_name: str, credentials: HTTPAuthorizationCredent
     return convert_objectid(playlist)
 
 @router.post("/playlists/{playlist_name}/videos")
-async def create_video(playlist_name: str, video: Video, user=Depends(get_current_user)): # credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)
+async def create_video(playlist_name: str, video: Video, user=Depends(get_current_user)):
 
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
@@ -286,8 +235,14 @@ async def update_video(playlist_name: str, updated_video: Video, user=Depends(ge
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found.")
-    # check_playlist_access(playlist, user["user_id"], user.get("team_ids", []))
-    if not playlist["owner_id"] == user["_id"]: #TODO: check if the user is in the team mapped to playlist
+
+    # Extend access: allow playlist owner OR users from the team with access
+    is_owner = playlist["owner_id"] == user["_id"]
+    user_team_ids = set(user.get("team_ids", []))
+    playlist_team_id = playlist.get("team_id")
+    is_team_member = playlist_team_id in user_team_ids
+
+    if not (is_owner or is_team_member):
         raise HTTPException(status_code=403, detail="Access denied to this playlist.")
 
     videos = playlist.get("videos", [])
