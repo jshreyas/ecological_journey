@@ -120,6 +120,15 @@ async def register(user_data: RegisterUser):
     result = await db.users.insert_one(user.dict(by_alias=True))
     return {"id": str(result.inserted_id)}
 
+@router.get("/users")
+async def get_users(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
+    projection = {
+        "_id": 1,
+        "username": 1,
+        "team_ids": 1
+    }
+    users = await db.users.find({}, projection).to_list(length=None)
+    return convert_objectid(users)
 
 @router.post("/auth/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
