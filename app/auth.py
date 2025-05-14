@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("JWT_SECRET")
 auth_scheme = HTTPBearer()
+SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
