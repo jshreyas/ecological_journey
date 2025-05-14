@@ -38,7 +38,7 @@ def login_user():
     return response.json()["access_token"]
 
 # Create a playlist
-def create_playlist(token, name="My Playlist"):
+def create_playlist(token, name="Grappling Journal"): #TODO: dynamically pull this name
     url = f"{BASE_URL}/playlists"
     headers = {"Authorization": f"Bearer {token}"}
     data = {

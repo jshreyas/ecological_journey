@@ -103,7 +103,8 @@ async def register(user_data: RegisterUser):
     )
 
     result = await db.users.insert_one(user.dict(by_alias=True))
-    return {"id": str(result.inserted_id)}
+    token = create_access_token({"sub": str(result.inserted_id)})
+    return {"access_token": token, "id": str(result.inserted_id), "email": user.email, "username": user.username}
 
 
 @router.get("/users")
@@ -123,7 +124,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     token = create_access_token({"sub": str(user["_id"])})
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "id": str(user["_id"]), "email": user["email"], "username": user["username"]}
 
 
 # book keeping
