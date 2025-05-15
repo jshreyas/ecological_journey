@@ -1,7 +1,8 @@
 import os
 import requests
+from fastapi.responses import PlainTextResponse
 from dotenv import load_dotenv
-from nicegui import ui, app as ngapp
+from nicegui import ui, app
 from about import about_page
 from dashboard import home_page
 from films import films_page
@@ -19,7 +20,7 @@ def api_post(endpoint: str, data: dict):
         return requests.post(f"{BACKEND_URL}{endpoint}", json=data, timeout=5)
 
 def api_get(endpoint: str):
-    token = ngapp.storage.user.get("token")
+    token = app.storage.user.get("token")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
 
@@ -42,8 +43,8 @@ def login_or_signup(mode='login'):
             response = api_post(endpoint, data)
             if response.status_code == 200:
                 data = response.json()
-                ngapp.storage.user["token"] = data["access_token"]
-                ngapp.storage.user["user"] = data["username"]
+                app.storage.user["token"] = data["access_token"]
+                app.storage.user["user"] = data["username"]
                 ui.notify("✅ Success", type="positive")
                 dialog.close()
                 ui.navigate.to("/")  # reload to refresh navbar
@@ -56,7 +57,7 @@ def login_or_signup(mode='login'):
     dialog.open()
 
 def logout():
-    ngapp.storage.user.clear()
+    app.storage.user.clear()
     ui.navigate.to("/")
 
 
@@ -73,7 +74,7 @@ def setup_navbar(title: str):
 
         # Right: Auth Actions
         with ui.row().classes('items-center gap-4 p-4'):
-            user = ngapp.storage.user.get("user")
+            user = app.storage.user.get("user")
             if user:
                 ui.label(f"Hi, {user}").classes('text-sm')
                 ui.button("Logout", on_click=logout).props("flat color=red")
@@ -111,5 +112,9 @@ def about():
 def video_detail(video_id: str):
     setup_navbar('📖 Film Study')
     film_page(video_id)
+
+@app.get("/", response_class=PlainTextResponse)
+def root():
+    return "Ecological Journey UI is alive"
 
 ui.run(title='Ecological Journey', reload=True, storage_secret='45d3fba306d5a694f61d0ccd684c75fa')
