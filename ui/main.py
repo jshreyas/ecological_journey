@@ -113,7 +113,7 @@ def video_detail(video_id: str):
     setup_navbar('📖 Film Study')
     film_page(video_id)
 
-@app.get("/", response_class=PlainTextResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
 def root():
     return "Ecological Journey UI is alive"
 
