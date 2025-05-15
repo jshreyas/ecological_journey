@@ -13,11 +13,46 @@ def about_page():
         Whether you're a beginner rolling your first rounds, a capoeirista exploring the flow, or a cross-discipline athlete, this space is yours.
 
         We believe in **empowering students** to own their journey, reflect with confidence, and build a **living portfolio** of their evolving skills. 
-
-        Think of this as **GitHub meets Strava for martial artists** — but with the soul of a dojo.
         ''')
 
-        ui.separator()
+        ui.label('🔍 A Familiar Comparison, Made Martial').classes('text-xl font-semibold mt-8 mb-2')
+        ui.markdown('**Think of it like GitHub for your training — with Strava’s community spirit — all grounded in the soul of a dojo.**')
+
+        with ui.row().classes('gap-4 mt-4 flex-wrap'):
+            with ui.card().classes('flex-1 min-w-[250px]'):
+                ui.label('🧠 GitHub').classes('text-lg font-bold')
+                ui.markdown('''
+                GitHub is where developers **track code versions** and collaborate on projects.
+
+                Here, it means:
+                - Track your training like **version history**
+                - Review past sessions and progress
+                - Collaborate with partners like teammates in a shared repo
+                ''')
+
+            with ui.card().classes('flex-1 min-w-[250px]'):
+                ui.label('💪 Strava').classes('text-lg font-bold')
+                ui.markdown('''
+                Strava is a social app for **athletes to log workouts** and share with a community.
+
+                Here, it means:
+                - Log your sessions and milestones
+                - Feel the support of a growing **training tribe**
+                - Celebrate your peers, and stay inspired
+                ''')
+
+            with ui.card().classes('flex-1 min-w-[250px]'):
+                ui.label('🧘 The Dojo').classes('text-lg font-bold')
+                ui.markdown('''
+                A dojo is a **sacred training space** — more than just a gym.
+
+                Here, it means:
+                - This is about **ritual, reflection, and rhythm**
+                - Build not just skill, but **character and clarity**
+                - Honor your path — and the path of others
+                ''')
+
+        ui.separator().classes('my-8')
 
         ui.markdown('''
         ### 🧠 Inspiration
