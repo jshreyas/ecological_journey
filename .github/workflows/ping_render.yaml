@@ -1,4 +1,4 @@
-# .github/workflows/ping_render.yml
+# .github/workflows/ping_render.yaml
 name: Ping Render Apps
 
 on:
