@@ -1,7 +1,7 @@
 from nicegui import ui, app
-from ui.video_player import VideoPlayer
-from utils_api import get_new_client, load_video, parse_and_save_clips, convert_clips_to_raw_text
-from utils import format_time
+from video_player import VideoPlayer
+from utils_api import load_video, parse_and_save_clips, convert_clips_to_raw_text
+
 
 @ui.page('/film/{video_id}')
 def film_page(video_id: str):
@@ -61,7 +61,7 @@ def film_page(video_id: str):
     # Save clip edits
     def handle_save(textarea, video_id):
         try:
-            success = parse_and_save_clips(video_id, textarea.value, client = get_new_client(app.storage.user.get('token')))
+            success = parse_and_save_clips(video_id, textarea.value, app.storage.user.get('token'))
             if success:
                 ui.notify('✅ Clips saved', type='positive')
             else:

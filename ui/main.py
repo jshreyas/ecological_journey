@@ -2,26 +2,26 @@ import os
 import requests
 from dotenv import load_dotenv
 from nicegui import ui, app as ngapp
-from ui.about import about_page
-from ui.dashboard import home_page
-from ui.films import films_page
-from ui.film import film_page
-from ui.partner import partner_page
-from ui.reviewer import video_reviewer
+from about import about_page
+from dashboard import home_page
+from films import films_page
+from film import film_page
+from partner import partner_page
+from reviewer import video_reviewer
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
 
 def api_post(endpoint: str, data: dict):
     if "token" in endpoint:
-        return requests.post(f"{BACKEND_URL}{endpoint}", data=data)
+        return requests.post(f"{BACKEND_URL}{endpoint}", data=data, timeout=5)
     else:
-        return requests.post(f"{BACKEND_URL}{endpoint}", json=data)
+        return requests.post(f"{BACKEND_URL}{endpoint}", json=data, timeout=5)
 
 def api_get(endpoint: str):
     token = ngapp.storage.user.get("token")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers)
+    return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
 
 def login_or_signup(mode='login'):
     with ui.dialog() as dialog, ui.card():
@@ -34,8 +34,11 @@ def login_or_signup(mode='login'):
 
         def submit():
             endpoint = "/auth/token" if mode == 'login' else "/auth/register"
-            data = {"email": email.value, "password": password.value}
-            if mode != 'login': data["username"] = username.value
+            if mode == 'login':
+                data = {"username": email.value, "password": password.value}
+            else:
+                data = {"email": email.value, "password": password.value}
+                data["username"] = username.value
             response = api_post(endpoint, data)
             if response.status_code == 200:
                 data = response.json()
@@ -109,31 +112,4 @@ def video_detail(video_id: str):
     setup_navbar('📖 Film Study')
     film_page(video_id)
 
-# ui.run(title='Ecological Journey', reload=True, storage_secret='45d3fba306d5a694f61d0ccd684c75fa')
-
-##
-
-# app/main.py
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from api.app.routes import router
-
-app = FastAPI(
-    title="Ecological Journey API",
-    description="Video and Clip management with team-scoped access",
-    security=[{"bearerAuth": []}],
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(router)
-
-##
-
-ui.run_with(app, title='Ecological Journey', storage_secret='45d3fba306d5a694f61d0ccd684c75fa')
+ui.run(title='Ecological Journey', reload=True, storage_secret='45d3fba306d5a694f61d0ccd684c75fa')

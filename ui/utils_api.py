@@ -1,33 +1,40 @@
 import os
 import re
-import json
+import requests
 from typing import List, Dict, Any, Optional
-
-# TODO: get rid of my_api_client/ asap
-from my_api_client.my_api_client import Client, AuthenticatedClient
-from my_api_client.my_api_client.models.playlist import Playlist
-from my_api_client.my_api_client.api.default import get_playlist_playlists_get
-from my_api_client.my_api_client.types import Response
-
-from my_api_client.my_api_client.models.video import Video
-from my_api_client.my_api_client import AuthenticatedClient
-from my_api_client.my_api_client.api.default import update_video_playlists_playlist_name_videos_put
-from my_api_client.my_api_client.models.http_validation_error import HTTPValidationError
-
 from dotenv import load_dotenv
 from utils import format_time
 load_dotenv()
 
 
-base_url = os.getenv("BACKEND_URL")
+BASE_URL = os.getenv("BACKEND_URL")
 
-def get_new_client(token=None) -> AuthenticatedClient:
-    return AuthenticatedClient(base_url=base_url, token=token)
+def get_headers(token: Optional[str] = None):
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+def api_get(endpoint: str, token: Optional[str] = None):
+    url = f"{BASE_URL}{endpoint}"
+    response = requests.get(url, headers=get_headers(token), timeout=5)
+    response.raise_for_status()
+    return response.json()
+
+def api_post(endpoint: str, data: dict, token: Optional[str] = None):
+    url = f"{BASE_URL}{endpoint}"
+    response = requests.post(url, json=data, headers=get_headers(token), timeout=5)
+    response.raise_for_status()
+    return response.json()
+
+def api_put(endpoint: str, data: dict, token: Optional[str] = None):
+    url = f"{BASE_URL}{endpoint}"
+    response = requests.put(url, json=data, headers=get_headers(token), timeout=5)
+    response.raise_for_status()
+    return response.json()
 
 def load_playlists() -> List[Dict[str, Any]]:
-    with get_new_client() as client:
-        response: Response[List[Playlist]] = get_playlist_playlists_get.sync_detailed(client=client)
-        return json.loads(response.content)
+    return api_get("/playlists")
 
 def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[Dict[str, Any]]:
     playlists = load_playlists()
@@ -195,33 +202,24 @@ def parse_raw_text(raw_text: str) -> Dict[str, Any]:
 
     return video_data
 
-def save_video_data_clips(video_data: Dict[str, Any], client) -> bool:
-    """
-    Save the full video data, including clips, to the backend via PUT request.
-    
-    Args:
-        video_data (Dict[str, Any]): A dictionary representing the full video data.
-    
-    Returns:
-        bool: True if the update was successful, False otherwise.
-    """
-
+def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
     playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
     if not playlist_name:
         print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
         return False
 
-    with client:
-        video_obj = Video.from_dict(video_data)
+    try:
+        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
+        return True
+    except requests.HTTPError as e:
+        print(f"Failed to save video data: {e}")
+        return False
+       #TODO: if not successful, display reason in ui?
 
-        response = update_video_playlists_playlist_name_videos_put.sync_detailed(playlist_name=playlist_name, body=video_obj, client=client)
-        return response.status_code.value == 200
-        #TODO: if not successful, display reason in ui
-
-def parse_and_save_clips(video_id: str, raw_text: str, client):
+def parse_and_save_clips(video_id: str, raw_text: str, token):
     video_data = parse_raw_text(raw_text)
     video_data["video_id"] = video_id
-    return save_video_data_clips(video_data, client)
+    return save_video_data_clips(video_data, token)
 
 def get_all_partners() -> List[str]:
     partners_set = set()
