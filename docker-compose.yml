@@ -12,19 +12,34 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: ecological_api
+    volumes:
+      - ./api/app:/app/app
     ports:
       - "8000:8000"
     depends_on:
       - mongo
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
+    tty: true
+    stdin_open: true
+    develop:
+      watch:
+        - action: sync
+          path: ./api
+          target: /app
+        - action: rebuild
+          path: ./requirements.txt
+
 
   ui:
     build:
       context: .
       dockerfile: Dockerfile.ui
     container_name: ecological_ui
+    volumes:
+      - ./ui:/app/ui
     ports:
       - "8080:8080"
     depends_on:
@@ -32,6 +47,17 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - BACKEND_URL=${BACKEND_URL}
+    command: ["python", "ui/main.py"]
+    tty: true
+    stdin_open: true
+    develop:
+      watch:
+        - action: sync
+          path: ./ui
+          target: /app
+        - action: rebuild
+          path: ./requirements.txt
+
 
 volumes:
   mongo_data:
