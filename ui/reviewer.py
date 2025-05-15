@@ -6,8 +6,7 @@ import math
 
 @ui.page("/video_reviewer")
 def video_reviewer():
-
-    ui.label("⚠️ TODO: Make this a demo/playarea for non-users!")
+    ui.label('⚠️ TODO: Make this a demo/playarea for non-users!').classes('text-2xl font-bold')
     return
 
     video_options = {f"{v['title']} ({v['video_id']})": v["video_id"] for v in videos}
