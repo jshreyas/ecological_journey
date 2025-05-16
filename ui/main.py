@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from nicegui import ui, app
 from about import about_page
 from home_page import home_page
-# from dashboard import home_page
 from films import films_page
 from film import film_page
 from partner import partner_page
