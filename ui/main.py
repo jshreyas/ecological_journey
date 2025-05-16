@@ -61,35 +61,35 @@ def logout():
     ui.navigate.to("/")
 
 def setup_navbar(title: str = '🥋 Ecological Journey'):
-    current_path = ui.context.client.page.path  # This is the correct way to get the current path
+    current_path = ui.context.client.page.path  # Correct way to get current path
 
     def link(text, path):
         is_active = current_path == path
-        classes = 'text-white no-underline'
+        classes = 'text-base text-white no-underline'
         if is_active:
             classes += ' font-bold border-b-2 border-white'
-        return ui.link(text, path).classes(classes)
+        return ui.link(text, path).classes(classes).style('line-height: 1.5;')  # better vertical alignment
 
-    with ui.header().classes('justify-between items-center text-white'):
-        with ui.row().classes('items-center gap-6 p-4'):
-            with ui.link('/', target='/').classes('no-underline'):
-                ui.label(title).classes('text-xl text-white')
+    with ui.header().classes('flex justify-between items-center text-white px-6 py-4'):
+        # Left: Title + Nav Links
+        with ui.row().classes('items-center gap-8'):
+            with ui.link('/', target='/').classes('no-underline flex items-center'):
+                ui.label(title).classes('text-2xl font-bold text-white leading-none')  # bigger font, no extra line height
             link('Home', '/')
             link('Films', '/films')
             link('Film Study', '/film_study')
             link('Partner Study', '/partner_study')
             link('About', '/about')
 
-
         # Right: Auth Actions
-        with ui.row().classes('items-center gap-4 p-4'):
+        with ui.row().classes('items-center gap-4'):
             user = app.storage.user.get("user")
             if user:
-                ui.label(f"Hi, {user}").classes('text-sm')
-                ui.button("Logout", on_click=logout).props("flat color=red")
+                ui.label(f"Hi, {user}").classes('text-sm text-white')
+                ui.button("Logout", on_click=logout).props("flat color=red").classes("text-sm")
             else:
-                ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white")
-                ui.button("Register", on_click=lambda: login_or_signup("signup")).props("flat color=white")
+                ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white").classes("text-sm")
+                ui.button("Register", on_click=lambda: login_or_signup("signup")).props("flat color=white").classes("text-sm")
 
 
 @ui.page('/')
