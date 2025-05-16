@@ -9,6 +9,7 @@ from home_page import home_page
 from films import films_page
 from film import film_page
 from partner import partner_page
+from john_doe import caught_john_doe
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
@@ -93,7 +94,7 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
                 ui.button("Logout", on_click=logout).props("flat color=red").classes("text-sm")
             else:
                 ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white").classes("text-sm")
-                ui.button("Register", on_click=lambda: login_or_signup("signup")).props("flat color=white").classes("text-sm")
+                ui.button("Register", on_click=lambda: caught_john_doe()).props("flat color=white").classes("text-sm")
 
 
 @ui.page('/')
