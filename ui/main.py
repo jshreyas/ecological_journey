@@ -7,6 +7,7 @@ from about import about_page
 from dashboard import home_page
 from films import films_page
 from film import film_page
+from film_study_page import film_study_page
 from partner import partner_page
 from reviewer import video_reviewer
 
@@ -89,12 +90,13 @@ def home():
     home_page()
 
 @ui.page('/film_study') ## TODO: Make this a demo/playarea for non-users
-def review():
+def film_study():
     setup_navbar('🎞️ Film Study')
-    video_reviewer()
+    # video_reviewer()
+    film_study_page()
 
 @ui.page('/films')
-def review():
+def films():
     setup_navbar('🎞️ Films')
     films_page()
 
