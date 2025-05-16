@@ -61,7 +61,7 @@ def logout():
     ui.navigate.to("/")
 
 
-def setup_navbar(title: str):
+def setup_navbar(title: str='🥋 Ecological Journey'):
     with ui.header().classes('justify-between items-center text-white'):
         # Left: Title + Navigation Links
         with ui.row().classes('items-center gap-6 p-4'):
@@ -85,27 +85,27 @@ def setup_navbar(title: str):
 
 @ui.page('/')
 def home():
-    setup_navbar('🥋 Ecological Journey')
+    setup_navbar()
     home_page()
 
 @ui.page('/film_study')
 def film_study():
-    setup_navbar('🎞️ Film Study Demo')
+    setup_navbar()
     film_page("demo")
 
 @ui.page('/films')
 def films():
-    setup_navbar('🎞️ Films')
+    setup_navbar()
     films_page()
 
 @ui.page('/partner_study') ## TODO: think about the intention and layout again
 def show_partner_page():
-    setup_navbar('📖 Partner Study')
+    setup_navbar()
     partner_page()
 
 @ui.page('/about')
 def about():
-    setup_navbar('📖 About This Platform')
+    setup_navbar()
     about_page()
 
 @ui.page('/film/{video_id}')

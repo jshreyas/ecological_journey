@@ -1,10 +1,35 @@
 from nicegui import ui
 from utils_api import get_all_partners, find_clips_by_partner
 from utils import format_time, embed_youtube_player
-
+import random
 
 def partner_page():
-    ui.label('🤼 Meet our Training Partners!').classes('text-2xl font-bold')
+
+    ui.label('🥋 Grappling Engine v0.1').classes('text-2xl font-bold mb-2')
+    ui.label('Calibrating stance and breath... Please hold.').classes('italic text-gray-600')
+
+    with ui.card().classes('w-full p-4 mt-4'):
+        ui.label('🧪 Training Dojo Console').classes('text-lg font-semibold')
+        ui.label('[dojo] >> running `simulate_sparring(partner="bot_jiujitsu_v0.4")`...')
+
+        progress = ui.linear_progress(value=0.0).classes('mt-2 mb-2')
+
+        def update_progress():
+            current = progress.value
+            if current < 1.0:
+                new_value = min(current + random.uniform(0.02, 0.06), 1.0)
+                progress.set_value(new_value)
+                ui.timer(0.15, update_progress, once=True)
+            else:
+                ui.notify('✅ Sparring complete. Check your journal.', type='positive')
+
+        ui.timer(0.5, update_progress, once=True)
+
+    with ui.row().classes('mt-6 gap-2'):
+        ui.icon('construction').classes('text-yellow-600 text-3xl')
+        ui.label('This section is still under construction.').classes('text-yellow-700 text-xl font-semibold')
+
+    ui.button('Return to Safety', on_click=lambda: ui.navigate.to('/')).props('icon=home')
 
 #     partners = get_all_partners()
 #     if not partners:
