@@ -1,3 +1,4 @@
+# main.py
 import os
 import requests
 from fastapi.responses import PlainTextResponse
@@ -8,7 +9,6 @@ from dashboard import home_page
 from films import films_page
 from film import film_page
 from partner import partner_page
-from reviewer import video_reviewer
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
@@ -88,13 +88,13 @@ def home():
     setup_navbar('🥋 Ecological Journey')
     home_page()
 
-@ui.page('/film_study') ## TODO: Make this a demo/playarea for non-users
-def review():
-    setup_navbar('🎞️ Film Study')
-    video_reviewer()
+@ui.page('/film_study')
+def film_study():
+    setup_navbar('🎞️ Film Study Demo')
+    film_page("demo")
 
 @ui.page('/films')
-def review():
+def films():
     setup_navbar('🎞️ Films')
     films_page()
 
