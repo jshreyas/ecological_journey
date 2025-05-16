@@ -25,13 +25,18 @@ def api_get(endpoint: str):
     return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
 
 def login_or_signup(mode='login'):
-    with ui.dialog() as dialog, ui.card():
-        ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes('text-xl font-bold')
+    with ui.dialog() as dialog, ui.card().style('padding: 2rem; max-width: 400px; width: 90vw;'):
+        ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes('text-xl font-bold w-full mb-6')
 
-        if mode != 'login':
-            username = ui.input("Username").classes('w-full')
-        email = ui.input("Email").classes('w-full')
-        password = ui.input("Password", password=True).classes('w-full')
+        with ui.column().classes('gap-4'):
+            if mode != 'login':
+                username = ui.input("Username").classes('w-full')
+            email = ui.input("Email").classes('w-full')
+            password = ui.input("Password", password=True).classes('w-full')
+
+        with ui.row().classes('justify-end gap-4 mt-6'):
+            ui.button("Submit", on_click=lambda: submit()).props('color=primary')
+            ui.button("Cancel", on_click=dialog.close).props('flat color=grey')
 
         def submit():
             endpoint = "/auth/token" if mode == 'login' else "/auth/register"
@@ -51,10 +56,8 @@ def login_or_signup(mode='login'):
             else:
                 ui.notify(f"❌ {response.text}", type="negative")
 
-        ui.button("Submit", on_click=submit).props('color=primary')
-        ui.button("Cancel", on_click=dialog.close).props('flat color=grey')
-
     dialog.open()
+
 
 def logout():
     app.storage.user.clear()
