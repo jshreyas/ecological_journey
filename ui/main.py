@@ -88,10 +88,9 @@ def home():
     setup_navbar('🥋 Ecological Journey')
     home_page()
 
-@ui.page('/film_study') ## TODO: Make this a demo/playarea for non-users
+@ui.page('/film_study')
 def film_study():
     setup_navbar('🎞️ Film Study Demo')
-    # video_reviewer()
     film_page("demo")
 
 @ui.page('/films')
