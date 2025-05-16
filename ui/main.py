@@ -25,10 +25,10 @@ def api_get(endpoint: str):
     return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
 
 def login_or_signup(mode='login'):
-    with ui.dialog() as dialog, ui.card().style('padding: 2rem; max-width: 400px; width: 90vw;'):
+    with ui.dialog() as dialog, ui.card().style('padding: 2rem; max-width: 400px; width: 90vw;').classes('w-full'):
         ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes('text-xl font-bold w-full mb-6')
 
-        with ui.column().classes('gap-4'):
+        with ui.column().classes('gap-4 w-full'):
             if mode != 'login':
                 username = ui.input("Username").classes('w-full')
             email = ui.input("Email").classes('w-full')
@@ -57,6 +57,7 @@ def login_or_signup(mode='login'):
                 ui.notify(f"❌ {response.text}", type="negative")
 
     dialog.open()
+
 
 
 def logout():
