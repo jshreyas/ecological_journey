@@ -5,7 +5,7 @@ from utils_api import load_video, parse_and_save_clips, convert_clips_to_raw_tex
 from utils import format_time
 import random
 
-# Optional demo video pool
+#TODO: Populate demo videos to demo playlist
 DEMO_VIDEO_POOL = [
     {"video_id": "Wv1cAFUIJzw", "title": "Demo Grappling Breakdown", "duration_seconds": 300},
 ]
