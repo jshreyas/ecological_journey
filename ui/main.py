@@ -8,9 +8,7 @@ from about import about_page
 from dashboard import home_page
 from films import films_page
 from film import film_page
-from film_study_page import film_study_page
 from partner import partner_page
-from reviewer import video_reviewer
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
