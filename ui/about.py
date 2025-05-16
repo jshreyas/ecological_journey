@@ -15,10 +15,10 @@ def about_page():
         We believe in **empowering students** to own their journey, reflect with confidence, and build a **living portfolio** of their evolving skills. 
         ''')
 
-        ui.label('🔍 A Familiar Comparison, Made Martial').classes('text-xl font-semibold mt-8 mb-2')
+        ui.label('🔍 A Familiar Comparison, Made Martial').classes('text-xl font-semibold')
         ui.markdown('**Think of it like GitHub for your training — with Strava’s community spirit — all grounded in the soul of a dojo.**')
 
-        with ui.row().classes('gap-4 mt-4 flex-wrap'):
+        with ui.row().classes('gap-4 flex-wrap'):
             with ui.card().classes('flex-1 min-w-[250px]'):
                 ui.label('🧠 GitHub').classes('text-lg font-bold')
                 ui.markdown('''
@@ -52,7 +52,7 @@ def about_page():
                 - Honor your path — and the path of others
                 ''')
 
-        ui.separator().classes('my-8')
+        ui.separator().classes('my-2')
 
         ui.markdown('''
         ### 🧠 Inspiration
