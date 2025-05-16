@@ -1,3 +1,4 @@
+# main.py
 import os
 import requests
 from fastapi.responses import PlainTextResponse
@@ -91,9 +92,9 @@ def home():
 
 @ui.page('/film_study') ## TODO: Make this a demo/playarea for non-users
 def film_study():
-    setup_navbar('🎞️ Film Study')
+    setup_navbar('🎞️ Film Study Demo')
     # video_reviewer()
-    film_study_page()
+    film_page("demo")
 
 @ui.page('/films')
 def films():
