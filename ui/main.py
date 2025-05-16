@@ -60,17 +60,26 @@ def logout():
     app.storage.user.clear()
     ui.navigate.to("/")
 
+def setup_navbar(title: str = '🥋 Ecological Journey'):
+    current_path = ui.context.client.page.path  # This is the correct way to get the current path
 
-def setup_navbar(title: str='🥋 Ecological Journey'):
+    def link(text, path):
+        is_active = current_path == path
+        classes = 'text-white no-underline'
+        if is_active:
+            classes += ' font-bold border-b-2 border-white'
+        return ui.link(text, path).classes(classes)
+
     with ui.header().classes('justify-between items-center text-white'):
-        # Left: Title + Navigation Links
         with ui.row().classes('items-center gap-6 p-4'):
-            ui.label(title).classes('text-xl')
-            ui.link('Home', '/').classes('text-white no-underline')
-            ui.link('Films', '/films').classes('text-white no-underline')
-            ui.link('Film Study', '/film_study').classes('text-white no-underline')
-            ui.link('Partner Study', '/partner_study').classes('text-white no-underline')
-            ui.link('About', '/about').classes('text-white no-underline')
+            with ui.link('/', target='/').classes('no-underline'):
+                ui.label(title).classes('text-xl text-white')
+            link('Home', '/')
+            link('Films', '/films')
+            link('Film Study', '/film_study')
+            link('Partner Study', '/partner_study')
+            link('About', '/about')
+
 
         # Right: Auth Actions
         with ui.row().classes('items-center gap-4 p-4'):
