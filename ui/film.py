@@ -102,15 +102,11 @@ def film_page(video_id: str):
             with splitter.after:
                 with ui.column().classes('w-full h-full p-2 gap-4'):
                     textarea = ui.textarea('✏️ Clipper', value=app.storage.user[session_key]).classes('w-full h-[calc(100%-3rem)]')
-                    if not demo_mode:
-                        with ui.row():
-                            ui.button("💾 Save", on_click=lambda: handle_local_save(textarea)).props('color=primary')
-                            ui.button("🧹 Clear", on_click=handle_clear_local_changes).props('color=warning')
+                    with ui.row():
+                        ui.button("💾 Save", on_click=lambda: handle_local_save(textarea)).props('color=primary')
+                        ui.button("🧹 Clear", on_click=handle_clear_local_changes).props('color=warning')
+                        if not demo_mode:
                             ui.button("🚀 Publish", on_click=lambda: handle_publish(textarea)).props('color=primary')
-                    else:
-                        textarea.props('readonly')
-                        ui.label("🔒 Editing disabled in demo mode").classes('text-sm text-gray-500 italic')
-
             with splitter.separator:
                 ui.icon('drag_indicator').classes('text-gray-400')
 
@@ -121,8 +117,3 @@ def film_page(video_id: str):
 
     player_container['ref'] = player_container_ref
     player_container['textarea'] = textarea
-
-    if demo_mode:
-        ui.markdown("---")
-        ui.button("♻️ Reset Demo").on("click", lambda: ui.open(f"/film/{video_id}?demo=true", new_tab=False))
-
