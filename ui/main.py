@@ -25,13 +25,18 @@ def api_get(endpoint: str):
     return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
 
 def login_or_signup(mode='login'):
-    with ui.dialog() as dialog, ui.card():
-        ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes('text-xl font-bold')
+    with ui.dialog() as dialog, ui.card().style('padding: 2rem; max-width: 400px; width: 90vw;').classes('w-full'):
+        ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes('text-xl font-bold w-full mb-6')
 
-        if mode != 'login':
-            username = ui.input("Username").classes('w-full')
-        email = ui.input("Email").classes('w-full')
-        password = ui.input("Password", password=True).classes('w-full')
+        with ui.column().classes('gap-4 w-full'):
+            if mode != 'login':
+                username = ui.input("Username").classes('w-full')
+            email = ui.input("Email").classes('w-full')
+            password = ui.input("Password", password=True).classes('w-full')
+
+        with ui.row().classes('justify-end gap-4 mt-6'):
+            ui.button("Submit", on_click=lambda: submit()).props('color=primary')
+            ui.button("Cancel", on_click=dialog.close).props('flat color=grey')
 
         def submit():
             endpoint = "/auth/token" if mode == 'login' else "/auth/register"
@@ -51,36 +56,44 @@ def login_or_signup(mode='login'):
             else:
                 ui.notify(f"❌ {response.text}", type="negative")
 
-        ui.button("Submit", on_click=submit).props('color=primary')
-        ui.button("Cancel", on_click=dialog.close).props('flat color=grey')
-
     dialog.open()
+
+
 
 def logout():
     app.storage.user.clear()
     ui.navigate.to("/")
 
+def setup_navbar(title: str = '🥋 Ecological Journey'):
+    current_path = ui.context.client.page.path  # Correct way to get current path
 
-def setup_navbar(title: str='🥋 Ecological Journey'):
-    with ui.header().classes('justify-between items-center text-white'):
-        # Left: Title + Navigation Links
-        with ui.row().classes('items-center gap-6 p-4'):
-            ui.label(title).classes('text-xl')
-            ui.link('Home', '/').classes('text-white no-underline')
-            ui.link('Films', '/films').classes('text-white no-underline')
-            ui.link('Film Study', '/film_study').classes('text-white no-underline')
-            ui.link('Partner Study', '/partner_study').classes('text-white no-underline')
-            ui.link('About', '/about').classes('text-white no-underline')
+    def link(text, path):
+        is_active = current_path == path
+        classes = 'text-base text-white no-underline'
+        if is_active:
+            classes += ' font-bold border-b-2 border-white'
+        return ui.link(text, path).classes(classes).style('line-height: 1.5;')  # better vertical alignment
+
+    with ui.header().classes('flex justify-between items-center text-white px-6 py-4'):
+        # Left: Title + Nav Links
+        with ui.row().classes('items-center gap-8'):
+            with ui.link('/', target='/').classes('no-underline flex items-center'):
+                ui.label(title).classes('text-2xl font-bold text-white leading-none')  # bigger font, no extra line height
+            link('Home', '/')
+            link('Films', '/films')
+            link('Film Study', '/film_study')
+            link('Partner Study', '/partner_study')
+            link('About', '/about')
 
         # Right: Auth Actions
-        with ui.row().classes('items-center gap-4 p-4'):
+        with ui.row().classes('items-center gap-4'):
             user = app.storage.user.get("user")
             if user:
-                ui.label(f"Hi, {user}").classes('text-sm')
-                ui.button("Logout", on_click=logout).props("flat color=red")
+                ui.label(f"Hi, {user}").classes('text-sm text-white')
+                ui.button("Logout", on_click=logout).props("flat color=red").classes("text-sm")
             else:
-                ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white")
-                ui.button("Register", on_click=lambda: login_or_signup("signup")).props("flat color=white")
+                ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white").classes("text-sm")
+                ui.button("Register", on_click=lambda: login_or_signup("signup")).props("flat color=white").classes("text-sm")
 
 
 @ui.page('/')
