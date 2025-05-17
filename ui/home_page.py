@@ -1,13 +1,21 @@
-from nicegui import ui
+from nicegui import ui, app
 from john_doe import caught_john_doe
-from utils_api import load_playlists, load_videos
+from fetch_videos import fetch_playlist_items
+from utils_api import load_playlists, load_videos, create_playlist
 import datetime
 from collections import Counter
 
 
 @ui.page('/home')
 def home_page():
-    user = {"id": 1, "name": "John Doe"}
+    username = app.storage.user.get("user", None)
+    user_token = app.storage.user.get("token", None)
+    user_id = app.storage.user.get("id", None)
+    if not username:
+        user = {"id": 1, "name": "John Doe"}
+    else:
+        user = {"id": 1, "name": username}
+
     if not user:
         ui.label('You must be logged in to view this page.')
         return
@@ -28,8 +36,10 @@ def home_page():
                 ui.separator()
                 ui.label('Add Playlist by ID').classes('font-semibold mt-4')
                 playlist_id_input = ui.input(placeholder='YouTube Playlist ID')
-                ui.button('Fetch', on_click=lambda: caught_john_doe())
-
+                if not username:
+                    ui.button('Fetch', on_click=lambda: caught_john_doe())
+                else:
+                    ui.button('Fetch', on_click=lambda: fetch_playlist_by_id(playlist_id_input.value, user_token)).classes('ml-2')
                 ui.separator()
                 ui.label('Teams').classes('font-semibold mt-4')
                 teams = []  # Replace with: fetch_teams_for_user(user['id'])
@@ -38,7 +48,11 @@ def home_page():
                         ui.label(team['name'])
                         ui.button('Manage', on_click=lambda t=team: open_team_modal(t))
 
-                ui.button('Create New Team', on_click=lambda: caught_john_doe()).classes('mt-4')
+                if not username:
+                    ui.button('Create New Team', on_click=lambda: caught_john_doe())
+                else:
+                    ui.button('Create New Team', on_click=lambda: create_team_modal())
+                
 
         # --- Right Main Panel ---
         with splitter.after:
@@ -94,9 +108,13 @@ def sync_playlist(playlist_id):
     print(f"Syncing playlist {playlist_id}...")
 
 
-def fetch_playlist_by_id(playlist_id):
+def fetch_playlist_by_id(playlist_id, token):
+    #TODO: check if the playlist id is valid
+    #TODO: add loader if this takes too long and show success/failure status on ui
+    #TODO: check if playlist is already in the database
+    create_playlist(fetch_playlist_items(playlist_id), token)
     print(f"Fetching playlist with ID: {playlist_id}")
-
+    
 
 def create_team_modal():
     print("Opening modal to create a new team")
@@ -108,3 +126,30 @@ def open_team_modal(team):
 
 def view_playlist_videos(playlist):
     print(f"Viewing videos for playlist: {playlist['title']}")
+
+# with ui.column().classes('w-full h-full p-4 m-2 gap-4 bg-gray-100 rounded-xl shadow-md'):
+#     with ui.tabs().classes('w-full') as tabs:
+#         playlist_tab = ui.tab('Playlists')
+#         team_tab = ui.tab('Teams')
+
+#     # with ui.tabs().classes('w-full') as tabs:
+#     #     playlist_tab = ui.tab('Playlists')
+#     #     team_tab = ui.tab('Teams')
+
+#     with ui.tab_panels(tabs, value='Playlists').classes('w-full'):
+#         with ui.tab_panel('Playlists'):
+#             ui.label('Your Synced Playlists').classes('text-xl font-semibold mb-2')
+#             for playlist in playlists:
+#                 with ui.card().classes('mb-4 shadow-md p-4'):
+#                     ui.label(playlist['name']).classes('text-lg font-bold')
+#                     ui.label(f"{len(playlist.get('videos', []))} videos")
+#                     ui.button('View', on_click=lambda p=playlist: view_playlist_videos(p))
+
+#         with ui.tab_panel('Teams'):
+#             ui.label('Your Teams').classes('text-xl font-semibold mb-2')
+#             for team in teams:
+#                 with ui.card().classes('mb-4 shadow-md p-4'):
+#                     ui.label(team['name']).classes('text-lg font-bold')
+#                     ui.label(f"Members: {len(team.get('members', []))}")
+#                     ui.label(f"Playlists: {len(team.get('playlists', []))}")
+#                     ui.button('Manage Team', on_click=lambda t=team: open_team_modal(t))

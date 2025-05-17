@@ -63,6 +63,7 @@ async def get_playlist_by_name(name: str):
 
 async def get_all_playlists() -> list:
     playlists = await db.playlists.find().to_list(length=None)
+    # import pdb; pdb.set_trace()
     return playlists
 
 
