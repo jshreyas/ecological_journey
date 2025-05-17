@@ -26,43 +26,75 @@ def home_page():
         with splitter.before:
             with ui.column().classes('w-full h-full p-4 m-2 gap-4 bg-gray-100 rounded-xl shadow-md'):
                 ui.label('My YouTube Playlists').classes('font-semibold mb-2')
-                playlists = load_playlists()
+                playlists_column = ui.column()
 
-                for playlist in playlists:
-                    with ui.row().classes('items-center justify-between w-full'):
-                        ui.label(playlist['name']).tooltip(playlist['_id'])
-                        ui.button('Sync', on_click=lambda: caught_john_doe())
+                def refresh_playlists():
+                    playlists_column.clear()
+                    playlists = load_playlists()
+                    for playlist in playlists:
+                        with playlists_column:
+                            with ui.row().classes('items-center justify-between w-full'):
+                                ui.label(playlist['name']).tooltip(playlist['_id'])
+                                ui.button('Sync', on_click=lambda: caught_john_doe())
+
+                refresh_playlists()
 
                 ui.separator()
                 ui.label('Add Playlist by ID').classes('font-semibold mt-4')
+
+                playlist_verified = {'status': False}
 
                 def verify_playlist():
                     playlist_id = playlist_id_input.value.strip()
                     if not playlist_id:
                         playlist_title_label.text = 'Please enter a Playlist ID.'
                         fetch_button.disable()
+                        playlist_verified['status'] = False
                         return
 
-                    metadata = fetch_playlist_metadata(playlist_id)  # replace with real API call
+                    metadata = fetch_playlist_metadata(playlist_id)
                     if metadata and 'title' in metadata:
                         playlist_title_label.text = f'Found YouTube Playlist: {metadata["title"]}'
                         fetch_button.enable()
+                        playlist_verified['status'] = True
                     else:
                         playlist_title_label.text = 'Invalid Playlist ID or playlist not found.'
                         fetch_button.disable()
+                        playlist_verified['status'] = False
 
                 def on_input_change():
-                    # Whenever the input changes, reset verification state
                     playlist_title_label.text = ''
                     fetch_button.disable()
+                    playlist_verified['status'] = False
+
+                def fetch_playlist_videos(playlist_id, token):
+                    if not playlist_verified['status']:
+                        ui.notify('❌ Please verify the playlist first.', type='warning')
+                        return
+                    ui.notify(f'Fetching videos for playlist: {playlist_id}') #TODO: replace playlist_id with playlist_name from metadata["title"]
+                    spinner = ui.spinner(size='lg').props('color=primary')
+                    ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
+
+                    def task():
+                        create_playlist(fetch_playlist_items(playlist_id), token)#TODO: add playlist_name argument to fetch_playlist_items()
+                        spinner.set_visibility(False)
+                        ui.notify('✅ Playlist fetched and added successfully!')
+                        refresh_playlists()
+                        # Reset for next entry
+                        playlist_id_input.value = ''
+                        playlist_title_label.text = ''
+                        fetch_button.disable()
+                        playlist_verified['status'] = False
+
+                    ui.timer(0.2, task, once=True)
 
                 playlist_id_input = ui.input('YouTube Playlist ID', on_change=on_input_change)
-
                 playlist_title_label = ui.label('')
+
                 with ui.row().classes('items-center justify-between w-full'):
                     ui.button('Verify Playlist', on_click=verify_playlist)
                     fetch_button = ui.button('Fetch Videos', on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
-                    fetch_button.disable()  # initially disabled
+                    fetch_button.disable()
 
                 ui.separator()
                 ui.label('Teams').classes('font-semibold mt-4')
@@ -76,7 +108,6 @@ def home_page():
                     ui.button('Create New Team', on_click=lambda: caught_john_doe())
                 else:
                     ui.button('Create New Team', on_click=lambda: create_team_modal())
-                
 
         # --- Right Main Panel ---
         with splitter.after:
@@ -126,18 +157,9 @@ def home_page():
                     }]
                 }).classes('w-full h-80')
 
-
 # --- Stubbed Actions ---
 def sync_playlist(playlist_id):
     print(f"Syncing playlist {playlist_id}...")
-
-
-def fetch_playlist_videos(playlist_id, token):
-    ui.notify(f'Fetching videos for playlist: {playlist_id}')
-    #TODO: check if the playlist id is valid
-    #TODO: add loader if this takes too long and show success/failure status on ui
-    #TODO: check if playlist is already in the database
-    create_playlist(fetch_playlist_items(playlist_id), token)    
 
 def create_team_modal():
     print("Opening modal to create a new team")
