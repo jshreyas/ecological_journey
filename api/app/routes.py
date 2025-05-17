@@ -153,9 +153,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 # book keeping
-from fastapi import Query
-from typing import Literal
-
 async def get_teams_owned_by(user_id: str) -> list:
     return await db.teams.find({"owner_id": ObjectId(user_id)}).to_list(length=None)
 
