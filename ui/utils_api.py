@@ -33,8 +33,18 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None):
     response.raise_for_status()
     return response.json()
 
+def create_playlist(video_data, token, name):
+    response = api_post("/playlists", data={"name": name}, token=token)
+    #TODO: combine all these individual API calls to a single call
+    for video in video_data:
+        response = api_post(f"/playlists/{name}/videos", data=video, token=token)
+    #TODO: please do error handling
+
 def load_playlists() -> List[Dict[str, Any]]:
     return api_get("/playlists")
+
+def load_playlists_for_user(user_id: str, filter: str = "all") -> List[Dict[str, Any]]:
+    return api_get(f"/playlists?user_id={user_id}&filter={filter}")
 
 def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[Dict[str, Any]]:
     playlists = load_playlists()

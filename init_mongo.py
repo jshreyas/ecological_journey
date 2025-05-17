@@ -1,6 +1,6 @@
 import os
 import requests
-from fetch_videos import fetch_playlist_items
+from ui.fetch_videos import fetch_playlist_items
 from dotenv import load_dotenv
 
 
@@ -108,7 +108,6 @@ def main():
             "clips": []
         })
 
-    # import pdb; pdb.set_trace()
     for video in parsed_videos:
         upload_video_to_playlist(token, playlist_name, video)
 
