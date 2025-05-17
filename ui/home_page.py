@@ -1,5 +1,5 @@
 from nicegui import ui, app
-from john_doe import caught_john_doe
+from dialog_puns import caught_john_doe, in_progress
 from fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils_api import load_playlists, load_videos, create_playlist
 import datetime
@@ -35,7 +35,11 @@ def home_page():
                         with playlists_column:
                             with ui.row().classes('items-center justify-between w-full'):
                                 ui.label(playlist['name']).tooltip(playlist['_id'])
-                                ui.button('Sync', on_click=lambda: caught_john_doe())
+                                if not username:
+                                    ui.button('Sync', on_click=lambda: caught_john_doe())
+                                else:
+                                    ui.button('Sync', on_click=lambda: in_progress())
+                                    # ui.button('Sync', on_click=lambda name=playlist['name']: sync_playlist(name))
 
                 refresh_playlists()
 
@@ -98,7 +102,10 @@ def home_page():
                 playlist_title_label = ui.label('')
 
                 with ui.row().classes('items-center justify-between w-full'):
-                    ui.button('Verify Playlist', on_click=verify_playlist)
+                    if not username:
+                        ui.button('Verify Playlist', on_click=caught_john_doe)
+                    else:
+                        ui.button('Verify Playlist', on_click=verify_playlist)
                     fetch_button = ui.button('Fetch Videos', on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
                     fetch_button.disable()
 

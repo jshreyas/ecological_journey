@@ -10,7 +10,7 @@ from home_page import home_page
 from films import films_page
 from film import film_page
 from partner import partner_page
-from john_doe import caught_john_doe
+from dialog_puns import caught_john_doe
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
