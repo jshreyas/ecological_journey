@@ -71,12 +71,16 @@ def home_page():
                     if not playlist_verified['status']:
                         ui.notify('❌ Please verify the playlist first.', type='warning')
                         return
-                    ui.notify(f'Fetching videos for playlist: {playlist_id}') #TODO: replace playlist_id with playlist_name from metadata["title"]
+
+                    metadata = fetch_playlist_metadata(playlist_id)
+                    playlist_name = metadata.get('title', playlist_id)
+
+                    ui.notify(f'Fetching videos for playlist: {playlist_name}')
                     spinner = ui.spinner(size='lg').props('color=primary')
                     ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
 
                     def task():
-                        create_playlist(fetch_playlist_items(playlist_id), token)#TODO: add playlist_name argument to fetch_playlist_items()
+                        create_playlist(fetch_playlist_items(playlist_id), token, playlist_name)
                         spinner.set_visibility(False)
                         ui.notify('✅ Playlist fetched and added successfully!')
                         refresh_playlists()
@@ -117,7 +121,8 @@ def home_page():
 
                 videos = load_videos()
                 if not videos:
-                    ui.notify('⚠️ No videos found!')
+                    with ui.card().classes('p-4 text-center'):
+                        ui.label('⚠️ No videos found! Start by adding a playlist above.').classes('text-md')
                     return
 
                 # Data Processing

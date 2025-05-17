@@ -34,7 +34,7 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None):
     return response.json()
 
 #TODO: dynamically pull this name
-def create_playlist(video_data, token, name="Grappling Journal"): #TODO: dynamically pull this name
+def create_playlist(video_data, token, name):
     response = api_post("/playlists", data={"name": name}, token=token)
     #TODO: combine all these individual API calls to a single call
     for video in video_data:
