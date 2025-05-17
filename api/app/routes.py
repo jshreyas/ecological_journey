@@ -78,9 +78,9 @@ async def get_playlist_by_member(user_id: str) -> list:
     teams = await db.teams.find({"member_ids": user_oid}).to_list(length=None)
     team_ids = [team["_id"] for team in teams]
 
-    # Find all playlists owned by these teams
+    # Find all playlists that belong to the team(s) the user is a member of
     return await db.playlists.find({
-        "owner_id": {"$in": team_ids}
+        "team_id": {"$in": team_ids}
     }).to_list(length=None)
 
 

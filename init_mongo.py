@@ -108,7 +108,6 @@ def main():
             "clips": []
         })
 
-    # import pdb; pdb.set_trace()
     for video in parsed_videos:
         upload_video_to_playlist(token, playlist_name, video)
 
