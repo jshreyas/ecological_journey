@@ -120,7 +120,7 @@ def home_page():
                 if not username:
                     ui.button('Create New Team', on_click=lambda: caught_john_doe())
                 else:
-                    ui.button('Create New Team', on_click=lambda: create_team_modal())
+                    ui.button('Create New Team', on_click=lambda: in_progress())
 
         # --- Right Main Panel ---
         with splitter.after:
