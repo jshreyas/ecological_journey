@@ -84,11 +84,13 @@ def home_page():
                         spinner.set_visibility(False)
                         ui.notify('✅ Playlist fetched and added successfully!')
                         refresh_playlists()
+                        render_dashboard()  # <== Refresh dashboard right after fetching
                         # Reset for next entry
                         playlist_id_input.value = ''
                         playlist_title_label.text = ''
                         fetch_button.disable()
                         playlist_verified['status'] = False
+
 
                     ui.timer(0.2, task, once=True)
 
@@ -115,52 +117,54 @@ def home_page():
 
         # --- Right Main Panel ---
         with splitter.after:
-            with ui.column().classes('p-4 m-2 gap-4'):
-                # --- Grappling Portfolio Dashboard ---
+            with ui.column().classes('p-4 m-2 gap-4') as dashboard_column:
                 ui.label("🤼 Grappling Portfolio Dashboard").classes('text-2xl font-bold mt-8 mb-4')
+                
+            def render_dashboard():
+                dashboard_column.clear()
 
                 videos = load_videos()
                 if not videos:
-                    with ui.card().classes('p-4 text-center'):
-                        ui.label('⚠️ No videos found! Start by adding a playlist above.').classes('text-md')
+                    with dashboard_column:
+                        with ui.card().classes('p-4 text-center'):
+                            ui.label('⚠️ No videos found! Start by adding a playlist above.').classes('text-md')
                     return
 
-                # Data Processing
                 dates = [datetime.datetime.strptime(v['date'], "%Y-%m-%dT%H:%M:%SZ") for v in videos]
                 total_videos = len(videos)
                 unique_partners = len(set(p for v in videos for p in v['partners']))
                 unique_positions = len(set(p for v in videos for p in v['positions']))
 
-                # Stats
-                with ui.row().classes('w-full gap-4'):
-                    with ui.card().classes('p-4').tight():
-                        ui.label(f"📹 Total Videos: {total_videos}").classes('text-lg')
-                    with ui.card().classes('p-4').tight():
-                        ui.label(f"🧑‍🤝‍🧑 Training Partners: {unique_partners}").classes('text-lg')
-                    with ui.card().classes('p-4').tight():
-                        ui.label(f"📍 Unique Positions: {unique_positions}").classes('text-lg')
+                with dashboard_column:
+                    with ui.row().classes('w-full gap-4'):
+                        with ui.card().classes('p-4').tight():
+                            ui.label(f"📹 Total Videos: {total_videos}").classes('text-lg')
+                        with ui.card().classes('p-4').tight():
+                            ui.label(f"🧑‍🤝‍🧑 Training Partners: {unique_partners}").classes('text-lg')
+                        with ui.card().classes('p-4').tight():
+                            ui.label(f"📍 Unique Positions: {unique_positions}").classes('text-lg')
 
-                # Chart: Activity Over Time
-                ui.label("📊 Activity Over Time").classes('text-xl mt-8 mb-2')
-                date_counts = Counter(d.date() for d in dates)
-                sorted_dates = sorted(date_counts.keys())
-                chart_data = {
-                    'labels': [d.strftime('%Y-%m-%d') for d in sorted_dates],
-                    'datasets': [{
-                        'label': 'Video count',
-                        'data': [date_counts[d] for d in sorted_dates],
-                    }]
-                }
-                ui.echart({
-                    'title': {'left': 'center'},
-                    'tooltip': {'trigger': 'axis'},
-                    'xAxis': {'type': 'category', 'data': chart_data['labels']},
-                    'yAxis': {'type': 'value'},
-                    'series': [{
-                        'type': 'bar',
-                        'data': chart_data['datasets'][0]['data'],
-                    }]
-                }).classes('w-full h-80')
+                    ui.label("📊 Activity Over Time").classes('text-xl mt-8 mb-2')
+                    date_counts = Counter(d.date() for d in dates)
+                    sorted_dates = sorted(date_counts.keys())
+                    chart_data = {
+                        'labels': [d.strftime('%Y-%m-%d') for d in sorted_dates],
+                        'datasets': [{
+                            'label': 'Video count',
+                            'data': [date_counts[d] for d in sorted_dates],
+                        }]
+                    }
+                    ui.echart({
+                        'title': {'left': 'center'},
+                        'tooltip': {'trigger': 'axis'},
+                        'xAxis': {'type': 'category', 'data': chart_data['labels']},
+                        'yAxis': {'type': 'value'},
+                        'series': [{
+                            'type': 'bar',
+                            'data': chart_data['datasets'][0]['data'],
+                        }]
+                    }).classes('w-full h-80')
+            render_dashboard()
 
 # --- Stubbed Actions ---
 def sync_playlist(playlist_id):
