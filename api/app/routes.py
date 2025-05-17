@@ -1,7 +1,8 @@
 # ---------------- app/routes.py ----------------
 import os
+from typing import Literal, Optional
 import jwt
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     OAuth2PasswordRequestForm,
@@ -64,6 +65,30 @@ async def get_playlist_by_name(name: str):
 async def get_all_playlists() -> list:
     playlists = await db.playlists.find().to_list(length=None)
     return playlists
+
+# Get all playlists where the given id is the direct owner
+async def get_playlist_by_owner(id: str) -> list:
+    return await db.playlists.find({"owner_id": ObjectId(id)}).to_list(length=None)
+
+
+async def get_playlist_by_member(user_id: str) -> list:
+    user_oid = ObjectId(user_id)
+
+    # Find all teams where this user is a member
+    teams = await db.teams.find({"member_ids": user_oid}).to_list(length=None)
+    team_ids = [team["_id"] for team in teams]
+
+    # Find all playlists owned by these teams
+    return await db.playlists.find({
+        "owner_id": {"$in": team_ids}
+    }).to_list(length=None)
+
+
+async def get_playlists_for_user(user_id: str) -> list:
+    owned = await get_playlist_by_owner(user_id)
+    member = await get_playlist_by_member(user_id)
+    filtered_member = [p for p in member if p["_id"] not in {pl["_id"] for pl in owned}]
+    return {"owned": owned, "member": filtered_member}
 
 
 async def get_video_by_id(playlist_name: str, video_id: str):
@@ -185,10 +210,20 @@ async def get_team_members(team_id: str, user=Depends(get_current_user)):
 # playlist
 @router.get("/playlists")
 async def get_playlists(
-    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+    user_id: Optional[str] = Query(None),
+    filter: Literal["owned", "member", "all"] = "all",
+    token: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
-
-    playlists = await get_all_playlists()
+    if user_id:
+        # TODO: owned and member filters are not tested, and are inconsistent with all's response
+        if filter == "owned":
+            playlists = await get_playlist_by_owner(user_id)
+        elif filter == "member":
+            playlists = await get_playlist_by_member(user_id)
+        else:  # filter == "all"
+            playlists = await get_playlists_for_user(user_id)
+    else:
+        playlists = await get_all_playlists()
     return convert_objectid(playlists)
 
 

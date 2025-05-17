@@ -1,7 +1,7 @@
 from nicegui import ui, app
 from dialog_puns import caught_john_doe, in_progress
 from fetch_videos import fetch_playlist_items, fetch_playlist_metadata
-from utils_api import load_playlists, load_videos, create_playlist
+from utils_api import load_playlists, load_videos, create_playlist, load_playlists_for_user
 import datetime
 from collections import Counter
 
@@ -30,20 +30,37 @@ def home_page():
 
                 def refresh_playlists():
                     playlists_column.clear()
-                    playlists = load_playlists()
-                    for playlist in playlists:
-                        with playlists_column:
-                            with ui.row().classes('items-center justify-between w-full'):
-                                ui.label(playlist['name']).tooltip(playlist['_id'])
-                                if not username:
+
+                    if not username:
+                        # Case 1: No user token → show all playlists, with demo sync behavior
+                        playlists = load_playlists()
+                        for playlist in playlists:
+                            with playlists_column:
+                                with ui.row().classes('items-center justify-between w-full'):
+                                    ui.label(playlist['name']).tooltip(playlist['_id'])
                                     ui.button('Sync', on_click=lambda: caught_john_doe())
-                                else:
-                                    ui.button('Sync', on_click=lambda: in_progress())
-                                    # ui.button('Sync', on_click=lambda name=playlist['name']: sync_playlist(name))
+
+                    else:
+                        # Case 2: Has user token → fetch owned and member playlists
+                        both = load_playlists_for_user(user_id)
+                        owned, member = both["owned"], both["member"]
+                        owned_ids = {pl['_id'] for pl in owned}
+
+                        all_playlists = owned + [
+                            p for p in member if p['_id'] not in owned_ids
+                        ]
+
+                        for playlist in all_playlists:
+                            with playlists_column:
+                                with ui.row().classes('items-center justify-between w-full'):
+                                    ui.label(playlist['name']).tooltip(playlist['_id'])
+                                    if playlist['_id'] in owned_ids:
+                                        # Show sync button only for owned playlists
+                                        ui.button('Sync', on_click=lambda name=playlist['name']: sync_playlist(name))
 
                 refresh_playlists()
-
                 ui.separator()
+
                 ui.label('Add Playlist by ID').classes('font-semibold mt-4')
 
                 playlist_verified = {'status': False}
