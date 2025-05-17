@@ -46,6 +46,7 @@ services:
       - api
     environment:
       - JWT_SECRET=${JWT_SECRET}
+      - API_KEY=${API_KEY}
       - BACKEND_URL=${BACKEND_URL}
     command: ["python", "ui/main.py"]
     tty: true

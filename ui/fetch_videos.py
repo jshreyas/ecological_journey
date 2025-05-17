@@ -14,8 +14,6 @@ API_KEY = os.getenv("API_KEY")
 if not API_KEY:
     raise ValueError("Missing API_KEY in environment variables")
 
-PLAYLIST_ID = "PLHXvJ_QLQWhXuOo2HcwsL4sysM79x8Id8" # Grappling Journal
-PLAYLIST_ID = "PLHXvJ_QLQWhWfwGejBdQE8LjHHToMMCge" # Home Training Journal
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 FETCH_VIDEOS_COUNT = None  # Set to an integer to limit fetched items
 
@@ -54,7 +52,7 @@ def fetch_video_duration(video_id):
 
 def check_update_date_title_mismatch(video):
     title = video["title"]
-    published_at = video["published_at"]
+    published_at = video["date"]
 
     date_formats = [
         ("%Y-%m-%d", r"\b(\d{4}-\d{2}-\d{2})\b"),
@@ -75,14 +73,26 @@ def check_update_date_title_mismatch(video):
                     actual_upload_date = fetch_video_upload_date(video["video_id"])
                     if actual_upload_date:
                         new_utc = pst.localize(datetime.combine(actual_upload_date, time.min)).astimezone(pytz.utc)
-                        video["published_at"] = new_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+                        video["date"] = new_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
                 pass
             break
 
     return video
 
-def fetch_playlist_items(playlist_id=PLAYLIST_ID, count=None):
+def fetch_playlist_metadata(playlist_id):
+    url = f"{BASE_URL}/playlists?part=snippet&id={playlist_id}&key={API_KEY}"
+    response = requests.get(url)
+    if not response.ok:
+        return None
+
+    data = response.json()
+    if "items" in data and len(data["items"]) > 0:
+        return data["items"][0]["snippet"]
+    else:
+        return None
+
+def fetch_playlist_items(playlist_id, count=None):
     videos = []
     next_page_token = ""
 
@@ -102,11 +112,15 @@ def fetch_playlist_items(playlist_id=PLAYLIST_ID, count=None):
             video_data = {
                 "title": snippet["title"],
                 "video_id": video_id,
-                "url": f"https://www.youtube.com/watch?v={video_id}",
-                # "description": snippet.get("description", ""), ## TODO: do we need this?
-                "published_at": snippet["publishedAt"]
+                "youtube_url": f"https://www.youtube.com/watch?v={video_id}",
+                "date": snippet["publishedAt"],
+                "type": "",
+                "partners": [],
+                "positions": [],
+                "notes": "",
+                "labels": [],
+                "clips": []
             }
-
             # Fetch video duration and add it to the video data
             video_duration = fetch_video_duration(video_id)
             if video_duration:
@@ -120,51 +134,3 @@ def fetch_playlist_items(playlist_id=PLAYLIST_ID, count=None):
             break
 
     return videos
-
-def check_create_playlist_db(playlist_id):
-    API_URL = os.getenv("FASTAPI_API_URL", "http://localhost:8000")  # Or prod URL
-    AUTH_TOKEN = os.getenv("JWT_TOKEN")  # Optional
-
-    headers = {"Content-Type": "application/json"}
-    if AUTH_TOKEN:
-        headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
-
-    response = requests.get(f"{API_URL}/playlists", headers=headers)
-    playlist_exists = False
-    for each in response.json():
-        if each["name"] == playlist_id:
-            playlist_exists = True
-    if not playlist_exists:
-        playlist = {
-            "name": playlist_id,
-            "videos": []
-        }
-        response = requests.post(f"{API_URL}/playlists", headers=headers, json=playlist)
-        if not response.ok:
-            print(f"Failed to create playlist: {playlist_id}: {response.text}")
-        else:
-            print(f"Created {playlist_id} successfully")
-
-def upload_to_fastapi(playlist_id, video):
-    API_URL = os.getenv("FASTAPI_API_URL", "http://localhost:8000")  # Or prod URL
-    AUTH_TOKEN = os.getenv("JWT_TOKEN")  # Optional
-
-    headers = {"Content-Type": "application/json"}
-    if AUTH_TOKEN:
-        headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
-
-    url = f"{API_URL}/playlists/{playlist_id}/videos"
-    response = requests.post(url, headers=headers, json=video)
-
-    if not response.ok:
-        print(f"Failed to upload video {video['video_id']}: {response.text}")
-    else:
-        print(f"Uploaded {video['video_id']}")
-
-
-def main():
-    print("this script does nothing at the moment")
-    pass
-
-if __name__ == "__main__":
-    main()

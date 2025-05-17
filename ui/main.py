@@ -6,10 +6,11 @@ from dotenv import load_dotenv
 from nicegui import ui, app
 from about import about_page
 from home_page import home_page
+# from ytplaylist import home_page
 from films import films_page
 from film import film_page
 from partner import partner_page
-from john_doe import caught_john_doe
+from dialog_puns import caught_john_doe
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
@@ -51,6 +52,7 @@ def login_or_signup(mode='login'):
                 data = response.json()
                 app.storage.user["token"] = data["access_token"]
                 app.storage.user["user"] = data["username"]
+                app.storage.user["id"] = data["id"]
                 ui.notify("✅ Success", type="positive")
                 dialog.close()
                 ui.navigate.to("/")  # reload to refresh navbar
