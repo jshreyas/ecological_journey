@@ -44,6 +44,7 @@ async def auth_scheme_optional(request: Request) -> HTTPAuthorizationCredentials
     if scheme.lower() != "bearer":
         return None
 
+    # Not needed id GET requests dont pass a token
     # Minimal validation: suppress obviously invalid tokens (e.g. None or empty strings)
     # because this is an optional scheme and should only be used for GET requests
     if not credentials or not isinstance(credentials, str) or len(credentials) < 10:

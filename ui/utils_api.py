@@ -43,8 +43,8 @@ def create_playlist(video_data, token, name):
 def load_playlists() -> List[Dict[str, Any]]:
     return api_get("/playlists")
 
-def load_playlists_for_user(user_id: str, filter: str = "all", token: Optional[str] = None) -> List[Dict[str, Any]]:
-    return api_get(f"/playlists?user_id={user_id}&filter={filter}", token=token)
+def load_playlists_for_user(user_id: str, filter: str = "all") -> List[Dict[str, Any]]:
+    return api_get(f"/playlists?user_id={user_id}&filter={filter}")
 
 def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[Dict[str, Any]]:
     playlists = load_playlists()
