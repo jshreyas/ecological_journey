@@ -52,7 +52,7 @@ def home_page():
                                     ui.label(playlist['name']).tooltip(playlist['_id'])
                                     if playlist['_id'] in owned_ids:
                                         # Show sync button only for owned playlists
-                                        ui.button('Sync', on_click=lambda name=playlist['name']: sync_playlist(name))
+                                        ui.button('Sync', on_click=lambda name=playlist['name']: in_progress())
 
                 refresh_playlists()
                 ui.separator()
