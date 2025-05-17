@@ -197,9 +197,6 @@ def sync_playlist(playlist_id):
 def create_team_modal():
     print("Opening modal to create a new team")
 
-def fetch_playlist_info(playlist_id):
-    print("Opening fetch_playlist_info")
-
 def open_team_modal(team):
     print(f"Opening team: {team['name']}")
 
