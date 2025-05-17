@@ -19,45 +19,44 @@ def home_page():
 
     ui.label(f"Welcome, {user['name']}").classes('text-2xl font-bold mb-4')
     with ui.splitter(value=30).classes('w-full h-auto gap-4 mt-2') as splitter:
+
+        # --- Left Side Panel ---
         with splitter.before:
-            with ui.column().classes('w-full h-full p-4 m-2 gap-4 bg-gray-100 rounded-xl shadow-md'):
-                ui.label('My YouTube Playlists').classes('font-semibold mb-2')
-                playlists_column = ui.column()
+            with ui.column().classes('w-full h-full p-6 gap-6 bg-gray-100 rounded-xl shadow-md'):
+                
+                # === Section: YouTube Playlists ===
+                ui.label('🎵 My YouTube Playlists').classes('text-xl font-bold')
+
+                playlists_column = ui.column().classes('gap-2')
 
                 def refresh_playlists():
                     playlists_column.clear()
 
                     if not username:
-                        # Case 1: No user token → show all playlists, with demo sync behavior
                         playlists = load_playlists()
                         for playlist in playlists:
                             with playlists_column:
-                                with ui.row().classes('items-center justify-between w-full'):
+                                with ui.row().classes('justify-between items-center w-full'):
                                     ui.label(playlist['name']).tooltip(playlist['_id'])
                                     ui.button('Sync', on_click=lambda: caught_john_doe())
-
                     else:
-                        # Case 2: Has user token → fetch owned and member playlists
                         both = load_playlists_for_user(user_id)
                         owned, member = both["owned"], both["member"]
                         owned_ids = {pl['_id'] for pl in owned}
-
-                        all_playlists = owned + [
-                            p for p in member if p['_id'] not in owned_ids
-                        ]
+                        all_playlists = owned + [p for p in member if p['_id'] not in owned_ids]
 
                         for playlist in all_playlists:
                             with playlists_column:
-                                with ui.row().classes('items-center justify-between w-full'):
+                                with ui.row().classes('justify-between items-center w-full'):
                                     ui.label(playlist['name']).tooltip(playlist['_id'])
                                     if playlist['_id'] in owned_ids:
-                                        # Show sync button only for owned playlists
                                         ui.button('Sync', on_click=lambda name=playlist['name']: in_progress())
 
                 refresh_playlists()
-                ui.separator()
-
-                ui.label('Add Playlist by ID').classes('font-semibold mt-4')
+                ui.separator().classes('my-4')
+##
+                # === Section: Add Playlist by ID ===
+                ui.label('➕ Add Playlist by ID').classes('text-lg font-semibold')
 
                 playlist_verified = {'status': False}
 
@@ -101,50 +100,48 @@ def home_page():
                         spinner.set_visibility(False)
                         ui.notify('✅ Playlist fetched and added successfully!')
                         refresh_playlists()
-                        render_dashboard()  # <== Refresh dashboard right after fetching
-                        # Reset for next entry
+                        render_dashboard()
                         playlist_id_input.value = ''
                         playlist_title_label.text = ''
                         fetch_button.disable()
                         playlist_verified['status'] = False
 
-
                     ui.timer(0.2, task, once=True)
 
-                playlist_id_input = ui.input('YouTube Playlist ID', on_change=on_input_change)
+                playlist_id_input = ui.input('YouTube Playlist ID', on_change=on_input_change).classes('w-full')
                 playlist_title_label = ui.label('')
 
-                with ui.row().classes('items-center justify-between w-full'):
-                    if not username:
-                        ui.button('Verify Playlist', on_click=caught_john_doe)
-                    else:
-                        ui.button('Verify Playlist', on_click=verify_playlist)
-                    fetch_button = ui.button('Fetch Videos', on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
+                with ui.row().classes('justify-start gap-3'):
+                    verify_btn = ui.button('Verify Playlist',
+                                        on_click=caught_john_doe if not username else verify_playlist)
+                    fetch_button = ui.button('Fetch Videos',
+                                            on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
                     fetch_button.disable()
+##
+                ui.separator().classes('my-4')
 
-                ui.separator()
-                # ui.label('Teams').classes('font-semibold mt-4')
-                ui.label('My Teams').classes('font-semibold mt-4')
-                teams_column = ui.column()
+                # === Section: My Teams ===
+                ui.label('👥 My Teams').classes('text-xl font-bold')
+
+                teams_column = ui.column().classes('gap-2')
 
                 def refresh_teams():
                     teams_column.clear()
 
                     if not username:
-                        both = fetch_teams_for_user_jd(44)  # Optionally show demo teams
+                        both = fetch_teams_for_user_jd(44)
                     else:
                         both = fetch_teams_for_user(user_id)
+
                     owned, member = both["owned"], both["member"]
                     owned_ids = {t["_id"] for t in owned}
                     all_teams = owned + [t for t in member if t["_id"] not in owned_ids]
 
                     for team in all_teams:
                         with teams_column:
-                            with ui.row().classes('items-center justify-between w-full'):
+                            with ui.row().classes('justify-between items-center w-full'):
                                 ui.label(team['name']).tooltip(team['_id'])
-
                                 if team['_id'] in owned_ids:
-                                    # Owner controls
                                     with ui.row().classes('gap-2'):
                                         ui.button('Add User', on_click=lambda t=team: open_add_user_modal(t))
                                         ui.button('Add Playlist', on_click=lambda t=team: open_add_playlist_modal(t))
@@ -152,12 +149,12 @@ def home_page():
                                     ui.label('Member').classes('text-sm text-gray-500 italic')
 
                 refresh_teams()
+                ui.separator().classes('my-4')
 
-                ui.separator()
+                # === Section: Create New Team ===
+                ui.label('🛠 Create New Team').classes('text-lg font-semibold')
 
-                ui.label('Create New Team').classes('font-semibold mt-4')
-
-                team_name_input = ui.input('Team Name')
+                team_name_input = ui.input('Team Name').classes('w-full')
 
                 def create_new_team():
                     name = team_name_input.value.strip()
@@ -165,17 +162,16 @@ def home_page():
                         ui.notify('Please enter a team name.', type='warning')
                         return
 
-                    # You’ll need a backend call to create the team
                     create_team(name, user_token)
                     ui.notify(f'Team "{name}" created successfully!')
                     refresh_teams()
                     team_name_input.value = ''
 
-                if not username:
-                    ui.button('Create Team', on_click=caught_john_doe)
-                else:
-                    ui.button('Create Team', on_click=create_new_team)
+                ui.button('Create Team',
+                        on_click=caught_john_doe if not username else create_new_team).classes('mt-2')
 
+
+###
         # --- Right Main Panel ---
         with splitter.after:
             with ui.column().classes('p-4 m-2 gap-4') as dashboard_column:
