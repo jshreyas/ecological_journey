@@ -33,6 +33,14 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None):
     response.raise_for_status()
     return response.json()
 
+def create_team(name, token):
+    response = api_post("/teams", data={"name": name}, token=token)
+    return response
+
+def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
+    response = api_get(f"/teams?user_id={user_id}")
+    return response
+
 def create_playlist(video_data, token, name):
     response = api_post("/playlists", data={"name": name}, token=token)
     #TODO: combine all these individual API calls to a single call

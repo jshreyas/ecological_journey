@@ -1,7 +1,7 @@
 from nicegui import ui, app
 from dialog_puns import caught_john_doe, in_progress
 from fetch_videos import fetch_playlist_items, fetch_playlist_metadata
-from utils_api import load_playlists, load_videos, create_playlist, load_playlists_for_user
+from utils_api import load_playlists, load_videos, create_playlist, load_playlists_for_user, create_team, fetch_teams_for_user
 import datetime
 from collections import Counter
 
@@ -123,17 +123,58 @@ def home_page():
                     fetch_button.disable()
 
                 ui.separator()
-                ui.label('Teams').classes('font-semibold mt-4')
-                teams = []  # Replace with: fetch_teams_for_user(user['id'])
-                for team in teams:
-                    with ui.row().classes('items-center justify-between w-full'):
-                        ui.label(team['name'])
-                        ui.button('Manage', on_click=lambda t=team: open_team_modal(t))
+                # ui.label('Teams').classes('font-semibold mt-4')
+                ui.label('My Teams').classes('font-semibold mt-4')
+                teams_column = ui.column()
+
+                def refresh_teams():
+                    teams_column.clear()
+
+                    if not username:
+                        both = fetch_teams_for_user_jd(44)  # Optionally show demo teams
+                    else:
+                        both = fetch_teams_for_user(user_id)
+                    owned, member = both["owned"], both["member"]
+                    owned_ids = {t["_id"] for t in owned}
+                    all_teams = owned + [t for t in member if t["_id"] not in owned_ids]
+
+                    for team in all_teams:
+                        with teams_column:
+                            with ui.row().classes('items-center justify-between w-full'):
+                                ui.label(team['name']).tooltip(team['_id'])
+
+                                if team['_id'] in owned_ids:
+                                    # Owner controls
+                                    with ui.row().classes('gap-2'):
+                                        ui.button('Add User', on_click=lambda t=team: open_add_user_modal(t))
+                                        ui.button('Add Playlist', on_click=lambda t=team: open_add_playlist_modal(t))
+                                else:
+                                    ui.label('Member').classes('text-sm text-gray-500 italic')
+
+                refresh_teams()
+
+                ui.separator()
+
+                ui.label('Create New Team').classes('font-semibold mt-4')
+
+                team_name_input = ui.input('Team Name')
+
+                def create_new_team():
+                    name = team_name_input.value.strip()
+                    if not name:
+                        ui.notify('Please enter a team name.', type='warning')
+                        return
+
+                    # You’ll need a backend call to create the team
+                    create_team(name, user_token)
+                    ui.notify(f'Team "{name}" created successfully!')
+                    refresh_teams()
+                    team_name_input.value = ''
 
                 if not username:
-                    ui.button('Create New Team', on_click=lambda: caught_john_doe())
+                    ui.button('Create Team', on_click=caught_john_doe)
                 else:
-                    ui.button('Create New Team', on_click=lambda: in_progress())
+                    ui.button('Create Team', on_click=create_new_team)
 
         # --- Right Main Panel ---
         with splitter.after:
@@ -187,6 +228,67 @@ def home_page():
             render_dashboard()
 
 # --- Stubbed Actions ---
+def fetch_teams_for_user_jd(user_id):
+    # Sample data to simulate backend result
+    return {
+        "owned": [
+            {
+                "_id": "team1",
+                "name": "Core Team",
+                "owner_id": user_id,
+                "member_ids": ["user2", "user3"]
+            }
+        ],
+        "member": [
+            {
+                "_id": "team2",
+                "name": "Collab Team",
+                "owner_id": "another_user",
+                "member_ids": [user_id, "user4"]
+            }
+        ]
+    }
+
+def open_add_user_modal(team):
+    with ui.dialog() as dialog, ui.card():
+        ui.label(f'Add user to team: {team["name"]}').classes('font-semibold')
+        email_input = ui.input('User Email')
+
+        def add_user():
+            email = email_input.value.strip()
+            if not email:
+                ui.notify("Enter a valid email.", type="warning")
+                return
+            # Simulate backend add logic
+            print(f"Adding user with email '{email}' to team '{team['_id']}'")
+            ui.notify(f"✅ Added {email} to {team['name']}")
+            dialog.close()
+
+        ui.button('Add User', on_click=add_user)
+        ui.button('Cancel', on_click=dialog.close)
+
+    dialog.open()
+
+def open_add_playlist_modal(team):
+    with ui.dialog() as dialog, ui.card():
+        ui.label(f'Add Playlist to team: {team["name"]}').classes('font-semibold')
+        playlist_id_input = ui.input('Playlist ID')
+
+        def add_playlist():
+            pid = playlist_id_input.value.strip()
+            if not pid:
+                ui.notify("Enter a valid Playlist ID.", type="warning")
+                return
+            # Simulate backend logic
+            print(f"Adding playlist '{pid}' to team '{team['_id']}'")
+            ui.notify(f"✅ Added playlist to {team['name']}")
+            dialog.close()
+
+        ui.button('Add Playlist', on_click=add_playlist)
+        ui.button('Cancel', on_click=dialog.close)
+
+    dialog.open()
+
 def sync_playlist(playlist_id):
     print(f"Syncing playlist {playlist_id}...")
 
