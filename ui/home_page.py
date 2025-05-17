@@ -8,6 +8,7 @@ from collections import Counter
 
 @ui.page('/home')
 def home_page():
+    #TODO: this user data can be cleaned up a little
     username = app.storage.user.get("user", None)
     user_token = app.storage.user.get("token", None)
     user_id = app.storage.user.get("id", None)
@@ -16,12 +17,7 @@ def home_page():
     else:
         user = {"id": 1, "name": username}
 
-    if not user:
-        ui.label('You must be logged in to view this page.')
-        return
-
     ui.label(f"Welcome, {user['name']}").classes('text-2xl font-bold mb-4')
-
     with ui.splitter(value=30).classes('w-full h-auto gap-4 mt-2') as splitter:
         with splitter.before:
             with ui.column().classes('w-full h-full p-4 m-2 gap-4 bg-gray-100 rounded-xl shadow-md'):
