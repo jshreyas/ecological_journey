@@ -42,6 +42,7 @@ class Playlist(BaseModel):
     owner_type: Literal["user", "team"] = "user"
     owner_id: Optional[PyObjectId] = None  # will be filled in route if not provided
     team_id: Optional[PyObjectId] = None
+    playlist_id: Optional[str] = None
 
     class Config:
         allow_population_by_field_name = True

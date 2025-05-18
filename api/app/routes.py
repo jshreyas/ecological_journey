@@ -153,11 +153,34 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 # book keeping
+async def get_teams_owned_by(user_id: str) -> list:
+    return await db.teams.find({"owner_id": ObjectId(user_id)}).to_list(length=None)
+
+async def get_teams_member_of(user_id: str) -> list:
+    return await db.teams.find({"member_ids": ObjectId(user_id)}).to_list(length=None)
+
+async def get_teams_for_user(user_id: str) -> dict:
+    owned = await get_teams_owned_by(user_id)
+    member = await get_teams_member_of(user_id)
+    filtered_member = [team for team in member if team["_id"] not in {t["_id"] for t in owned}]
+    return {"owned": owned, "member": filtered_member}
+
 @router.get("/teams")
 async def get_teams(
+    user_id: Optional[str] = Query(None),
+    filter: Literal["owned", "member", "all"] = "all",
     _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
-    teams = await db.teams.find().to_list(length=None)
+    if user_id:
+        if filter == "owned":
+            teams = await get_teams_owned_by(user_id)
+        elif filter == "member":
+            teams = await get_teams_member_of(user_id)
+        else:  # filter == "all"
+            teams = await get_teams_for_user(user_id)
+    else:
+        teams = await db.teams.find().to_list(length=None)
+
     return convert_objectid(teams)
 
 
