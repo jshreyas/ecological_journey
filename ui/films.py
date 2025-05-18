@@ -20,7 +20,12 @@ def films_page():
     min_date = min(dates).strftime('%Y-%m-%d') if dates else '1900-01-01'
     max_date = max(dates).strftime('%Y-%m-%d') if dates else '2100-01-01'
 
-    default_date_range = f'{min_date} - {max_date}'
+    # Format the min_date and max_date into a human-readable format
+    min_date_human = datetime.strptime(min_date, '%Y-%m-%d').strftime('%B %d, %Y')
+    max_date_human = datetime.strptime(max_date, '%Y-%m-%d').strftime('%B %d, %Y')
+
+    # Use the human-readable format for the default date range
+    default_date_range = f'{min_date_human} - {max_date_human}'
 
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
@@ -35,14 +40,14 @@ def films_page():
                 ).classes('w-full')
 
                 # Collapsed date picker with selected date range display
-                with ui.input('Date Range', value=f"{min_date} - {max_date}").classes('w-full') as date_input:
+                with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
                     with ui.menu().props('no-parent-event') as menu:
                         with ui.date(value={'from': min_date, 'to': max_date}).props('range').bind_value(
                             date_input,
-                            forward=lambda x: f"{x['from']} - {x['to']}" if x else None,
+                            forward=lambda x: f"{datetime.strptime(x['from'], '%Y-%m-%d').strftime('%B %d, %Y')} - {datetime.strptime(x['to'], '%Y-%m-%d').strftime('%B %d, %Y')}" if x else None,
                             backward=lambda x: {
-                                'from': x.split(' - ')[0],
-                                'to': x.split(' - ')[1],
+                                'from': datetime.strptime(x.split(' - ')[0], '%B %d, %Y').strftime('%Y-%m-%d'),
+                                'to': datetime.strptime(x.split(' - ')[1], '%B %d, %Y').strftime('%Y-%m-%d'),
                             } if ' - ' in (x or '') else None,
                         ):
                             with ui.row().classes('justify-end'):
@@ -53,67 +58,75 @@ def films_page():
                 ui.button('Apply Filters', on_click=lambda: render_videos()).classes('mt-4 w-full')
 
         with splitter.after:
-            with ui.column().classes('w-full h-full p-6 space-y-6'):
-                video_grid = ui.column().classes('space-y-6')
+            # Responsive grid container
+            video_grid = ui.grid().classes(
+                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full'
+            )
 
-                def render_videos():
-                    # Parse the date range from the input value
-                    date_range = date_input.value or f"{min_date} - {max_date}"
-                    try:
-                        start_date, end_date = date_range.split(" - ")
-                    except ValueError:
-                        # Fallback to default date range if parsing fails
-                        start_date, end_date = min_date, max_date
+            def render_videos():
+                # Parse the date range from the input value
+                date_range = date_input.value or default_date_range
+                try:
+                    start_date, end_date = date_range.split(" - ")
+                    start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                    end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                except ValueError:
+                    # Fallback to default date range if parsing fails
+                    start_date, end_date = min_date, max_date
 
-                    # Filter videos based on the selected playlist and date range
-                    filtered_videos = [
-                        v for v in all_videos
-                        if v['playlist_id'] in playlist_filter.value
-                        and start_date <= v['date'][:10] <= end_date
-                    ]
+                # Filter videos based on the selected playlist and date range
+                filtered_videos = [
+                    v for v in all_videos
+                    if v['playlist_id'] in playlist_filter.value
+                    and start_date <= v['date'][:10] <= end_date
+                ]
 
-                    # Sort videos by date in descending order
-                    videos_sorted = sorted(filtered_videos, key=lambda x: x['date'], reverse=True)
+                # Sort videos by date in descending order
+                videos_sorted = sorted(filtered_videos, key=lambda x: x['date'], reverse=True)
 
-                    # Paginate videos
-                    total_pages = max(1, (len(videos_sorted) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)
-                    start_index = (current_page['value'] - 1) * VIDEOS_PER_PAGE
-                    end_index = start_index + VIDEOS_PER_PAGE
-                    paginated_videos = videos_sorted[start_index:end_index]
+                # Paginate videos
+                total_pages = max(1, (len(videos_sorted) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)
+                start_index = (current_page['value'] - 1) * VIDEOS_PER_PAGE
+                end_index = start_index + VIDEOS_PER_PAGE
+                paginated_videos = videos_sorted[start_index:end_index]
 
-                    # Group videos by date
-                    grouped = {}
-                    for v in paginated_videos:
-                        day = v['date'][:10]
-                        grouped.setdefault(day, []).append(v)
+                # Group paginated videos by date
+                grouped_videos = {}
+                for v in paginated_videos:
+                    day = v['date'][:10]
+                    if day not in grouped_videos:
+                        grouped_videos[day] = []
+                    grouped_videos[day].append(v)
 
-                    # Clear and populate the video grid
-                    video_grid.clear()
-                    for day, day_videos in grouped.items():
-                        with video_grid:
-                            ui.label(f'📅 {day}').classes('text-xl font-semibold text-blue-800')
-                            with ui.grid().classes(
-                                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full'
-                            ):
-                                for v in day_videos:
-                                    with ui.card().classes(
-                                        'cursor-pointer hover:shadow-xl transition-shadow duration-200'
-                                    ).on('click', partial(navigate_to_film, v["video_id"])):
-                                        thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
-                                        ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover')
-                                        ui.label(v["title"]).tooltip(v["title"]).classes('font-medium mt-2 truncate text-sm')
-                            ui.separator().classes('my-4')
-                    # Add pagination controls
-                    with video_grid:
-                        with ui.row().classes('justify-between items-center mt-4'):
-                            ui.button('Previous', on_click=lambda: change_page(-1)).props('flat').classes('text-blue-500')
-                            ui.label(f'Page {current_page["value"]} of {total_pages}').classes('text-sm font-medium')
-                            ui.button('Next', on_click=lambda: change_page(1)).props('flat').classes('text-blue-500')
+                # Clear and populate the video grid
+                video_grid.clear()
+                with video_grid:
+                    for day, day_videos in grouped_videos.items():
+                        # Add a label for each date
+                        ui.label(f"📅 {day}").classes('text-xl font-semibold text-blue-800 col-span-full mb-2')
+                        for v in day_videos:
+                            with ui.card().classes(
+                                'cursor-pointer hover:shadow-xl transition-shadow duration-200'
+                            ).on('click', partial(navigate_to_film, v["video_id"])):
+                                thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
+                                ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover')
+                                ui.label(v["title"]) \
+                                    .tooltip(v["title"]) \
+                                    .classes('font-medium mt-2 truncate text-sm sm:text-base')
+                                ui.label(f"📅 {v['date'][:10]}") \
+                                    .classes('text-sm text-gray-500')
 
-                def change_page(direction):
-                    # Update the current page and re-render videos
-                    total_pages = max(1, (len(all_videos) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)
-                    current_page['value'] = max(1, min(current_page['value'] + direction, total_pages))
-                    render_videos()
+                # Add pagination controls
+                with video_grid:
+                    with ui.row().classes('justify-between items-center mt-4 col-span-full'):
+                        ui.button('Previous', on_click=lambda: change_page(-1)).props('flat').classes('text-blue-500')
+                        ui.label(f'Page {current_page["value"]} of {total_pages}').classes('text-sm font-medium')
+                        ui.button('Next', on_click=lambda: change_page(1)).props('flat').classes('text-blue-500')
 
+            def change_page(direction):
+                # Update the current page and re-render videos
+                total_pages = max(1, (len(all_videos) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)
+                current_page['value'] = max(1, min(current_page['value'] + direction, total_pages))
                 render_videos()
+
+            render_videos()
