@@ -64,6 +64,7 @@ def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[
         if playlist_id is None or playlist.get("_id") == playlist_id:
             for video in playlist.get("videos", []):
                 video["playlist_id"] = playlist.get("_id")
+                video["playlist_name"] = playlist.get("name")
                 videos.append(video)
     videos.sort(key=lambda x: x.get("date", ""), reverse=True)
     if response_dict:

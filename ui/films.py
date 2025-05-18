@@ -14,7 +14,7 @@ def films_page():
         .classes('text-2xl font-bold mb-4 text-center')
 
     all_videos = load_videos()
-    all_playlists = sorted(list({v['playlist_id'] for v in all_videos}))
+    all_playlists = sorted(list({v['playlist_name'] for v in all_videos}))
 
     dates = [datetime.strptime(v['date'][:10], '%Y-%m-%d') for v in all_videos]
     min_date = min(dates).strftime('%Y-%m-%d') if dates else '1900-01-01'
@@ -77,7 +77,7 @@ def films_page():
                 # Filter videos based on the selected playlist and date range
                 filtered_videos = [
                     v for v in all_videos
-                    if v['playlist_id'] in playlist_filter.value
+                    if v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
                 ]
 
