@@ -22,12 +22,11 @@ def home_page():
 
         # --- Left Side Panel ---
         with splitter.before:
-            with ui.column().classes('w-full h-full p-6 gap-6 bg-gray-100 rounded-xl shadow-md'):
-                
-                # === Section: YouTube Playlists ===
-                ui.label('🎵 My YouTube Playlists').classes('text-xl font-bold')
+            with ui.column().classes('w-full h-full p-3 bg-gray-100 rounded-md shadow-sd'):
+                # === Section: YouTube Playlists as Cards ===
+                ui.label('🎵 My YouTube Playlists').classes('text-lg font-bold')
 
-                playlists_column = ui.column().classes('gap-2')
+                playlists_column = ui.column().classes('gap-3')
 
                 def refresh_playlists():
                     playlists_column.clear()
@@ -36,9 +35,11 @@ def home_page():
                         playlists = load_playlists()
                         for playlist in playlists:
                             with playlists_column:
-                                with ui.row().classes('justify-between items-center w-full'):
-                                    ui.label(playlist['name']).tooltip(playlist['_id'])
-                                    ui.button('Sync', on_click=lambda: caught_john_doe())
+                                with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
+                                    with ui.row().classes('justify-between items-center'):
+                                        ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
+                                        ui.button('Sync', on_click=lambda: caught_john_doe())
+                                    ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
                     else:
                         both = load_playlists_for_user(user_id)
                         owned, member = both["owned"], both["member"]
@@ -66,76 +67,82 @@ def home_page():
 
                         for playlist in all_playlists:
                             with playlists_column:
-                                with ui.row().classes('justify-between items-center w-full'):
-                                    ui.label(playlist['name']).tooltip(playlist['_id'])
-                                    if playlist['_id'] in owned_ids:
-                                        ui.button('Sync', on_click=lambda pid=playlist['_id'], name=playlist['name'], play_id=playlist['playlist_id']: on_sync_click(pid, user_token, name, play_id))
+                                with ui.column().classes('w-full p-3 border border-gray-200 rounded-md bg-white shadow'):
+                                    with ui.row().classes('justify-between items-center'):
+                                        ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
+
+                                        if playlist['_id'] in owned_ids:
+                                            ui.button(
+                                                'Sync',
+                                                on_click=lambda pid=playlist['_id'], name=playlist['name'], play_id=playlist['playlist_id']: on_sync_click(pid, user_token, name, play_id)
+                                            )
+                                    ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
 
                 refresh_playlists()
-                ui.separator().classes('my-4')
-##
-                # === Section: Add Playlist by ID ===
-                ui.label('➕ Add Playlist by ID').classes('text-lg font-semibold')
 
-                playlist_verified = {'status': False}
+                # === Section: Add Playlist by ID (Card) ===
+                with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
+                    ui.label('➕ Add Playlist by ID').classes('text-lg font-bold')
 
-                def verify_playlist():
-                    playlist_id = playlist_id_input.value.strip()
-                    if not playlist_id:
-                        playlist_title_label.text = 'Please enter a Playlist ID.'
-                        fetch_button.disable()
-                        playlist_verified['status'] = False
-                        return
+                    playlist_verified = {'status': False}
 
-                    metadata = fetch_playlist_metadata(playlist_id)
-                    if metadata and 'title' in metadata:
-                        playlist_title_label.text = f'Found YouTube Playlist: {metadata["title"]}'
-                        fetch_button.enable()
-                        playlist_verified['status'] = True
-                    else:
-                        playlist_title_label.text = 'Invalid Playlist ID or playlist not found.'
-                        fetch_button.disable()
-                        playlist_verified['status'] = False
+                    def verify_playlist():
+                        playlist_id = playlist_id_input.value.strip()
+                        if not playlist_id:
+                            playlist_title_label.text = 'Please enter a Playlist ID.'
+                            fetch_button.disable()
+                            playlist_verified['status'] = False
+                            return
 
-                def on_input_change():
-                    playlist_title_label.text = ''
-                    fetch_button.disable()
-                    playlist_verified['status'] = False
+                        metadata = fetch_playlist_metadata(playlist_id)
+                        if metadata and 'title' in metadata:
+                            playlist_title_label.text = f'Found YouTube Playlist: {metadata["title"]}'
+                            fetch_button.enable()
+                            playlist_verified['status'] = True
+                        else:
+                            playlist_title_label.text = 'Invalid Playlist ID or playlist not found.'
+                            fetch_button.disable()
+                            playlist_verified['status'] = False
 
-                def fetch_playlist_videos(playlist_id, token):
-                    if not playlist_verified['status']:
-                        ui.notify('❌ Please verify the playlist first.', type='warning')
-                        return
-
-                    metadata = fetch_playlist_metadata(playlist_id)
-                    playlist_name = metadata.get('title', playlist_id)
-
-                    ui.notify(f'Fetching videos for playlist: {playlist_name}')
-                    spinner = ui.spinner(size='lg').props('color=primary')
-                    ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
-
-                    def task():
-                        create_playlist(fetch_playlist_items(playlist_id), token, playlist_name, playlist_id)
-                        spinner.set_visibility(False)
-                        ui.notify('✅ Playlist fetched and added successfully!')
-                        refresh_playlists()
-                        render_dashboard()
-                        playlist_id_input.value = ''
+                    def on_input_change():
                         playlist_title_label.text = ''
                         fetch_button.disable()
                         playlist_verified['status'] = False
 
-                    ui.timer(0.2, task, once=True)
+                    def fetch_playlist_videos(playlist_id, token):
+                        if not playlist_verified['status']:
+                            ui.notify('❌ Please verify the playlist first.', type='warning')
+                            return
 
-                playlist_id_input = ui.input('YouTube Playlist ID', on_change=on_input_change).classes('w-full')
-                playlist_title_label = ui.label('')
+                        metadata = fetch_playlist_metadata(playlist_id)
+                        playlist_name = metadata.get('title', playlist_id)
 
-                with ui.row().classes('justify-start gap-3'):
-                    verify_btn = ui.button('Verify Playlist',
-                                        on_click=caught_john_doe if not username else verify_playlist)
-                    fetch_button = ui.button('Fetch Videos',
-                                            on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
-                    fetch_button.disable()
+                        ui.notify(f'Fetching videos for playlist: {playlist_name}')
+                        spinner = ui.spinner(size='lg').props('color=primary')
+                        ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
+
+                        def task():
+                            create_playlist(fetch_playlist_items(playlist_id), token, playlist_name, playlist_id)
+                            spinner.set_visibility(False)
+                            ui.notify('✅ Playlist fetched and added successfully!')
+                            refresh_playlists()
+                            render_dashboard()
+                            playlist_id_input.value = ''
+                            playlist_title_label.text = ''
+                            fetch_button.disable()
+                            playlist_verified['status'] = False
+
+                        ui.timer(0.2, task, once=True)
+
+                    playlist_id_input = ui.input('YouTube Playlist ID', on_change=on_input_change).classes('w-full')
+                    playlist_title_label = ui.label('').classes('text-sm text-gray-600 mt-1')
+
+                    with ui.row().classes('justify-start gap-3 mt-2'):
+                        ui.button('Verify Playlist',
+                                on_click=caught_john_doe if not username else verify_playlist)
+                        fetch_button = ui.button('Fetch Videos',
+                                                on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
+                        fetch_button.disable()
 
                 ui.separator().classes('my-4')
 
@@ -156,6 +163,30 @@ def home_page():
                     owned_ids = {t["_id"] for t in owned}
                     all_teams = owned + [t for t in member if t["_id"] not in owned_ids]
 
+                    # -- Create Team Card --
+                    with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
+                        with ui.row().classes('justify-between items-center'):
+                            ui.label('🛠 Create New Team').classes('text-lg font-bold')
+
+                        team_name_input = ui.input('Team Name').props('outlined dense').classes('w-full mt-2')
+
+                        def create_new_team():
+                            name = team_name_input.value.strip()
+                            if not name:
+                                ui.notify('Please enter a team name.', type='warning')
+                                return
+
+                            create_team(name, user_token)
+                            ui.notify(f'Team "{name}" created successfully!')
+                            refresh_teams()
+                            team_name_input.value = ''
+
+                        ui.button(
+                            'Create Team',
+                            on_click=caught_john_doe if not username else create_new_team
+                        ).props('color=primary').classes('mt-2 self-end')
+
+
                     for team in all_teams:
                         with teams_column:
                             with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
@@ -165,7 +196,7 @@ def home_page():
                                         with ui.row().classes('gap-2'):
                                             ui.button('Add User', on_click=lambda t=team: open_add_user_modal(t))
                                             ui.button('Add Playlist', on_click=lambda t=team: open_add_playlist_modal(t))
-                                            ui.button('View Team', on_click=lambda t=team: open_view_team_modal(t))
+                                            ui.button('View Team', on_click=lambda t=team: open_team_modal(t))
                                     else:
                                         ui.label('👤 Member').classes('text-sm italic text-gray-500')
 
@@ -173,26 +204,6 @@ def home_page():
                                 ui.label(f"👥 Members: {len(team.get('member_ids', []))} | 🎵 Playlists: {team.get('playlist_count', 0)}").classes('text-sm text-gray-600')
 
                 refresh_teams()
-                ui.separator().classes('my-4')
-
-                # === Section: Create New Team ===
-                ui.label('🛠 Create New Team').classes('text-lg font-semibold')
-
-                team_name_input = ui.input('Team Name').classes('w-full')
-
-                def create_new_team():
-                    name = team_name_input.value.strip()
-                    if not name:
-                        ui.notify('Please enter a team name.', type='warning')
-                        return
-
-                    create_team(name, user_token)
-                    ui.notify(f'Team "{name}" created successfully!')
-                    refresh_teams()
-                    team_name_input.value = ''
-
-                ui.button('Create Team',
-                        on_click=caught_john_doe if not username else create_new_team).classes('mt-2')
 
         # --- Right Main Panel ---
         with splitter.after:
@@ -252,17 +263,19 @@ def fetch_teams_for_user_jd(user_id):
         "owned": [
             {
                 "_id": "team1",
-                "name": "Core Team",
+                "name": "Mat Lab",
                 "owner_id": user_id,
-                "member_ids": ["user2", "user3"]
+                "playlist_count": 2,
+                "member_ids": ["user2", "user3", "user3"]
             }
         ],
         "member": [
             {
                 "_id": "team2",
-                "name": "Collab Team",
+                "name": "Mao Pelo Pe",
+                "playlist_count": 5,
                 "owner_id": "another_user",
-                "member_ids": [user_id, "user4"]
+                "member_ids": [user_id, "user4", "user22", "user31", "user222", "user34", "user31", "user222", "user34", "user12", "user31", "user2", "user3", "user4"]
             }
         ]
     }
@@ -326,6 +339,37 @@ def open_add_playlist_modal(team):
             ui.button('Cancel', on_click=dialog.close).props('flat')
 
     dialog.open()
+
+def open_team_modal(team):
+    with ui.dialog() as dialog, ui.card().classes('w-[40rem]'):
+        ui.label(f"👥 Team: {team['name']}").classes('text-lg font-semibold')
+
+        members = [
+            {"name": "Alice", "email": "alice@example.com", "role": "member", "joined": "2024-01-10"},
+            {"name": "Bob", "email": "bob@example.com", "role": "member", "joined": "2024-02-12"},
+        ]
+
+        member_container = ui.column().classes('gap-2 mt-2')
+
+        def refresh():
+            member_container.clear()
+            for member in members:
+                with member_container:
+                    with ui.row().classes('items-center justify-between w-full'):
+                        ui.label(f"{member['name']} ({member['email']}) - {member['role']}, joined: {member['joined']}")
+                        ui.button('Remove', on_click=lambda m=member: remove_member(m)).props('flat dense').classes('text-red-500')
+
+        def remove_member(member):
+            members.remove(member)
+            ui.notify(f'Removed {member["name"]}')
+            refresh()
+
+        refresh()
+
+        ui.button('Close', on_click=dialog.close).classes('mt-4')
+
+    dialog.open()
+
 
 def open_view_team_modal(team):
     with ui.dialog() as dialog, ui.card().classes('w-[40rem]'):
@@ -395,9 +439,6 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
 
 def create_team_modal():
     print("Opening modal to create a new team")
-
-def open_team_modal(team):
-    print(f"Opening team: {team['name']}")
 
 def view_playlist_videos(playlist):
     print(f"Viewing videos for playlist: {playlist['title']}")
