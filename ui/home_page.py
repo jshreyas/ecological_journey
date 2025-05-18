@@ -1,7 +1,7 @@
 from nicegui import ui, app
 from dialog_puns import caught_john_doe, in_progress
 from fetch_videos import fetch_playlist_items, fetch_playlist_metadata
-from utils_api import load_playlists, load_videos, create_playlist, load_playlists_for_user, create_team, fetch_teams_for_user
+from utils_api import create_video, load_playlists, load_videos, create_playlist, load_playlists_for_user, create_team, fetch_teams_for_user
 import datetime
 from collections import Counter
 
@@ -45,12 +45,20 @@ def home_page():
                         owned_ids = {pl['_id'] for pl in owned}
                         all_playlists = owned + [p for p in member if p['_id'] not in owned_ids]
 
+                        def on_sync_click(playlist_id, token, playlist_name, play_id):
+                            def task():
+                                sync_playlist(playlist_id, token, playlist_name, play_id)
+                                refresh_playlists()
+                                render_dashboard()
+
+                            ui.timer(0.2, task, once=True)
+
                         for playlist in all_playlists:
                             with playlists_column:
                                 with ui.row().classes('justify-between items-center w-full'):
                                     ui.label(playlist['name']).tooltip(playlist['_id'])
                                     if playlist['_id'] in owned_ids:
-                                        ui.button('Sync', on_click=lambda name=playlist['name']: in_progress())
+                                        ui.button('Sync', on_click=lambda pid=playlist['_id'], name=playlist['name'], play_id=playlist['playlist_id']: on_sync_click(pid, user_token, name, play_id))
 
                 refresh_playlists()
                 ui.separator().classes('my-4')
@@ -96,7 +104,7 @@ def home_page():
                     ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
 
                     def task():
-                        create_playlist(fetch_playlist_items(playlist_id), token, playlist_name)
+                        create_playlist(fetch_playlist_items(playlist_id), token, playlist_name, playlist_id)
                         spinner.set_visibility(False)
                         ui.notify('✅ Playlist fetched and added successfully!')
                         refresh_playlists()
@@ -285,8 +293,30 @@ def open_add_playlist_modal(team):
 
     dialog.open()
 
-def sync_playlist(playlist_id):
-    print(f"Syncing playlist {playlist_id}...")
+def sync_playlist(playlist_id, token, playlist_name, play_id):
+
+    try:
+        # Step 1: Fetch current playlist data from source (YouTube, etc.)
+        latest_video_data = fetch_playlist_items(play_id)
+        latest_video_ids = {video['video_id'] for video in latest_video_data}
+
+        # Step 2: Fetch existing videos in DB for this playlist
+        existing_videos = load_videos(playlist_id)
+        existing_video_ids = {video['video_id'] for video in existing_videos}
+
+        # Step 3: Identify new videos
+        new_video_data = [video for video in latest_video_data if video['video_id'] not in existing_video_ids]
+        if not new_video_data:
+            ui.notify('✅ Playlist is already up to date!')
+            return
+
+        # Step 4: Append new videos
+        create_video(new_video_data, token, playlist_name)
+        ui.notify(f'✅ Synced {len(new_video_data)} new videos to "{playlist_name}".')
+
+    except Exception as exc:
+        ui.notify(f'❌ Sync failed: {str(exc)}')
+
 
 def create_team_modal():
     print("Opening modal to create a new team")
