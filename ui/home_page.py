@@ -370,48 +370,6 @@ def open_team_modal(team):
 
     dialog.open()
 
-
-def open_view_team_modal(team):
-    with ui.dialog() as dialog, ui.card().classes('w-[40rem]'):
-        ui.label(f'👥 Team: {team["name"]}').classes('text-lg font-semibold')
-
-        members = [
-            {"name": "Alice", "email": "alice@example.com", "role": "member", "joined": "2024-01-10"},
-            {"name": "Bob", "email": "bob@example.com", "role": "member", "joined": "2024-02-12"},
-        ]  # Replace with real API fetch in production
-
-        table = ui.table(columns=[
-            {'name': 'name', 'label': 'Name', 'field': 'name'},
-            {'name': 'email', 'label': 'Email', 'field': 'email'},
-            {'name': 'role', 'label': 'Role', 'field': 'role'},
-            {'name': 'joined', 'label': 'Joined', 'field': 'joined'},
-            {'name': 'remove', 'label': 'Remove', 'field': 'remove'}
-        ], rows=[]).classes('mt-2')
-
-        def refresh_table():
-            table.rows.clear()
-            for member in members:
-                table.add_row({
-                    'name': member['name'],
-                    'email': member['email'],
-                    'role': member['role'],
-                    'joined': member['joined'],
-                    'remove': ui.button('Remove', on_click=lambda m=member: remove_user(m)).props('flat dense').classes('text-red-500')
-                })
-
-        def remove_user(member):
-            print(f"Removing {member['email']} from team {team['name']}")
-            ui.notify(f"❌ Removed {member['name']} from team.")
-            members.remove(member)
-            refresh_table()
-
-        refresh_table()
-
-        with ui.row().classes('justify-end mt-4'):
-            ui.button('Close', on_click=dialog.close).props('flat')
-
-    dialog.open()
-
 def sync_playlist(playlist_id, token, playlist_name, play_id):
 
     try:
@@ -435,7 +393,6 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
 
     except Exception as exc:
         ui.notify(f'❌ Sync failed: {str(exc)}')
-
 
 def create_team_modal():
     print("Opening modal to create a new team")
