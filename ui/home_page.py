@@ -47,11 +47,22 @@ def home_page():
 
                         def on_sync_click(playlist_id, token, playlist_name, play_id):
                             def task():
-                                sync_playlist(playlist_id, token, playlist_name, play_id)
-                                refresh_playlists()
-                                render_dashboard()
+                                spinner = ui.spinner(size='lg').props('color=primary')
+                                spinner.set_visibility(True)
 
-                            ui.timer(0.2, task, once=True)
+                                def do_sync():
+                                    try:
+                                        sync_playlist(playlist_id, token, playlist_name, play_id)
+                                    except Exception as e:
+                                        ui.notify(f'❌ Sync failed: {str(e)}')
+                                    finally:
+                                        spinner.set_visibility(False)
+                                        refresh_playlists()
+                                        render_dashboard()
+
+                                ui.timer(0.2, do_sync, once=True)
+
+                            task()
 
                         for playlist in all_playlists:
                             with playlists_column:
@@ -125,7 +136,7 @@ def home_page():
                     fetch_button = ui.button('Fetch Videos',
                                             on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
                     fetch_button.disable()
-##
+
                 ui.separator().classes('my-4')
 
                 # === Section: My Teams ===
@@ -178,8 +189,6 @@ def home_page():
                 ui.button('Create Team',
                         on_click=caught_john_doe if not username else create_new_team).classes('mt-2')
 
-
-###
         # --- Right Main Panel ---
         with splitter.after:
             with ui.column().classes('p-4 m-2 gap-4') as dashboard_column:
@@ -326,30 +335,3 @@ def open_team_modal(team):
 
 def view_playlist_videos(playlist):
     print(f"Viewing videos for playlist: {playlist['title']}")
-
-# with ui.column().classes('w-full h-full p-4 m-2 gap-4 bg-gray-100 rounded-xl shadow-md'):
-#     with ui.tabs().classes('w-full') as tabs:
-#         playlist_tab = ui.tab('Playlists')
-#         team_tab = ui.tab('Teams')
-
-#     # with ui.tabs().classes('w-full') as tabs:
-#     #     playlist_tab = ui.tab('Playlists')
-#     #     team_tab = ui.tab('Teams')
-
-#     with ui.tab_panels(tabs, value='Playlists').classes('w-full'):
-#         with ui.tab_panel('Playlists'):
-#             ui.label('Your Synced Playlists').classes('text-xl font-semibold mb-2')
-#             for playlist in playlists:
-#                 with ui.card().classes('mb-4 shadow-md p-4'):
-#                     ui.label(playlist['name']).classes('text-lg font-bold')
-#                     ui.label(f"{len(playlist.get('videos', []))} videos")
-#                     ui.button('View', on_click=lambda p=playlist: view_playlist_videos(p))
-
-#         with ui.tab_panel('Teams'):
-#             ui.label('Your Teams').classes('text-xl font-semibold mb-2')
-#             for team in teams:
-#                 with ui.card().classes('mb-4 shadow-md p-4'):
-#                     ui.label(team['name']).classes('text-lg font-bold')
-#                     ui.label(f"Members: {len(team.get('members', []))}")
-#                     ui.label(f"Playlists: {len(team.get('playlists', []))}")
-#                     ui.button('Manage Team', on_click=lambda t=team: open_team_modal(t))
