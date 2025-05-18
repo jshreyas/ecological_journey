@@ -17,19 +17,19 @@ def get_headers(token: Optional[str] = None):
 
 def api_get(endpoint: str, token: Optional[str] = None):
     url = f"{BASE_URL}{endpoint}"
-    response = requests.get(url, headers=get_headers(token), timeout=5)
+    response = requests.get(url, headers=get_headers(token))
     response.raise_for_status()
     return response.json()
 
 def api_post(endpoint: str, data: dict, token: Optional[str] = None):
     url = f"{BASE_URL}{endpoint}"
-    response = requests.post(url, json=data, headers=get_headers(token), timeout=5)
+    response = requests.post(url, json=data, headers=get_headers(token))
     response.raise_for_status()
     return response.json()
 
 def api_put(endpoint: str, data: dict, token: Optional[str] = None):
     url = f"{BASE_URL}{endpoint}"
-    response = requests.put(url, json=data, headers=get_headers(token), timeout=5)
+    response = requests.put(url, json=data, headers=get_headers(token))
     response.raise_for_status()
     return response.json()
 

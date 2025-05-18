@@ -158,14 +158,19 @@ def home_page():
 
                     for team in all_teams:
                         with teams_column:
-                            with ui.row().classes('justify-between items-center w-full'):
-                                ui.label(team['name']).tooltip(team['_id'])
-                                if team['_id'] in owned_ids:
-                                    with ui.row().classes('gap-2'):
-                                        ui.button('Add User', on_click=lambda t=team: open_add_user_modal(t))
-                                        ui.button('Add Playlist', on_click=lambda t=team: open_add_playlist_modal(t))
-                                else:
-                                    ui.label('Member').classes('text-sm text-gray-500 italic')
+                            with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
+                                with ui.row().classes('justify-between items-center'):
+                                    ui.label(team['name']).tooltip(team['_id']).classes('text-lg font-bold')
+                                    if team['_id'] in owned_ids:
+                                        with ui.row().classes('gap-2'):
+                                            ui.button('Add User', on_click=lambda t=team: open_add_user_modal(t))
+                                            ui.button('Add Playlist', on_click=lambda t=team: open_add_playlist_modal(t))
+                                            ui.button('View Team', on_click=lambda t=team: open_view_team_modal(t))
+                                    else:
+                                        ui.label('👤 Member').classes('text-sm italic text-gray-500')
+
+                                # Stub counts
+                                ui.label(f"👥 Members: {len(team.get('member_ids', []))} | 🎵 Playlists: {team.get('playlist_count', 0)}").classes('text-sm text-gray-600')
 
                 refresh_teams()
                 ui.separator().classes('my-4')
@@ -263,42 +268,103 @@ def fetch_teams_for_user_jd(user_id):
     }
 
 def open_add_user_modal(team):
-    with ui.dialog() as dialog, ui.card():
-        ui.label(f'Add user to team: {team["name"]}').classes('font-semibold')
-        email_input = ui.input('User Email')
+    with ui.dialog() as dialog, ui.card().classes('w-[30rem]'):
+        ui.label(f'➕ Add user to {team["name"]}').classes('text-lg font-semibold')
+
+        # Stubbed user list (replace with real API call later)
+        all_users = [
+            {"email": "alice@example.com", "name": "Alice"},
+            {"email": "bob@example.com", "name": "Bob"},
+            {"email": "charlie@example.com", "name": "Charlie"},
+        ]
+
+        # Map email -> display name (email)
+        user_map = {u["email"]: f'{u["name"]} ({u["email"]})' for u in all_users}
+
+        user_select = ui.select(user_map, label="Select User")
 
         def add_user():
-            email = email_input.value.strip()
+            email = user_select.value
             if not email:
-                ui.notify("Enter a valid email.", type="warning")
+                ui.notify("⚠️ Please select a user.", type="warning")
                 return
-            # Simulate backend add logic
-            print(f"Adding user with email '{email}' to team '{team['_id']}'")
+            print(f"Adding user {email} to team {team['_id']}")
             ui.notify(f"✅ Added {email} to {team['name']}")
             dialog.close()
 
-        ui.button('Add User', on_click=add_user)
-        ui.button('Cancel', on_click=dialog.close)
+        with ui.row().classes('gap-2 mt-3'):
+            ui.button('Add User', on_click=add_user).props('color=primary')
+            ui.button('Cancel', on_click=dialog.close).props('flat')
 
     dialog.open()
 
+
 def open_add_playlist_modal(team):
-    with ui.dialog() as dialog, ui.card():
-        ui.label(f'Add Playlist to team: {team["name"]}').classes('font-semibold')
-        playlist_id_input = ui.input('Playlist ID')
+    with ui.dialog() as dialog, ui.card().classes('w-[30rem]'):
+        ui.label(f'🎵 Add playlist to {team["name"]}').classes('text-lg font-semibold')
+
+        # Stubbed playlist list (replace with call to load_playlists_for_user)
+        user_playlists = [
+            {"_id": "pl1", "name": "Top Transitions"},
+            {"_id": "pl2", "name": "Submission Chains"},
+        ]
+
+        playlist_select = ui.select([pl["name"] for pl in user_playlists], label="Select Playlist")
 
         def add_playlist():
-            pid = playlist_id_input.value.strip()
-            if not pid:
-                ui.notify("Enter a valid Playlist ID.", type="warning")
+            selected_name = playlist_select.value
+            if not selected_name:
+                ui.notify("⚠️ Please select a playlist.", type="warning")
                 return
-            # Simulate backend logic
-            print(f"Adding playlist '{pid}' to team '{team['_id']}'")
-            ui.notify(f"✅ Added playlist to {team['name']}")
+            selected = next(pl for pl in user_playlists if pl["name"] == selected_name)
+            print(f"Assigning playlist '{selected['_id']}' to team '{team['_id']}'")
+            ui.notify(f"✅ Added '{selected_name}' to team {team['name']}")
             dialog.close()
 
-        ui.button('Add Playlist', on_click=add_playlist)
-        ui.button('Cancel', on_click=dialog.close)
+        with ui.row().classes('gap-2 mt-3'):
+            ui.button('Add Playlist', on_click=add_playlist).props('color=primary')
+            ui.button('Cancel', on_click=dialog.close).props('flat')
+
+    dialog.open()
+
+def open_view_team_modal(team):
+    with ui.dialog() as dialog, ui.card().classes('w-[40rem]'):
+        ui.label(f'👥 Team: {team["name"]}').classes('text-lg font-semibold')
+
+        members = [
+            {"name": "Alice", "email": "alice@example.com", "role": "member", "joined": "2024-01-10"},
+            {"name": "Bob", "email": "bob@example.com", "role": "member", "joined": "2024-02-12"},
+        ]  # Replace with real API fetch in production
+
+        table = ui.table(columns=[
+            {'name': 'name', 'label': 'Name', 'field': 'name'},
+            {'name': 'email', 'label': 'Email', 'field': 'email'},
+            {'name': 'role', 'label': 'Role', 'field': 'role'},
+            {'name': 'joined', 'label': 'Joined', 'field': 'joined'},
+            {'name': 'remove', 'label': 'Remove', 'field': 'remove'}
+        ], rows=[]).classes('mt-2')
+
+        def refresh_table():
+            table.rows.clear()
+            for member in members:
+                table.add_row({
+                    'name': member['name'],
+                    'email': member['email'],
+                    'role': member['role'],
+                    'joined': member['joined'],
+                    'remove': ui.button('Remove', on_click=lambda m=member: remove_user(m)).props('flat dense').classes('text-red-500')
+                })
+
+        def remove_user(member):
+            print(f"Removing {member['email']} from team {team['name']}")
+            ui.notify(f"❌ Removed {member['name']} from team.")
+            members.remove(member)
+            refresh_table()
+
+        refresh_table()
+
+        with ui.row().classes('justify-end mt-4'):
+            ui.button('Close', on_click=dialog.close).props('flat')
 
     dialog.open()
 
