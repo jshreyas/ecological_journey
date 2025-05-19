@@ -1,8 +1,9 @@
 # film.py
 from nicegui import ui, app
 from video_player import VideoPlayer
-from utils_api import load_video, parse_and_save_clips, convert_clips_to_raw_text, parse_raw_text
+from utils_api import load_video, parse_and_save_clips, convert_clips_to_raw_text, parse_raw_text, load_videos
 from utils import format_time
+from films import navigate_to_film
 import random
 
 #TODO: Populate demo videos to demo playlist
@@ -80,13 +81,95 @@ def film_page(video_id: str):
                 VideoPlayer(video_id, start=start_time)
 
     def add_clip_card(clip):
-        with ui.card().classes('cursor-pointer hover:shadow-lg').on('click', lambda e: play_clip(clip)):
-            thumbnail_url = f'https://img.youtube.com/vi/{video_id}/0.jpg'
-            ui.image(thumbnail_url).classes('w-full rounded')
-            ui.label(clip["title"]).classes('font-medium mt-2')
+        with ui.card().classes('cursor-pointer hover:shadow-lg p-2').on('click', lambda e: play_clip(clip)):
+            with ui.column().classes('w-full gap-2'):
+                # Display the clip title
+                ui.label(clip["title"]).classes('font-medium text-sm truncate')
+                # Display the clip start and end times in a human-readable format
+                start_time = format_time(clip.get('start', 0))
+                end_time = format_time(clip.get('end', 0))
+                ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs text-gray-500')
+
+    def refresh_filmboard():
+        """Refresh the Filmboard section with videos from the same day."""
+        filmboard_container.clear()
+        with filmboard_container:
+            # Get the date of the current video
+            current_video_date = video.get('date', '').split('T')[0]
+            if not current_video_date:
+                ui.label("⚠️ No date available for the current video.").classes('text-sm text-gray-500')
+                return
+
+            # Load all videos and filter by the same date
+            all_videos = load_videos()
+            same_day_videos = [v for v in all_videos if v.get('date', '').startswith(current_video_date) and v['video_id'] != video_id]
+
+            if not same_day_videos:
+                ui.label("📭 No other videos found from the same day.").classes('text-sm text-gray-500')
+                return
+
+            # Display thumbnails for videos from the same day
+            for v in same_day_videos:
+                with ui.card().classes('cursor-pointer hover:shadow-lg p-2').on('click', lambda e, vid=v['video_id']: navigate_to_film(vid, e)):
+                    with ui.column().classes('w-full gap-2'):
+                        # Thumbnail
+                        thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
+                        ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover')
+                        # Title
+                        ui.label(v["title"]).classes('font-medium text-sm truncate')
+                        # Duration
+                        ui.label(f"⏱ {format_time(v.get('duration_seconds', 0))}").classes('text-xs text-gray-500')
+
+    def get_adjacent_videos():
+        """Find the last video from the previous day and the first video from the next day."""
+        all_videos = load_videos()
+        current_video_date = video.get('date', '').split('T')[0]
+
+        if not current_video_date:
+            return None, None
+
+        # Sort videos by date
+        sorted_videos = sorted(all_videos, key=lambda v: v.get('date', ''))
+        prev_video = None
+        next_video = None
+
+        for i, v in enumerate(sorted_videos):
+            if v['video_id'] == video_id:
+                # Find the last video from the previous day
+                for j in range(i - 1, -1, -1):
+                    if sorted_videos[j]['date'].split('T')[0] < current_video_date:
+                        prev_video = sorted_videos[j]
+                        break
+
+                # Find the first video from the next day
+                for j in range(i + 1, len(sorted_videos)):
+                    if sorted_videos[j]['date'].split('T')[0] > current_video_date:
+                        next_video = sorted_videos[j]
+                        break
+                break
+
+        return prev_video, next_video
+
+    prev_video, next_video = get_adjacent_videos()
 
     # Inline render_film_editor functionality
     with ui.column().classes('w-full p-4 gap-6'):
+
+        # Navigation Arrows
+        with ui.row().classes('w-full justify-between items-center mb-4'):
+            if prev_video:
+                with ui.row().classes('items-center cursor-pointer').on('click', lambda e: navigate_to_film(prev_video['video_id'], e)):
+                    ui.icon('arrow_back').classes('text-blue-500')
+                    ui.label(f"Previous: {prev_video['title']}").classes('text-sm text-blue-500 truncate')
+            else:
+                ui.space()  # Add space if no previous video
+
+            if next_video:
+                with ui.row().classes('items-center cursor-pointer').on('click', lambda e: navigate_to_film(next_video['video_id'], e)):
+                    ui.label(f"Next: {next_video['title']}").classes('text-sm text-blue-500 truncate')
+                    ui.icon('arrow_forward').classes('text-blue-500')
+            else:
+                ui.space()  # Add space if no next video
 
         ui.label(f'🎬 Studying: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
 
@@ -119,6 +202,11 @@ def film_page(video_id: str):
 
         with ui.grid(columns=5).classes('w-full gap-4') as clipboard_container:
             refresh_clipboard()
+
+        # Filmboard Section
+        ui.label('🎥 Filmboard: Videos from the Same Day').classes('text-xl font-semibold mt-8')
+        with ui.grid(columns=5).classes('w-full gap-4') as filmboard_container:
+            refresh_filmboard()
 
     player_container['ref'] = player_container_ref
     player_container['textarea'] = textarea
