@@ -80,10 +80,18 @@ def film_page(video_id: str):
                 VideoPlayer(video_id, start=start_time)
 
     def add_clip_card(clip):
-        with ui.card().classes('cursor-pointer hover:shadow-lg').on('click', lambda e: play_clip(clip)):
+        with ui.card().classes('cursor-pointer hover:shadow-lg p-2').on('click', lambda e: play_clip(clip)):
+            # Generate a thumbnail URL for the clip
             thumbnail_url = f'https://img.youtube.com/vi/{video_id}/0.jpg'
-            ui.image(thumbnail_url).classes('w-full rounded')
-            ui.label(clip["title"]).classes('font-medium mt-2')
+            with ui.column().classes('w-full gap-2'):
+                # Display the thumbnail
+                ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover')
+                # Display the clip title
+                ui.label(clip["title"]).classes('font-medium text-sm truncate')
+                # Display the clip start and end times in a human-readable format
+                start_time = format_time(clip.get('start', 0))
+                end_time = format_time(clip.get('end', 0))
+                ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs text-gray-500')
 
     # Inline render_film_editor functionality
     with ui.column().classes('w-full p-4 gap-6'):
