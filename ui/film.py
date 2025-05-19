@@ -88,7 +88,7 @@ def film_page(video_id: str):
     # Inline render_film_editor functionality
     with ui.column().classes('w-full p-4 gap-6'):
 
-        ui.label(f'🎬 Editing: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
+        ui.label(f'🎬 Studying: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
 
         player_container_ref = None
 
