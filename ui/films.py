@@ -58,9 +58,9 @@ def films_page():
                 ui.button('Apply Filters', on_click=lambda: render_videos()).classes('mt-4 w-full')
 
         with splitter.after:
-            # Responsive grid container
+            # Enhanced grid container
             video_grid = ui.grid().classes(
-                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full'
+                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-6 w-full p-4 bg-white rounded-lg shadow-lg'
             )
 
             def render_videos():
@@ -102,26 +102,31 @@ def films_page():
                 video_grid.clear()
                 with video_grid:
                     for day, day_videos in grouped_videos.items():
+                        # Convert the date (day) to a human-readable format
+                        human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
+                        
                         # Add a label for each date
-                        ui.label(f"📅 {day}").classes('text-xl font-semibold text-blue-800 col-span-full mb-2')
+                        ui.label(f"📅 {human_readable_day}").classes('text-xl font-semibold text-blue-800 col-span-full mb-4')
                         for v in day_videos:
+                            # Enhanced video cards
                             with ui.card().classes(
-                                'cursor-pointer hover:shadow-xl transition-shadow duration-200'
+                                'cursor-pointer hover:shadow-xl transition-shadow duration-200 border border-gray-300 rounded-lg'
                             ).on('click', partial(navigate_to_film, v["video_id"])):
                                 thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
-                                ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover')
+                                ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover mb-2')
                                 ui.label(v["title"]) \
                                     .tooltip(v["title"]) \
-                                    .classes('font-medium mt-2 truncate text-sm sm:text-base')
+                                    .classes('font-medium mt-2 truncate text-sm sm:text-base text-gray-700')
                                 ui.label(f"📅 {v['date'][:10]}") \
                                     .classes('text-sm text-gray-500')
+                        ui.separator().classes('text-xl font-semibold text-blue-800 col-span-full mb-4')
 
-                # Add pagination controls
+                # Enhanced pagination controls
                 with video_grid:
-                    with ui.row().classes('justify-between items-center mt-4 col-span-full'):
-                        ui.button('Previous', on_click=lambda: change_page(-1)).props('flat').classes('text-blue-500')
-                        ui.label(f'Page {current_page["value"]} of {total_pages}').classes('text-sm font-medium')
-                        ui.button('Next', on_click=lambda: change_page(1)).props('flat').classes('text-blue-500')
+                    with ui.row().classes('justify-between items-center mt-6 col-span-full'):
+                        ui.button('Previous', on_click=lambda: change_page(-1)).props('flat').classes('text-blue-500 hover:text-blue-700')
+                        ui.label(f'Page {current_page["value"]} of {total_pages}').classes('text-sm font-medium text-gray-700')
+                        ui.button('Next', on_click=lambda: change_page(1)).props('flat').classes('text-blue-500 hover:text-blue-700')
 
             def change_page(direction):
                 # Update the current page and re-render videos
