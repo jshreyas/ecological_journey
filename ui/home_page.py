@@ -18,7 +18,7 @@ def home_page():
         user = {"id": 1, "name": username}
 
     ui.label(f"Welcome, {user['name']}!").classes('text-2xl font-bold mb-4')
-    with ui.splitter(value=30).classes('w-full h-auto gap-4 mt-2') as splitter:
+    with ui.splitter(value=25).classes('w-full h-auto gap-4 mt-2') as splitter:
 
         # --- Left Side Panel ---
         with splitter.before:

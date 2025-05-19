@@ -4,11 +4,9 @@ from urllib.parse import urlparse, parse_qs
 
 class VideoPlayer:
 
-    def __init__(self, video_url: str, start: int = 0, width: int = 560, height: int = 315):
+    def __init__(self, video_url: str, start: int = 0):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
-        self.width = width
-        self.height = height
         self._render()
 
     def _extract_video_id(self, url: str) -> str:
@@ -25,10 +23,10 @@ class VideoPlayer:
         start_param = f"&start={self.start}" if self.start else ""
         embed_url = f"https://www.youtube.com/embed/{self.video_id}?autoplay=1{start_param}"
         ui.html(f'''
-            <iframe width="{self.width}" height="{self.height}"
+            <iframe
                 src="{embed_url}"
+                style="width: 100%; height: 100%; border:10px solid white; position: absolute; top: 0; left: 0;"
                 title="YouTube video player"
-                frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowfullscreen>
             </iframe>
