@@ -10,7 +10,7 @@ DEMO_VIDEO_POOL = [
     {"video_id": "Wv1cAFUIJzw", "title": "Demo Grappling Breakdown", "duration_seconds": 300},
 ]
 
-# @ui.page('/film/{video_id}')
+
 def film_page(video_id: str):
     player_container = {'ref': None}
     demo_mode = False
@@ -88,21 +88,26 @@ def film_page(video_id: str):
     # Inline render_film_editor functionality
     with ui.column().classes('w-full p-4 gap-6'):
 
-        ui.label(f'🎬 Editing: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
+        ui.label(f'🎬 Studying: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
 
         player_container_ref = None
 
         with ui.splitter(horizontal=False, value=70).classes('w-full h-[70vh] rounded shadow') as splitter:
             with splitter.before:
-                with ui.column().classes('w-full h-full p-2 gap-2') as player_container_ref:
+                with ui.column().classes('w-full h-full p-4 gap-4') as player_container_ref:
                     VideoPlayer(video_id)
                 player_container['ref'] = player_container_ref
 
-
             with splitter.after:
                 with ui.column().classes('w-full h-full p-2 gap-4'):
-                    textarea = ui.textarea('✏️ Clipper', value=app.storage.user[session_key]).classes('w-full h-[calc(100%-3rem)]')
-                    with ui.row():
+                    # Set a larger default height for the textarea
+                    textarea = ui.textarea(
+                        '✏️ Clipper',
+                        value=app.storage.user[session_key]
+                    ).props('rows=15').classes('w-full h-full')
+
+                    # Add a row for buttons below the textarea
+                    with ui.row().classes('justify-start gap-2 mt-2'):
                         ui.button("💾 Save", on_click=lambda: handle_local_save(textarea)).props('color=primary')
                         ui.button("🧹 Clear", on_click=handle_clear_local_changes).props('color=warning')
                         if not demo_mode:

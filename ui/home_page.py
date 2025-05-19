@@ -17,16 +17,16 @@ def home_page():
     else:
         user = {"id": 1, "name": username}
 
-    ui.label(f"Welcome, {user['name']}").classes('text-2xl font-bold mb-4')
-    with ui.splitter(value=30).classes('w-full h-auto gap-4 mt-2') as splitter:
+    ui.label(f"Welcome, {user['name']}!").classes('text-2xl font-bold mb-4')
+    with ui.splitter(value=25).classes('w-full h-auto gap-4 mt-2') as splitter:
 
         # --- Left Side Panel ---
         with splitter.before:
-            with ui.column().classes('w-full h-full p-3 bg-gray-100 rounded-md shadow-sd'):
+            with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-md shadow-md gap-4'):
                 # === Section: YouTube Playlists as Cards ===
-                ui.label('🎵 My YouTube Playlists').classes('text-lg font-bold')
+                ui.label('🎵 My YouTube Playlists').classes('text-lg font-bold mb-2')
 
-                playlists_column = ui.column().classes('gap-3')
+                playlists_column = ui.column().classes('w-full gap-4')
 
                 def refresh_playlists():
                     playlists_column.clear()
@@ -35,10 +35,10 @@ def home_page():
                         playlists = load_playlists()
                         for playlist in playlists:
                             with playlists_column:
-                                with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
-                                    with ui.row().classes('justify-between items-center'):
+                                with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-4'):
+                                    with ui.row().classes('w-full justify-between items-center'):
                                         ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
-                                        ui.button('Sync', on_click=lambda: caught_john_doe())
+                                        ui.button('Sync', on_click=lambda: caught_john_doe()).classes('ml-auto')  # Align to the right
                                     ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
                     else:
                         both = load_playlists_for_user(user_id)
@@ -67,8 +67,8 @@ def home_page():
 
                         for playlist in all_playlists:
                             with playlists_column:
-                                with ui.column().classes('w-full p-3 border border-gray-200 rounded-md bg-white shadow'):
-                                    with ui.row().classes('justify-between items-center'):
+                                with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2'):
+                                    with ui.row().classes('w-full justify-between items-center'):
                                         ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
 
                                         if playlist['_id'] in owned_ids:
@@ -81,7 +81,7 @@ def home_page():
                 refresh_playlists()
 
                 # === Section: Add Playlist by ID (Card) ===
-                with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
+                with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3'):
                     ui.label('➕ Add Playlist by ID').classes('text-lg font-bold')
 
                     playlist_verified = {'status': False}
@@ -139,17 +139,17 @@ def home_page():
 
                     with ui.row().classes('justify-start gap-3 mt-2'):
                         ui.button('Verify Playlist',
-                                on_click=caught_john_doe if not username else verify_playlist)
+                                  on_click=caught_john_doe if not username else verify_playlist)
                         fetch_button = ui.button('Fetch Videos',
-                                                on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
+                                                 on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
                         fetch_button.disable()
 
                 ui.separator().classes('my-4')
 
                 # === Section: My Teams ===
-                ui.label('👥 My Teams').classes('text-xl font-bold')
+                ui.label('👥 My Teams').classes('text-xl font-bold mb-2')
 
-                teams_column = ui.column().classes('gap-2')
+                teams_column = ui.column().classes('gap-4 w-full')
 
                 def refresh_teams():
                     teams_column.clear()
@@ -164,8 +164,8 @@ def home_page():
                     all_teams = owned + [t for t in member if t["_id"] not in owned_ids]
 
                     # -- Create Team Card --
-                    with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
-                        with ui.row().classes('justify-between items-center'):
+                    with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3'):
+                        with ui.row().classes('w-full justify-between items-center'):
                             ui.label('🛠 Create New Team').classes('text-lg font-bold')
 
                         team_name_input = ui.input('Team Name').props('outlined dense').classes('w-full mt-2')
@@ -186,11 +186,10 @@ def home_page():
                             on_click=caught_john_doe if not username else create_new_team
                         ).props('color=primary').classes('mt-2 self-end')
 
-
                     for team in all_teams:
                         with teams_column:
-                            with ui.column().classes('w-full p-3 border border-gray-300 rounded-md bg-white shadow-sm'):
-                                with ui.row().classes('justify-between items-center'):
+                            with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2'):
+                                with ui.row().classes('w-full justify-between items-center'):
                                     ui.label(team['name']).tooltip(team['_id']).classes('text-lg font-bold')
                                     if team['_id'] in owned_ids:
                                         with ui.row().classes('gap-2'):
@@ -207,54 +206,90 @@ def home_page():
 
         # --- Right Main Panel ---
         with splitter.after:
-            with ui.column().classes('p-4 m-2 gap-4') as dashboard_column:
-                ui.label("🤼 Grappling Portfolio Dashboard").classes('text-2xl font-bold mt-8 mb-4')
-                
-            def render_dashboard():
-                dashboard_column.clear()
+            with ui.column().classes('w-full p-4 m-2 gap-4') as dashboard_column:
 
-                videos = load_videos()
-                if not videos:
+                def render_dashboard():
+                    # Clear the column but keep the label intact
+                    dashboard_column.clear()
+                    ui.label("🤼 Grappling Portfolio Dashboard").classes('text-2xl font-bold mt-8 mb-4')
+
+                    videos = load_videos()
+                    if not videos:
+                        with dashboard_column:
+                            with ui.card().classes('p-4 text-center'):
+                                ui.label('⚠️ No videos found! Start by adding a playlist above.').classes('text-md')
+                        return
+
+                    dates = [datetime.datetime.strptime(v['date'], "%Y-%m-%dT%H:%M:%SZ") for v in videos]
+                    total_videos = len(videos)
+                    unique_partners = len(set(p for v in videos for p in v['partners']))
+                    unique_positions = len(set(p for v in videos for p in v['positions']))
+
                     with dashboard_column:
-                        with ui.card().classes('p-4 text-center'):
-                            ui.label('⚠️ No videos found! Start by adding a playlist above.').classes('text-md')
-                    return
+                        with ui.row().classes('w-full gap-4'):
+                            with ui.card().classes('p-4').tight():
+                                ui.label(f"📹 Total Films: {total_videos}").classes('text-lg')
+                            with ui.card().classes('p-4').tight():
+                                ui.label(f"🧑‍🤝‍🧑 Training Partners: {unique_partners}").classes('text-lg')
+                            with ui.card().classes('p-4').tight():
+                                ui.label(f"📍 Unique Positions: {unique_positions}").classes('text-lg')
+                        ui.separator().classes('my-4 w-full')
 
-                dates = [datetime.datetime.strptime(v['date'], "%Y-%m-%dT%H:%M:%SZ") for v in videos]
-                total_videos = len(videos)
-                unique_partners = len(set(p for v in videos for p in v['partners']))
-                unique_positions = len(set(p for v in videos for p in v['positions']))
+                        date_counts = Counter(d.date() for d in dates)
+                        sorted_dates = sorted(date_counts.keys())
+                        chart_data = {
+                            'labels': [d.strftime('%b %d, %Y') for d in sorted_dates],  # Human-readable date format
+                            'datasets': [{
+                                'label': 'Video Count',
+                                'data': [date_counts[d] for d in sorted_dates],
+                                'type': 'bar',
+                                'itemStyle': {'color': '#4CAF50'},  # Custom bar color
+                            }]
+                        }
 
-                with dashboard_column:
-                    with ui.row().classes('w-full gap-4'):
-                        with ui.card().classes('p-4').tight():
-                            ui.label(f"📹 Total Videos: {total_videos}").classes('text-lg')
-                        with ui.card().classes('p-4').tight():
-                            ui.label(f"🧑‍🤝‍🧑 Training Partners: {unique_partners}").classes('text-lg')
-                        with ui.card().classes('p-4').tight():
-                            ui.label(f"📍 Unique Positions: {unique_positions}").classes('text-lg')
+                        ui.echart({
+                            'title': {
+                                'text': 'Activity Over Time',
+                                'left': 'center',
+                                'textStyle': {'fontSize': 18, 'fontWeight': 'bold'},
+                            },
+                            'tooltip': {
+                                'trigger': 'axis',
+                                'axisPointer': {'type': 'shadow'},  # Highlight bar on hover
+                                'formatter': '{b}: {c} videos',  # Custom tooltip format
+                            },
+                            'grid': {
+                                'left': '10%',
+                                'right': '10%',
+                                'bottom': '15%',
+                                'containLabel': True,  # Ensure labels fit within the chart
+                            },
+                            'xAxis': {
+                                'type': 'category',
+                                'data': chart_data['labels'],
+                                'axisLabel': {
+                                    'rotate': 45,  # Rotate labels for better readability
+                                    'fontSize': 12,
+                                },
+                                'axisLine': {'lineStyle': {'color': '#888'}},  # Style the axis line
+                            },
+                            'yAxis': {
+                                'type': 'value',
+                                'axisLabel': {
+                                    'fontSize': 12,
+                                    'formatter': '{value}',  # Format y-axis values
+                                },
+                                'axisLine': {'lineStyle': {'color': '#888'}},  # Style the axis line
+                                'splitLine': {'lineStyle': {'type': 'dashed', 'color': '#ddd'}},  # Dashed grid lines
+                            },
+                            'series': [{
+                                'type': 'bar',
+                                'data': chart_data['datasets'][0]['data'],
+                                'barWidth': '50%',  # Adjust bar width
+                            }]
+                        }).classes('w-full h-80')
 
-                    ui.label("📊 Activity Over Time").classes('text-xl mt-8 mb-2')
-                    date_counts = Counter(d.date() for d in dates)
-                    sorted_dates = sorted(date_counts.keys())
-                    chart_data = {
-                        'labels': [d.strftime('%Y-%m-%d') for d in sorted_dates],
-                        'datasets': [{
-                            'label': 'Video count',
-                            'data': [date_counts[d] for d in sorted_dates],
-                        }]
-                    }
-                    ui.echart({
-                        'title': {'left': 'center'},
-                        'tooltip': {'trigger': 'axis'},
-                        'xAxis': {'type': 'category', 'data': chart_data['labels']},
-                        'yAxis': {'type': 'value'},
-                        'series': [{
-                            'type': 'bar',
-                            'data': chart_data['datasets'][0]['data'],
-                        }]
-                    }).classes('w-full h-80')
-            render_dashboard()
+                render_dashboard()
 
 # --- Stubbed Actions ---
 def fetch_teams_for_user_jd(user_id):
