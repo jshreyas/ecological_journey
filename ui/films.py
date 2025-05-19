@@ -117,9 +117,9 @@ def films_page():
                                 ui.label(v["title"]) \
                                     .tooltip(v["title"]) \
                                     .classes('font-medium mt-2 truncate text-sm sm:text-base text-gray-700')
-                                ui.label(f"📅 {v['date'][:10]}") \
+                                # Display duration instead of date
+                                ui.label(f"⏱ {v['duration_human']}") \
                                     .classes('text-sm text-gray-500')
-                        ui.separator().classes('text-xl font-semibold text-blue-800 col-span-full mb-4')
 
                 # Enhanced pagination controls
                 with video_grid:
