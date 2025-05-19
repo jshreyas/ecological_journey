@@ -10,7 +10,7 @@ def navigate_to_film(video_id, e):
 
 def films_page():
     current_page = {'value': 1}
-    ui.label("🤼 Films, Films, and more Films!") \
+    ui.label("🎬 Films, Films, and more Films!") \
         .classes('text-2xl font-bold mb-4 text-center')
 
     all_videos = load_videos()
