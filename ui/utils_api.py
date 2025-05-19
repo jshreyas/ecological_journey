@@ -57,6 +57,14 @@ def load_playlists() -> List[Dict[str, Any]]:
 def load_playlists_for_user(user_id: str, filter: str = "all") -> List[Dict[str, Any]]:
     return api_get(f"/playlists?user_id={user_id}&filter={filter}")
 
+def format_duration(seconds: int) -> str:
+    """Convert seconds into a human-readable format (HH:MM:SS or MM:SS)."""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours > 0:
+        return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"  # HH:MM:SS
+    return f"{int(minutes):02}:{int(seconds):02}"  # MM:SS
+
 def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[Dict[str, Any]]:
     playlists = load_playlists()
     videos = []
@@ -65,6 +73,8 @@ def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[
             for video in playlist.get("videos", []):
                 video["playlist_id"] = playlist.get("_id")
                 video["playlist_name"] = playlist.get("name")
+                # Add human-readable duration to each video
+                video["duration_human"] = format_duration(video.get("duration_seconds", 0))
                 videos.append(video)
     videos.sort(key=lambda x: x.get("date", ""), reverse=True)
     if response_dict:
