@@ -125,7 +125,7 @@ def about():
 
 @ui.page('/film/{video_id}')
 def video_detail(video_id: str):
-    setup_navbar('📖 Film Study')
+    setup_navbar()
     film_page(video_id)
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
