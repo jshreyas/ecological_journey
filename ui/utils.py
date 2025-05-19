@@ -1,6 +1,7 @@
 # utils.py
 from nicegui import ui
 import requests
+from datetime import date, datetime, timedelta
 
 
 def format_time(seconds):
@@ -8,6 +9,16 @@ def format_time(seconds):
     sec = seconds % 60
     return f"{int(minutes):02}:{int(sec):02}"
 
+
+# --- Helper: Group videos by YYYY-MM-DD ---
+def group_videos_by_day(videos):
+    """Group videos by date (YYYY-MM-DD) extracted from the timestamp."""
+    grouped = {}
+    for v in videos:
+        # Extract the date portion from the timestamp
+        video_date = datetime.strptime(v['date'], '%Y-%m-%dT%H:%M:%SZ').date().isoformat()
+        grouped.setdefault(video_date, []).append(v)
+    return grouped
 
 # def embed_youtube_player(video_id: str, start: int = 0, end: int = None, speed: float = 1.0):
 #     end_js = f"{end}" if end is not None else "null"

@@ -4,6 +4,8 @@ from fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils_api import create_video, load_playlists, load_videos, create_playlist, load_playlists_for_user, create_team, fetch_teams_for_user
 import datetime
 from collections import Counter
+from calendar_component import calendar_container
+from utils import group_videos_by_day
 
 
 @ui.page('/home')
@@ -16,15 +18,16 @@ def home_page():
         user = {"id": 1, "name": "John Doe"}
     else:
         user = {"id": 1, "name": username}
+    all_videos = load_videos()
+    grouped_videos_by_day = group_videos_by_day(all_videos)
 
-    ui.label(f"Welcome, {user['name']}!").classes('text-2xl font-bold mb-4')
     with ui.splitter(value=25).classes('w-full h-auto gap-4 mt-2') as splitter:
 
         # --- Left Side Panel ---
         with splitter.before:
             with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-md shadow-md gap-4'):
                 # === Section: YouTube Playlists as Cards ===
-                ui.label('🎵 My YouTube Playlists').classes('text-lg font-bold mb-2')
+                ui.label(f"🎵 {user['name']}'s YouTube Playlists").classes('text-lg font-bold mb-2')
 
                 playlists_column = ui.column().classes('w-full gap-4')
 
@@ -144,10 +147,8 @@ def home_page():
                                                  on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
                         fetch_button.disable()
 
-                ui.separator().classes('my-4')
-
                 # === Section: My Teams ===
-                ui.label('👥 My Teams').classes('text-xl font-bold mb-2')
+                ui.label(f"👥 {user['name']}'s Teams").classes('text-lg font-bold mb-2')
 
                 teams_column = ui.column().classes('gap-4 w-full')
 
@@ -206,12 +207,12 @@ def home_page():
 
         # --- Right Main Panel ---
         with splitter.after:
+
             with ui.column().classes('w-full p-4 m-2 gap-4') as dashboard_column:
 
                 def render_dashboard():
                     # Clear the column but keep the label intact
                     dashboard_column.clear()
-                    ui.label("🤼 Grappling Portfolio Dashboard").classes('text-2xl font-bold mt-8 mb-4')
 
                     videos = load_videos()
                     if not videos:
@@ -221,20 +222,23 @@ def home_page():
                         return
 
                     dates = [datetime.datetime.strptime(v['date'], "%Y-%m-%dT%H:%M:%SZ") for v in videos]
-                    total_videos = len(videos)
-                    unique_partners = len(set(p for v in videos for p in v['partners']))
-                    unique_positions = len(set(p for v in videos for p in v['positions']))
+                    # total_videos = len(videos)
+                    # unique_partners = len(set(p for v in videos for p in v['partners']))
+                    # unique_positions = len(set(p for v in videos for p in v['positions']))
 
                     with dashboard_column:
-                        with ui.row().classes('w-full gap-4'):
-                            with ui.card().classes('p-4').tight():
-                                ui.label(f"📹 Total Films: {total_videos}").classes('text-lg')
-                            with ui.card().classes('p-4').tight():
-                                ui.label(f"🧑‍🤝‍🧑 Training Partners: {unique_partners}").classes('text-lg')
-                            with ui.card().classes('p-4').tight():
-                                ui.label(f"📍 Unique Positions: {unique_positions}").classes('text-lg')
-                        ui.separator().classes('my-4 w-full')
+                        # with ui.row().classes('w-full gap-4'):
+                        #     with ui.card().classes('p-4').tight():
+                        #         ui.label(f"📹 Total Films: {total_videos}").classes('text-lg')
+                        #     with ui.card().classes('p-4').tight():
+                        #         ui.label(f"🧑‍🤝‍🧑 Training Partners: {unique_partners}").classes('text-lg')
+                        #     with ui.card().classes('p-4').tight():
+                        #         ui.label(f"📍 Unique Positions: {unique_positions}").classes('text-lg')
+                        # ui.separator().classes('my-4 w-full')
 
+                        calendar_container(grouped_videos_by_day)
+
+                        ui.separator().classes('my-4 w-full')
                         date_counts = Counter(d.date() for d in dates)
                         sorted_dates = sorted(date_counts.keys())
                         chart_data = {

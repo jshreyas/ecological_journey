@@ -106,7 +106,7 @@ def films_page():
                         human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
                         
                         # Add a label for each date
-                        ui.label(f"📅 {human_readable_day}").classes('text-xl font-semibold text-blue-800 col-span-full mb-4')
+                        ui.label(f"📅 {human_readable_day}").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
                         for v in day_videos:
                             # Enhanced video cards
                             with ui.card().classes(
