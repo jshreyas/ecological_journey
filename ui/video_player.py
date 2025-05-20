@@ -21,14 +21,18 @@ class VideoPlayer:
             return url  # assume it's already a video ID
 
     def _render(self):
-        # Player container
-        ui.html('<div id="yt-player-wrapper" class=" mx-auto"><div id="yt-player"></div></div>')
+        # Set explicit pixel size for the parent container
+        ui.html('''
+            <div id="yt-player-wrapper">
+                <div id="yt-player"></div>
+            </div>
+        ''')
 
         # Load YouTube IFrame API
         ui.add_head_html('''
             <script src="https://www.youtube.com/iframe_api"></script>
         ''')
-
+        # TODO: Make the height and width 100% resizable
         # JS config and player logic
         ui.run_javascript(f'''
             window.ytConfig = {{
