@@ -97,35 +97,84 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
                 ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white").classes("text-sm")
                 ui.button("Register", on_click=lambda: caught_john_doe()).props("flat color=white").classes("text-sm")
 
+def ecological_layout():
+    setup_navbar()
+    ui.run_javascript('''
+        function showOrientationWarning() {
+            if (!document.getElementById("orientation-warning")) {
+                const notice = document.createElement('div');
+                notice.innerHTML = `
+                    <div style="
+                        display: flex; flex-direction: column; align-items: center; justify-content: center;
+                        width: 100vw; height: 100vh; color: #fff; text-align: center;">
+                        <span style="font-size:3em; margin-bottom:0.5em;">🥋</span>
+                        <div style="font-size:2em; font-weight:bold; margin-bottom:0.5em;">
+                            Landscape Mode Recommended
+                        </div>
+                        <div style="font-size:1.2em; max-width: 90vw;">
+                            For the best Ecological Journey experience,<br>
+                            please rotate your device to <b>landscape</b>.<br>
+                            <span style="font-size:1.5em;">🔁</span>
+                        </div>
+                    </div>
+                `;
+                notice.style.position = "fixed";
+                notice.style.top = "0";
+                notice.style.left = "0";
+                notice.style.width = "100vw";
+                notice.style.height = "100vh";
+                notice.style.background = "rgba(16,24,32,0.96)";
+                notice.style.zIndex = "9999";
+                notice.id = "orientation-warning";
+                document.body.appendChild(notice);
+            }
+        }
+        function hideOrientationWarning() {
+            const existing = document.getElementById("orientation-warning");
+            if (existing) existing.remove();
+        }
+        function checkOrientation() {
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+            if (isMobile && isPortrait) {
+                showOrientationWarning();
+            } else {
+                hideOrientationWarning();
+            }
+        }
+        window.addEventListener("load", checkOrientation);
+        window.addEventListener("resize", checkOrientation);
+        window.addEventListener("orientationchange", checkOrientation);
+    ''')
 
 @ui.page('/')
 def home():
-    setup_navbar()
+    ecological_layout()
     home_page()
 
 @ui.page('/film_study')
 def film_study():
-    setup_navbar()
+    ecological_layout()
     film_page("demo")
 
 @ui.page('/films')
 def films():
-    setup_navbar()
+    ecological_layout()
     films_page()
 
 @ui.page('/partner_study') ## TODO: think about the intention and layout again
 def show_partner_page():
-    setup_navbar()
+    ecological_layout()
     partner_page()
 
 @ui.page('/about')
 def about():
-    setup_navbar()
+    ecological_layout()
     about_page()
 
 @ui.page('/film/{video_id}')
 def video_detail(video_id: str):
-    setup_navbar()
+    ecological_layout()
     film_page(video_id)
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
