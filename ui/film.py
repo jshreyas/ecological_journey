@@ -78,7 +78,7 @@ def film_page(video_id: str):
         if ref:
             ref.clear()
             with ref:
-                VideoPlayer(video_id, start=start_time)
+                VideoPlayer(video_id, start=start_time, end=clip.get("end"))
 
     def add_clip_card(clip):
         with ui.card().classes('cursor-pointer hover:shadow-lg p-2').on('click', lambda e: play_clip(clip)):
