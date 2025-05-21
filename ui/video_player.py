@@ -4,10 +4,14 @@ from urllib.parse import urlparse, parse_qs
 
 class VideoPlayer:
 
-    def __init__(self, video_url: str, start: int = 0, end: int = 1000000):
+    def __init__(self, video_url: str, start: int = 0, end: int = 1000000, speed: float = 1.0, show_speed_slider: bool = True, width: int = 700, height: int = 400):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
         self.end = end
+        self.speed = speed
+        self.show_speed_slider = show_speed_slider
+        self.width = width
+        self.height = height
         self._render()
 
     def _extract_video_id(self, url: str) -> str:
@@ -21,24 +25,22 @@ class VideoPlayer:
             return url  # assume it's already a video ID
 
     def _render(self):
-        # Set explicit pixel size for the parent container
-        ui.html('''
+        ui.html(f'''
             <div id="yt-player-wrapper">
                 <div id="yt-player"></div>
             </div>
         ''')
 
-        # Load YouTube IFrame API
         ui.add_head_html('''
             <script src="https://www.youtube.com/iframe_api"></script>
         ''')
-        # TODO: Make the height and width 100% resizable
-        # JS config and player logic
+
         ui.run_javascript(f'''
             window.ytConfig = {{
                 videoId: "{self.video_id}",
                 start: {self.start},
-                end: {self.end}
+                end: {self.end},
+                speed: {self.speed}
             }};
 
             let ytPlayer;
@@ -46,8 +48,8 @@ class VideoPlayer:
 
             window.onYouTubeIframeAPIReady = function() {{
                 ytPlayer = new YT.Player('yt-player', {{
-                    height: '400',
-                    width: '700',
+                    height: '{self.height}',
+                    width: '{self.width}',
                     videoId: window.ytConfig.videoId,
                     playerVars: {{
                         autoplay: 1,
@@ -61,6 +63,7 @@ class VideoPlayer:
             }};
 
             function onPlayerReady(event) {{
+                event.target.setPlaybackRate(window.ytConfig.speed);
                 event.target.playVideo();
                 if (ytEndInterval) clearInterval(ytEndInterval);
                 ytEndInterval = setInterval(() => {{
@@ -72,9 +75,7 @@ class VideoPlayer:
                 }}, 500);
             }}
 
-            function onPlayerStateChange(event) {{
-                // Optionally handle state changes
-            }}
+            function onPlayerStateChange(event) {{}}
 
             window.setYTClip = function(start, end) {{
                 window.ytConfig.start = start;
@@ -91,7 +92,23 @@ class VideoPlayer:
                 }}, 500);
             }};
 
+            window.setYTSpeed = function(speed) {{
+                window.ytConfig.speed = speed;
+                if (ytPlayer && ytPlayer.setPlaybackRate) {{
+                    ytPlayer.setPlaybackRate(speed);
+                }}
+            }};
+
             if (window.YT && window.YT.Player) {{
                 window.onYouTubeIframeAPIReady();
             }}
         ''')
+
+        if self.show_speed_slider:
+            def on_speed_change(e):
+                self.speed = e.value
+                ui.run_javascript(f"window.setYTSpeed({e.value});")
+            ui.slider(
+                min=0.25, max=2.0, step=0.05, value=self.speed,
+                on_change=on_speed_change
+            ).props(f'label="Speed" label-always').classes(f'w-[{self.width}px]')
