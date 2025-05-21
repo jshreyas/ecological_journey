@@ -18,6 +18,7 @@ DEMO_VIDEO_POOL = [
 
 def film_page(video_id: str):
     player_container = {'ref': None}
+    player_speed = {'value': 1.0}  # Store speed in a mutable dict for closure
     demo_mode = False
     if video_id == "demo":
         demo_mode = True
@@ -341,7 +342,7 @@ def film_page(video_id: str):
         with ui.splitter(horizontal=False, value=70).classes('w-full h-[70vh] rounded shadow') as splitter:
             with splitter.before:
                 with ui.column().classes('w-full h-full p-4 gap-4') as player_container_ref:
-                    VideoPlayer(video_id)
+                    VideoPlayer(video_id, speed=player_speed['value'])
                 player_container['ref'] = player_container_ref
 
             with splitter.after:

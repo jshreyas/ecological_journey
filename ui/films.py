@@ -37,7 +37,7 @@ def films_page():
                     value=all_playlists.copy(),
                     label='Playlist',
                     multiple=True,
-                ).classes('w-full')
+                ).classes('w-full').props('use-chips')
 
                 # Collapsed date picker with selected date range display
                 with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
