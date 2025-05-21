@@ -125,24 +125,29 @@ def film_page(video_id: str):
                 end_input.on('keydown.enter', lambda e: update_slider_from_inputs())
                 update_inputs_from_slider()
 
-                # --- Raw text section ---
-                raw_text_value = clip_to_raw_text(clip)
-                raw_text = ui.textarea(
-                    'Metadata',
-                    value=raw_text_value
+                # --- Chips input for @partners and #labels ---
+                chips_input_ref, chips_list, chips_error = chips_input_combined(
+                    [f'@{p}' for p in clip.get('partners', [])] + [f'#{l}' for l in clip.get('labels', [])]
+                )
+
+                # --- Notes textarea ---
+                notes_input = ui.textarea(
+                    'Notes',
+                    value=clip.get('description', '')
                 ).props('rows=4').classes('w-full')
 
                 with ui.row().classes('justify-end gap-2 mt-4'):
                     def save_clip():
-                        parsed = raw_text_to_clip(raw_text.value)
+                        partners_list = [c[1:] for c in chips_list if c.startswith('@')]
+                        labels_list = [c[1:] for c in chips_list if c.startswith('#')]
                         updated_clip = {
                             'clip_id': clip.get('clip_id'),
                             'title': title.value,
                             'start': hms_to_seconds(start_input.value),
                             'end': hms_to_seconds(end_input.value),
-                            'description': parsed['description'],
-                            'labels': parsed['labels'],
-                            'partners': parsed['partners'],
+                            'description': notes_input.value,
+                            'labels': labels_list,
+                            'partners': partners_list,
                         }
                         playlist_name = get_playlist_id_for_video(video_id)
                         token = app.storage.user.get("token")
@@ -228,13 +233,14 @@ def film_page(video_id: str):
             for clip in clips:
                 add_clip_card(clip)
 
-    def handle_publish(textarea):
+    def handle_publish(textarea=None, video_metadata=None):
         token = app.storage.user.get("token")
         if not token:
             caught_john_doe()
             return
         try:
-            video_metadata = parse_video_metadata(textarea.value)
+            if textarea:
+                video_metadata = parse_video_metadata(textarea.value)
             # Merge with required fields from the loaded video
             for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
                 video_metadata[key] = video.get(key)
@@ -346,14 +352,14 @@ def film_page(video_id: str):
                 player_container['ref'] = player_container_ref
 
             with splitter.after:
-                with ui.tabs().classes('w-full') as tabs:
+                with ui.tabs().classes('w-full mb-2') as tabs:
                     tab_clipmaker = ui.tab('Clip Maker', icon='movie_creation')
                     tab_clipper = ui.tab('Video Metadata', icon='edit_note')
                 with ui.tab_panels(tabs, value=tab_clipmaker).classes('w-full h-full'):
                     with ui.tab_panel(tab_clipmaker):
-                        with ui.column().classes('w-full'):
-                            # Dedicated container for the Clip Maker form
-                            clip_form_container['container'] = ui.column().classes('w-full')
+                        # Removed the card, just use a column for the form
+                        with ui.column().classes('w-full gap-4 p-2'):
+                            clip_form_container['container'] = ui.column().classes('w-full gap-2')
                             clip_id = str(uuid.uuid4())[:8]
                             show_clip_form(
                                 clip_form_state.get('clip') or {
@@ -368,31 +374,44 @@ def film_page(video_id: str):
                                 is_new=clip_form_state.get('is_new', True)
                             )
                     with ui.tab_panel(tab_clipper):
-                        textarea = ui.textarea(
-                            '✏️ Video Metadata',
-                            value=convert_video_metadata_to_raw_text(video)
-                        ).props('rows=12').classes('w-full h-[45vh]')
-                        with ui.row().classes('justify-start gap-2 mt-2'):
-                            ui.button("💾 Save", on_click=lambda: handle_publish(textarea)).props('color=primary')
-                            ui.button("🧹 Clear", on_click=caught_john_doe).props('color=warning')
-                            # if not demo_mode:
-                            #     ui.button("🚀 Publish", on_click=lambda: handle_publish(textarea)).props('color=primary')
+                        with ui.column().classes('w-full gap-4 p-2'):
+                            chips_input_ref, chips_list, chips_error = chips_input_combined(
+                                [f'@{p}' for p in video.get('partners', [])] + [f'#{l}' for l in video.get('labels', [])]
+                            )
+                            notes_input = ui.textarea('Notes', value=video.get('notes', '')).props('rows=6').classes('w-full')
+                            # textarea = ui.textarea(
+                            #     '✏️ Video Metadata',
+                            #     value=convert_video_metadata_to_raw_text(video)
+                            # ).props('rows=12').classes('w-full h-[45vh]')
 
+                            with ui.row().classes('justify-start gap-2 mt-2'):
+                                ui.button(
+                                    "💾 Save",
+                                    on_click=lambda: handle_publish(
+                                        video_metadata={
+                                            "partners": [c[1:] for c in chips_list if c.startswith('@')],
+                                            "labels": [c[1:] for c in chips_list if c.startswith('#')],
+                                            "notes": notes_input.value,
+                                        }
+                                    )
+                                ).props('color=primary')
+                                # else:
+                                #     ui.button("💾 Save", on_click=lambda: handle_publish(textarea)).props('color=primary')
+                                ui.button("🧹 Clear", on_click=caught_john_doe).props('color=warning')
 
             with splitter.separator:
                 ui.icon('drag_indicator').classes('text-gray-400')
 
         ui.label('📋 Clipboard').classes('text-xl font-semibold mt-4')
-        with ui.grid(columns=5).classes('w-full gap-4') as clipboard_container:
+        with ui.grid(columns=5).classes('w-full gap-4 mb-8') as clipboard_container:
             refresh_clipboard()
 
-        # Filmboard Section
         ui.label('🎥 Filmboard: Videos from the Same Day').classes('text-xl font-semibold mt-8')
-        with ui.grid(columns=5).classes('w-full gap-4') as filmboard_container:
+        with ui.grid(columns=5).classes('w-full gap-4 mb-8') as filmboard_container:
             refresh_filmboard()
 
     player_container['ref'] = player_container_ref
-    player_container['textarea'] = textarea
+    player_container['textarea'] = None
 
 
 # --- Helper functions for raw text <-> clip dict ---
@@ -423,3 +442,58 @@ def raw_text_to_clip(text):
         'labels': labels,
         'description': '\n'.join(notes_lines).strip(),
     }
+
+def chips_input(label, initial=None, icon=None, color='primary'):
+    """Reusable chips input for tags/partners."""
+    initial = initial or []
+    chips_list = initial.copy()
+    container = ui.row().classes('gap-2')
+    input_ref = ui.input(f'Add {label}').props('dense')
+    def add_chip():
+        val = input_ref.value.strip()
+        if val and val not in chips_list:
+            chips_list.append(val)
+            with container:
+                ui.chip(val, icon=icon, color=color, removable=True).on('remove', lambda e, v=val: chips_list.remove(v))
+        input_ref.value = ''
+    input_ref.on('keydown.enter', add_chip)
+    with input_ref.add_slot('append'):
+        ui.button(icon='add', on_click=add_chip).props('round dense flat')
+    # Render initial chips
+    with container:
+        for val in chips_list:
+            ui.chip(val, icon=icon, color=color, removable=True).on('remove', lambda e, v=val: chips_list.remove(v))
+    return input_ref, chips_list
+
+def chips_input_combined(initial=None):
+    """Single chips input for both partners (@) and labels (#)."""
+    initial = initial or []
+    chips_list = initial.copy()
+    container = ui.row().classes('gap-2')
+    input_ref = ui.input('Add @partner or #label').classes('w-full').props('dense')
+    error_label = ui.label().classes('text-red-500 text-xs')
+
+    def add_chip():
+        val = input_ref.value.strip()
+        if not val:
+            return
+        if not (val.startswith('@') or val.startswith('#')):
+            error_label.text = "Start with @ for partners or # for labels"
+            return
+        if val in chips_list:
+            error_label.text = "Already added"
+            return
+        error_label.text = ""
+        chips_list.append(val)
+        with container:
+            ui.chip(val, icon='person' if val.startswith('@') else 'label', color='secondary' if val.startswith('@') else 'primary', removable=True).on('remove', lambda e, v=val: chips_list.remove(v))
+        input_ref.value = ''
+
+    input_ref.on('keydown.enter', add_chip)
+    with input_ref.add_slot('append'):
+        ui.button(icon='add', on_click=add_chip).props('round dense flat')
+    # Render initial chips
+    with container:
+        for val in chips_list:
+            ui.chip(val, icon='person' if val.startswith('@') else 'label', color='secondary' if val.startswith('@') else 'primary', removable=True).on('remove', lambda e, v=val: chips_list.remove(v))
+    return input_ref, chips_list, error_label
