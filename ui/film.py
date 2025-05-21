@@ -36,21 +36,6 @@ def film_page(video_id: str):
     clip_form_state = {'clip': None, 'is_new': True}
     clip_form_container = {}
 
-    def add_clip():
-        # Generate a unique and funny title for the new clip
-        clip_id = str(uuid.uuid4())
-        funny_title = generate_funny_title()
-        empty_clip = {
-            'clip_id': clip_id,
-            'title': funny_title,
-            'start': 0,
-            'end': 0,
-            'description': '',
-            'labels': [],
-            'partners': [],
-        }
-        show_clip_form(empty_clip, is_new=True)
-
     def show_clip_form(clip, is_new=False):
         clip_form_container['container'].clear()
         with clip_form_container['container']:
@@ -121,7 +106,7 @@ def film_page(video_id: str):
                 update_inputs_from_slider()
 
                 # --- Chips input for @partners and #labels ---
-                chips_input_ref, chips_list, chips_error = chips_input_combined(
+                chips_input_ref, chips_list, chips_error, chips_container = chips_input_combined(
                     [f'@{p}' for p in clip.get('partners', [])] + [f'#{l}' for l in clip.get('labels', [])]
                 )
 
@@ -179,21 +164,6 @@ def film_page(video_id: str):
 
                     ui.button('Save', on_click=save_clip).props('color=primary')
                     ui.button('Cancel', on_click=reset_to_add_mode).props('color=secondary')
-
-    def on_add_clip():
-        # Generate a unique id for the new clip
-        clip_id = str(uuid.uuid4())
-        clip_form_state['clip'] = {
-            'clip_id': clip_id,
-            'title': f'clip-{clip_id[:8]}',
-            'start': 0,
-            'end': 0,
-            'description': '',
-            'labels': [],
-            'partners': [],
-        }
-        clip_form_state['is_new'] = True
-        show_clip_form(clip_form_state['clip'], is_new=True)
 
     def on_edit_clip(clip):
         clip_form_state['clip'] = clip
@@ -353,10 +323,28 @@ def film_page(video_id: str):
                 with ui.tab_panels(tabs, value=tab_videom).classes('w-full h-full'):
                     with ui.tab_panel(tab_videom):
                         with ui.column().classes('w-full gap-4 p-2'):
-                            chips_input_ref, chips_list, chips_error = chips_input_combined(
+                            chips_input_ref, chips_list, chips_error, chips_container = chips_input_combined(
                                 [f'@{p}' for p in video.get('partners', [])] + [f'#{l}' for l in video.get('labels', [])]
                             )
                             notes_input = ui.textarea('Notes', value=video.get('notes', '')).props('rows=6').classes('w-full')
+
+                            def rerender_chips():
+                                chips_container.clear()
+                                for val in chips_list:
+                                    ui.chip(
+                                        val,
+                                        icon='person' if val.startswith('@') else 'label',
+                                        color='secondary' if val.startswith('@') else 'primary',
+                                        removable=True
+                                    ).on('remove', lambda e, v=val: (chips_list.remove(v), rerender_chips()))
+
+                            def reset_metadata_fields():
+                                # Reset chips and notes to original video values
+                                chips_list.clear()
+                                chips_list.extend([f'@{p}' for p in video.get('partners', [])] + [f'#{l}' for l in video.get('labels', [])])
+                                notes_input.value = video.get('notes', '')
+                                rerender_chips()
+
                             with ui.row().classes('justify-start gap-2 mt-2'):
                                 ui.button(
                                     "💾 Save",
@@ -368,15 +356,16 @@ def film_page(video_id: str):
                                         }
                                     )
                                 ).props('color=primary')
-                                ui.button("🧹 Clear", on_click=caught_john_doe).props('color=warning')
+                                ui.button("Cancel", on_click=reset_metadata_fields).props('color=secondary')
                     with ui.tab_panel(tab_clipmaker):
                         with ui.column().classes('w-full gap-4 p-2'):
                             clip_form_container['container'] = ui.column().classes('w-full gap-2')
                             clip_id = str(uuid.uuid4())[:8]
+                            funny_title = generate_funny_title()
                             show_clip_form(
                                 clip_form_state.get('clip') or {
                                     'clip_id': clip_id,
-                                    'title': f'clip-{clip_id[:8]}',
+                                    'title': funny_title,
                                     'start': 0,
                                     'end': 0,
                                     'description': '',
@@ -431,4 +420,4 @@ def chips_input_combined(initial=None):
     with container:
         for val in chips_list:
             ui.chip(val, icon='person' if val.startswith('@') else 'label', color='secondary' if val.startswith('@') else 'primary', removable=True).on('remove', lambda e, v=val: chips_list.remove(v))
-    return input_ref, chips_list, error_label
+    return input_ref, chips_list, error_label, container
