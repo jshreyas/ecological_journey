@@ -2,13 +2,14 @@
 import os
 from typing import Literal, Optional
 import jwt
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     OAuth2PasswordRequestForm,
     OAuth2PasswordBearer,
 )
 from bson import ObjectId
+from uuid import uuid4
 
 from .models import Playlist, Video, Clip
 from .auth_models import Team, User, RegisterUser
@@ -313,6 +314,9 @@ async def create_clip(
     if not video:
         raise HTTPException(status_code=404, detail="Video not found.")
 
+    if not clip.clip_id:
+        clip.clip_id = str(uuid4())
+
     await insert_clip(playlist_name, video_id, clip)
     return {"msg": "Clip added to video!"}
 
@@ -380,3 +384,44 @@ async def assign_playlist_to_team(
     )
 
     return {"msg": "Playlist assigned to team successfully."}
+
+
+@router.put("/playlists/{playlist_name}/videos/{video_id}/clips")
+async def update_clip(
+    playlist_name: str,
+    video_id: str,
+    clip: Clip = Body(...),
+    user=Depends(get_current_user)
+):
+    playlist = await get_playlist_by_name(playlist_name)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found.")
+    if not playlist["owner_id"] == user["_id"]:
+        raise HTTPException(status_code=403, detail="Access denied to this playlist.")
+
+    video = await get_video_by_id(playlist_name, video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found.")
+
+    # Find and update the clip by title and start time (or use a unique id if you have one)
+    updated = False
+    for v in playlist.get("videos", []):
+        if v["video_id"] == video_id:
+            for i, c in enumerate(v.get("clips", [])):
+                # You can use a better unique identifier if available
+                if c.get("clip_id") == clip.clip_id:
+                    v["clips"][i] = clip.dict()
+                    updated = True
+                    break
+            if not updated:
+                raise HTTPException(status_code=404, detail="Clip not found.")
+            break
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Clip not found.")
+
+    await db.playlists.update_one(
+        {"name": playlist_name},
+        {"$set": {"videos": playlist["videos"]}}
+    )
+    return {"msg": "Clip updated successfully!"}

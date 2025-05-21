@@ -290,3 +290,54 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
                 }
                 result.append(combined)
     return result
+
+def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    """Add a single clip to a video in a playlist."""
+    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
+    return api_post(endpoint, data=clip, token=token)
+
+def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    """Update a single clip in a video in a playlist."""
+    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
+    return api_put(endpoint, data=clip, token=token)
+
+def parse_video_metadata(raw_text: str) -> dict:
+    """Parse only video-level metadata from raw text."""
+    partners, labels, notes = [], [], ""
+    for line in raw_text.strip().splitlines():
+        tokens = line.split()
+        if all(token.startswith('@') or token.startswith('#') for token in tokens):
+            for token in tokens:
+                if token.startswith("@"):
+                    partners.append(token[1:].strip())
+                elif token.startswith("#"):
+                    labels.append(token[1:].strip())
+        elif line.lower().startswith("notes:"):
+            notes = line.split(":", 1)[1].strip()
+        else:
+            # treat as notes if not matched above
+            notes += ("\n" + line if notes else line)
+    return {
+        "partners": partners,
+        "labels": labels,
+        "notes": notes.strip(),
+    }
+
+def convert_video_metadata_to_raw_text(video: dict) -> str:
+    partners_line = " ".join(f"@{p}" for p in video.get("partners", []))
+    labels_line = " ".join(f"#{l}" for l in video.get("labels", []))
+    notes = video.get("notes", "")
+    return "\n".join(filter(None, [partners_line, labels_line, notes]))
+
+def save_video_metadata(video_metadata: dict, token: str) -> bool:
+    playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
+    if not playlist_name:
+        print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
+        return False
+    try:
+        # import pdb; pdb.set_trace()
+        api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
+        return True
+    except Exception as e:
+        print(f"Failed to save video metadata: {e}")
+        return False
