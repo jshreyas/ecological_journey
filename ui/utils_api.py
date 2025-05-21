@@ -301,28 +301,6 @@ def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: s
     endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
     return api_put(endpoint, data=clip, token=token)
 
-def parse_video_metadata(raw_text: str) -> dict:
-    """Parse only video-level metadata from raw text."""
-    partners, labels, notes = [], [], ""
-    for line in raw_text.strip().splitlines():
-        tokens = line.split()
-        if all(token.startswith('@') or token.startswith('#') for token in tokens):
-            for token in tokens:
-                if token.startswith("@"):
-                    partners.append(token[1:].strip())
-                elif token.startswith("#"):
-                    labels.append(token[1:].strip())
-        elif line.lower().startswith("notes:"):
-            notes = line.split(":", 1)[1].strip()
-        else:
-            # treat as notes if not matched above
-            notes += ("\n" + line if notes else line)
-    return {
-        "partners": partners,
-        "labels": labels,
-        "notes": notes.strip(),
-    }
-
 def convert_video_metadata_to_raw_text(video: dict) -> str:
     partners_line = " ".join(f"@{p}" for p in video.get("partners", []))
     labels_line = " ".join(f"#{l}" for l in video.get("labels", []))
