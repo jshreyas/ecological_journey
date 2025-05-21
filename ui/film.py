@@ -1,7 +1,9 @@
 # film.py
 from nicegui import ui, app
+from dialog_puns import caught_john_doe
 from video_player import VideoPlayer
-from utils_api import load_video, parse_and_save_clips, convert_clips_to_raw_text, parse_raw_text, load_videos
+from utils_api import convert_video_metadata_to_raw_text, load_video, parse_and_save_clips, convert_clips_to_raw_text, parse_raw_text, load_videos, parse_video_metadata, save_video_metadata
+from utils_api import add_clip_to_video, update_clip_in_video, get_playlist_id_for_video
 from utils import format_time
 from films import navigate_to_film
 import random
@@ -28,12 +30,12 @@ def film_page(video_id: str):
     if not video:
         ui.label(f"⚠️ Video: {video_id} not found!")
         return
-    raw_text = convert_clips_to_raw_text(video_id, video['duration_seconds'])
+    # raw_text = convert_clips_to_raw_text(video_id, video['duration_seconds'])
 
-    # Initialize session-backed draft text
-    session_key = f"clip_draft_{video_id}"
-    if not app.storage.user.get(session_key):
-        app.storage.user[session_key] = raw_text
+    # # Initialize session-backed draft text
+    # session_key = f"clip_draft_{video_id}"
+    # if not app.storage.user.get(session_key):
+    #     app.storage.user[session_key] = raw_text
 
     # State to track which clip is being edited (or None for new)
     clip_form_state = {'clip': None, 'is_new': True}
@@ -41,12 +43,12 @@ def film_page(video_id: str):
 
     def add_clip():
         # Generate a unique id for the new clip
-        clip_id = str(uuid.uuid4())[:8]  # short unique id
+        clip_id = str(uuid.uuid4())  # or [:8] for short
         empty_clip = {
-            'title': f'clip-{clip_id}',
+            'clip_id': clip_id,
+            'title': f'clip-{clip_id[:8]}',
             'start': 0,
             'end': 0,
-            'type': 'Technique',
             'description': '',
             'labels': [],
             'partners': [],
@@ -133,34 +135,39 @@ def film_page(video_id: str):
                     def save_clip():
                         parsed = raw_text_to_clip(raw_text.value)
                         updated_clip = {
+                            'clip_id': clip.get('clip_id'),
                             'title': title.value,
-                            'start': int(range_slider.value['min']),
-                            'end': int(range_slider.value['max']),
-                            'type': parsed['type'] if parsed['type'] else 'Technique',
+                            'start': hms_to_seconds(start_input.value),
+                            'end': hms_to_seconds(end_input.value),
                             'description': parsed['description'],
                             'labels': parsed['labels'],
                             'partners': parsed['partners'],
                         }
-                        draft_text = app.storage.user.get(session_key, "")
-                        parsed = parse_raw_text(draft_text)
-                        clips = parsed.get("clips", [])
-                        if is_new:
-                            clips.append(updated_clip)
-                        else:
-                            idx = clips.index(clip)
-                            clips[idx] = updated_clip
-                        app.storage.user[session_key] = convert_clips_to_raw_text(video_id, video['duration_seconds'], clips)
-                        refresh_clipboard()
-                        reset_to_add_mode()
+                        playlist_name = get_playlist_id_for_video(video_id)
+                        token = app.storage.user.get("token")
+                        if not token:
+                            caught_john_doe()
+                            return
+                        try:
+                            if is_new:
+                                add_clip_to_video(playlist_name, video_id, updated_clip, token)
+                                ui.notify("✅ Clip created successfully", type="positive")
+                            else:
+                                update_clip_in_video(playlist_name, video_id, updated_clip, token)
+                                ui.notify("✅ Clip updated successfully", type="positive")
+                            refresh_clipboard()
+                            reset_to_add_mode()
+                        except Exception as e:
+                            ui.notify(f"❌ Failed to save clip: {e}", type="negative")
 
                     def reset_to_add_mode():
                         # Reset to add mode after save/cancel
-                        clip_id = str(uuid.uuid4())[:8]
+                        clip_id = str(uuid.uuid4())
                         clip_form_state['clip'] = {
-                            'title': f'clip-{clip_id}',
+                            'clip_id': clip_id,
+                            'title': f'clip-{clip_id[:8]}',
                             'start': 0,
                             'end': 0,
-                            'type': 'Technique',
                             'description': '',
                             'labels': [],
                             'partners': [],
@@ -173,12 +180,12 @@ def film_page(video_id: str):
 
     def on_add_clip():
         # Generate a unique id for the new clip
-        clip_id = str(uuid.uuid4())[:8]
+        clip_id = str(uuid.uuid4())
         clip_form_state['clip'] = {
-            'title': f'clip-{clip_id}',
+            'clip_id': clip_id,
+            'title': f'clip-{clip_id[:8]}',
             'start': 0,
             'end': 0,
-            'type': 'Technique',
             'description': '',
             'labels': [],
             'partners': [],
@@ -214,43 +221,29 @@ def film_page(video_id: str):
     def refresh_clipboard():
         clipboard_container.clear()
         with clipboard_container:
-            # Add "Add Clip" card
-            with ui.card().classes('flex items-center justify-center cursor-pointer h-32').on('click', add_clip):
-                ui.icon('add').classes('text-4xl text-primary')
-                ui.label('Add Clip').classes('ml-2 text-lg text-primary')
             # Existing clips
-            draft_text = app.storage.user.get(session_key, "")
-            try:
-                parsed = parse_raw_text(draft_text)
-                clips = parsed.get("clips", [])
-                for clip in clips:
-                    add_clip_card(clip)
-            except Exception as e:
-                ui.notify(f"❌ Error parsing clipboard: {e}", type="negative")
-
-    def handle_clear_local_changes():
-        app.storage.user[session_key] = raw_text  # Reset to DB/default version
-        textarea.value = raw_text  # Update editor
-        ui.notify("🧹 Local changes cleared")
-        refresh_clipboard()
-
-    def handle_local_save(textarea):
-        app.storage.user[session_key] = textarea.value
-        ui.notify("✅ Draft saved locally")
-        refresh_clipboard()
+            video = load_video(video_id)
+            clips = video.get("clips", [])
+            for clip in clips:
+                add_clip_card(clip)
 
     def handle_publish(textarea):
         token = app.storage.user.get("token")
         if not token:
-            ui.notify("🔒 Login required to publish changes", type="warning")
+            caught_john_doe()
             return
         try:
-            success = parse_and_save_clips(video_id, textarea.value, token)
+            video_metadata = parse_video_metadata(textarea.value)
+            # Merge with required fields from the loaded video
+            for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
+                video_metadata[key] = video.get(key)
+            # 🛑 Preserve existing clips!
+            video_metadata["clips"] = video.get("clips", [])
+            success = save_video_metadata(video_metadata, token)
             if success:
-                ui.notify("✅ Published to database", type="positive")
-                refresh_clipboard()
+                ui.notify("✅ Video metadata published", type="positive")
             else:
-                ui.notify("❌ Failed to publish", type="negative")
+                ui.notify("❌ Failed to publish metadata", type="negative")
         except Exception as e:
             ui.notify(f"❌ Error: {e}", type="negative")
 
@@ -321,19 +314,27 @@ def film_page(video_id: str):
 
         # Navigation Arrows
         with ui.row().classes('w-full justify-between items-center mb-4'):
-            if prev_video:
-                with ui.row().classes('items-center cursor-pointer').on('click', lambda e: navigate_to_film(prev_video['video_id'], e)):
-                    ui.icon('arrow_back').classes('text-blue-500')
-                    ui.label(f"Previous: {prev_video['title']}").classes('text-sm text-blue-500 truncate')
-            else:
-                ui.space()  # Add space if no previous video
-            ui.label(f'🎬 Studying: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
-            if next_video:
-                with ui.row().classes('items-center cursor-pointer').on('click', lambda e: navigate_to_film(next_video['video_id'], e)):
-                    ui.label(f"Next: {next_video['title']}").classes('text-sm text-blue-500 truncate')
-                    ui.icon('arrow_forward').classes('text-blue-500')
-            else:
-                ui.space()  # Add space if no next video
+            # Use a 3-column grid for consistent centering
+            with ui.grid(columns=3).classes('w-full items-center'):
+                # Previous
+                if prev_video:
+                    with ui.row().classes('items-center cursor-pointer justify-start').on('click', lambda e: navigate_to_film(prev_video['video_id'], e)):
+                        ui.icon('arrow_back').classes('text-blue-500')
+                        ui.label(f"Previous: {prev_video['title']}").classes('text-sm text-blue-500 truncate')
+                else:
+                    ui.label().classes('')  # Empty cell
+
+                # Center label
+                with ui.row().classes('justify-center'):
+                    ui.label(f'🎬 Studying: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
+
+                # Next
+                if next_video:
+                    with ui.row().classes('items-center cursor-pointer justify-end').on('click', lambda e: navigate_to_film(next_video['video_id'], e)):
+                        ui.label(f"Next: {next_video['title']}").classes('text-sm text-blue-500 truncate')
+                        ui.icon('arrow_forward').classes('text-blue-500')
+                else:
+                    ui.label().classes('')  # Empty cell
 
         player_container_ref = None
 
@@ -355,10 +356,10 @@ def film_page(video_id: str):
                             clip_id = str(uuid.uuid4())[:8]
                             show_clip_form(
                                 clip_form_state.get('clip') or {
-                                    'title': f'clip-{clip_id}',
+                                    'clip_id': clip_id,
+                                    'title': f'clip-{clip_id[:8]}',
                                     'start': 0,
                                     'end': 0,
-                                    'type': 'Technique',
                                     'description': '',
                                     'labels': [],
                                     'partners': [],
@@ -367,14 +368,14 @@ def film_page(video_id: str):
                             )
                     with ui.tab_panel(tab_clipper):
                         textarea = ui.textarea(
-                            '✏️ Clipper',
-                            value=app.storage.user[session_key]
+                            '✏️ Video Metadata',
+                            value=convert_video_metadata_to_raw_text(video)
                         ).props('rows=12').classes('w-full h-[45vh]')
                         with ui.row().classes('justify-start gap-2 mt-2'):
-                            ui.button("💾 Save", on_click=lambda: handle_local_save(textarea)).props('color=primary')
-                            ui.button("🧹 Clear", on_click=handle_clear_local_changes).props('color=warning')
-                            if not demo_mode:
-                                ui.button("🚀 Publish", on_click=lambda: handle_publish(textarea)).props('color=primary')
+                            ui.button("💾 Save", on_click=lambda: handle_publish(textarea)).props('color=primary')
+                            ui.button("🧹 Clear", on_click=caught_john_doe).props('color=warning')
+                            # if not demo_mode:
+                            #     ui.button("🚀 Publish", on_click=lambda: handle_publish(textarea)).props('color=primary')
 
 
             with splitter.separator:
@@ -419,6 +420,5 @@ def raw_text_to_clip(text):
     return {
         'partners': partners,
         'labels': labels,
-        'type': 'Technique',  # Default or handle elsewhere if needed
         'description': '\n'.join(notes_lines).strip(),
     }

@@ -3,12 +3,13 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 from bson import ObjectId
 from .auth_models import PyObjectId
+from uuid import uuid4
 
 
 class Clip(BaseModel):
+    clip_id: str = Field(default_factory=lambda: str(uuid4()))
     start: int
     end: int
-    type: str
     description: str
     title: str
     labels: List[str] = []
