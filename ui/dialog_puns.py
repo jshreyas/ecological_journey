@@ -2,6 +2,19 @@ import random
 from nicegui import ui
 
 
+
+ADJECTIVES = [
+    "sneaky", "wobbly", "fuzzy", "brave", "zippy", "quirky", "grumpy", "jazzy", "spicy", "bouncy",
+    "cosmic", "loopy", "snazzy", "cheeky", "dizzy", "peppy", "crunchy", "sassy", "whimsical", "zany"
+]
+NOUNS = [
+    "otter", "ninja", "waffle", "pickle", "panda", "taco", "wizard", "giraffe", "robot", "pirate",
+    "unicorn", "sloth", "penguin", "cactus", "dragon", "monkey", "yeti", "lobster", "hamster", "llama"
+]
+
+def generate_funny_title():
+    return f"{random.choice(ADJECTIVES)}-{random.choice(NOUNS)}"
+
 JOHN_DOE_PUNS = [
     lambda: create_dialog(
         title="🎭 Caught you, John Doe!",
