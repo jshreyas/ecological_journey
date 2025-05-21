@@ -353,11 +353,28 @@ def film_page(video_id: str):
 
             with splitter.after:
                 with ui.tabs().classes('w-full mb-2') as tabs:
+                    tab_videom = ui.tab('Video Metadata', icon='edit_note')
                     tab_clipmaker = ui.tab('Clip Maker', icon='movie_creation')
-                    tab_clipper = ui.tab('Video Metadata', icon='edit_note')
-                with ui.tab_panels(tabs, value=tab_clipmaker).classes('w-full h-full'):
+                with ui.tab_panels(tabs, value=tab_videom).classes('w-full h-full'):
+                    with ui.tab_panel(tab_videom):
+                        with ui.column().classes('w-full gap-4 p-2'):
+                            chips_input_ref, chips_list, chips_error = chips_input_combined(
+                                [f'@{p}' for p in video.get('partners', [])] + [f'#{l}' for l in video.get('labels', [])]
+                            )
+                            notes_input = ui.textarea('Notes', value=video.get('notes', '')).props('rows=6').classes('w-full')
+                            with ui.row().classes('justify-start gap-2 mt-2'):
+                                ui.button(
+                                    "💾 Save",
+                                    on_click=lambda: handle_publish(
+                                        video_metadata={
+                                            "partners": [c[1:] for c in chips_list if c.startswith('@')],
+                                            "labels": [c[1:] for c in chips_list if c.startswith('#')],
+                                            "notes": notes_input.value,
+                                        }
+                                    )
+                                ).props('color=primary')
+                                ui.button("🧹 Clear", on_click=caught_john_doe).props('color=warning')
                     with ui.tab_panel(tab_clipmaker):
-                        # Removed the card, just use a column for the form
                         with ui.column().classes('w-full gap-4 p-2'):
                             clip_form_container['container'] = ui.column().classes('w-full gap-2')
                             clip_id = str(uuid.uuid4())[:8]
@@ -373,32 +390,6 @@ def film_page(video_id: str):
                                 },
                                 is_new=clip_form_state.get('is_new', True)
                             )
-                    with ui.tab_panel(tab_clipper):
-                        with ui.column().classes('w-full gap-4 p-2'):
-                            chips_input_ref, chips_list, chips_error = chips_input_combined(
-                                [f'@{p}' for p in video.get('partners', [])] + [f'#{l}' for l in video.get('labels', [])]
-                            )
-                            notes_input = ui.textarea('Notes', value=video.get('notes', '')).props('rows=6').classes('w-full')
-                            # textarea = ui.textarea(
-                            #     '✏️ Video Metadata',
-                            #     value=convert_video_metadata_to_raw_text(video)
-                            # ).props('rows=12').classes('w-full h-[45vh]')
-
-                            with ui.row().classes('justify-start gap-2 mt-2'):
-                                ui.button(
-                                    "💾 Save",
-                                    on_click=lambda: handle_publish(
-                                        video_metadata={
-                                            "partners": [c[1:] for c in chips_list if c.startswith('@')],
-                                            "labels": [c[1:] for c in chips_list if c.startswith('#')],
-                                            "notes": notes_input.value,
-                                        }
-                                    )
-                                ).props('color=primary')
-                                # else:
-                                #     ui.button("💾 Save", on_click=lambda: handle_publish(textarea)).props('color=primary')
-                                ui.button("🧹 Clear", on_click=caught_john_doe).props('color=warning')
-
             with splitter.separator:
                 ui.icon('drag_indicator').classes('text-gray-400')
 
