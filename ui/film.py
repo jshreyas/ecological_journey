@@ -1,8 +1,8 @@
 # film.py
 from nicegui import ui, app
-from dialog_puns import caught_john_doe
+from dialog_puns import caught_john_doe, generate_funny_title
 from video_player import VideoPlayer
-from utils_api import convert_video_metadata_to_raw_text, load_video, parse_and_save_clips, convert_clips_to_raw_text, parse_raw_text, load_videos, parse_video_metadata, save_video_metadata
+from utils_api import load_video, load_videos, parse_video_metadata, save_video_metadata
 from utils_api import add_clip_to_video, update_clip_in_video, get_playlist_id_for_video
 from utils import format_time
 from films import navigate_to_film
@@ -31,23 +31,18 @@ def film_page(video_id: str):
     if not video:
         ui.label(f"⚠️ Video: {video_id} not found!")
         return
-    # raw_text = convert_clips_to_raw_text(video_id, video['duration_seconds'])
-
-    # # Initialize session-backed draft text
-    # session_key = f"clip_draft_{video_id}"
-    # if not app.storage.user.get(session_key):
-    #     app.storage.user[session_key] = raw_text
 
     # State to track which clip is being edited (or None for new)
     clip_form_state = {'clip': None, 'is_new': True}
     clip_form_container = {}
 
     def add_clip():
-        # Generate a unique id for the new clip
-        clip_id = str(uuid.uuid4())  # or [:8] for short
+        # Generate a unique and funny title for the new clip
+        clip_id = str(uuid.uuid4())
+        funny_title = generate_funny_title()
         empty_clip = {
             'clip_id': clip_id,
-            'title': f'clip-{clip_id[:8]}',
+            'title': funny_title,
             'start': 0,
             'end': 0,
             'description': '',
@@ -169,9 +164,10 @@ def film_page(video_id: str):
                     def reset_to_add_mode():
                         # Reset to add mode after save/cancel
                         clip_id = str(uuid.uuid4())
+                        funny_title = generate_funny_title()
                         clip_form_state['clip'] = {
                             'clip_id': clip_id,
-                            'title': f'clip-{clip_id[:8]}',
+                            'title': funny_title,
                             'start': 0,
                             'end': 0,
                             'description': '',
@@ -202,6 +198,7 @@ def film_page(video_id: str):
     def on_edit_clip(clip):
         clip_form_state['clip'] = clip
         clip_form_state['is_new'] = False
+        tabs.value = tab_clipmaker  # Switch to Clip Maker tab
         show_clip_form(clip, is_new=False)
 
     def play_clip(clip):
@@ -233,14 +230,12 @@ def film_page(video_id: str):
             for clip in clips:
                 add_clip_card(clip)
 
-    def handle_publish(textarea=None, video_metadata=None):
+    def handle_publish(video_metadata=None):
         token = app.storage.user.get("token")
         if not token:
             caught_john_doe()
             return
         try:
-            if textarea:
-                video_metadata = parse_video_metadata(textarea.value)
             # Merge with required fields from the loaded video
             for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
                 video_metadata[key] = video.get(key)
@@ -354,7 +349,7 @@ def film_page(video_id: str):
             with splitter.after:
                 with ui.tabs().classes('w-full mb-2') as tabs:
                     tab_videom = ui.tab('Video Metadata', icon='edit_note')
-                    tab_clipmaker = ui.tab('Clip Maker', icon='movie_creation')
+                    tab_clipmaker = ui.tab('Clipper', icon='movie_creation')
                 with ui.tab_panels(tabs, value=tab_videom).classes('w-full h-full'):
                     with ui.tab_panel(tab_videom):
                         with ui.column().classes('w-full gap-4 p-2'):
@@ -404,57 +399,6 @@ def film_page(video_id: str):
     player_container['ref'] = player_container_ref
     player_container['textarea'] = None
 
-
-# --- Helper functions for raw text <-> clip dict ---
-
-def clip_to_raw_text(clip):
-    """Convert a clip dict to raw text format, using space as delimiter for @ and #."""
-    partners_line = ' '.join(f'@{p}' for p in clip.get('partners', [])) if clip.get('partners') else ''
-    labels_line = ' '.join(f'#{l}' for l in clip.get('labels', [])) if clip.get('labels') else ''
-    notes_lines = clip.get('description', '')
-    return '\n'.join(filter(None, [partners_line, labels_line, notes_lines]))
-
-def raw_text_to_clip(text):
-    """Parse raw text into a clip dict. @ and # can be anywhere, space-delimited, rest is notes."""
-    partners, labels = [], []
-    notes_lines = []
-    for line in text.strip().split('\n'):
-        # Find all @partners and #labels in the line, space-delimited
-        found_partners = re.findall(r'@(\w+)', line)
-        found_labels = re.findall(r'#(\w+)', line)
-        partners.extend(found_partners)
-        labels.extend(found_labels)
-        # Remove @... and #... tokens from the line for notes
-        cleaned = re.sub(r'[@#]\w+', '', line).strip()
-        if cleaned:
-            notes_lines.append(cleaned)
-    return {
-        'partners': partners,
-        'labels': labels,
-        'description': '\n'.join(notes_lines).strip(),
-    }
-
-def chips_input(label, initial=None, icon=None, color='primary'):
-    """Reusable chips input for tags/partners."""
-    initial = initial or []
-    chips_list = initial.copy()
-    container = ui.row().classes('gap-2')
-    input_ref = ui.input(f'Add {label}').props('dense')
-    def add_chip():
-        val = input_ref.value.strip()
-        if val and val not in chips_list:
-            chips_list.append(val)
-            with container:
-                ui.chip(val, icon=icon, color=color, removable=True).on('remove', lambda e, v=val: chips_list.remove(v))
-        input_ref.value = ''
-    input_ref.on('keydown.enter', add_chip)
-    with input_ref.add_slot('append'):
-        ui.button(icon='add', on_click=add_chip).props('round dense flat')
-    # Render initial chips
-    with container:
-        for val in chips_list:
-            ui.chip(val, icon=icon, color=color, removable=True).on('remove', lambda e, v=val: chips_list.remove(v))
-    return input_ref, chips_list
 
 def chips_input_combined(initial=None):
     """Single chips input for both partners (@) and labels (#)."""
