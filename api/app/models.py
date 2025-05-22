@@ -14,6 +14,7 @@ class Clip(BaseModel):
     title: str
     labels: List[str] = []
     partners: List[str] = []  # Usernames or IDs
+    speed: float = 1.0
 
 
 class Video(BaseModel):
