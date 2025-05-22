@@ -105,10 +105,12 @@ class VideoPlayer:
         ''')
 
         if self.show_speed_slider:
-            def on_speed_change(e):
-                self.speed = e.value
-                ui.run_javascript(f"window.setYTSpeed({e.value});")
-            ui.slider(
-                min=0.25, max=2.0, step=0.05, value=self.speed,
-                on_change=on_speed_change
-            ).props(f'label="Speed" label-always').classes(f'w-[{self.width}px]')
+            def on_speed_change(_):
+                self.speed = speed_knob.value
+                ui.run_javascript(f"window.setYTSpeed({speed_knob.value});")
+            with ui.row().classes('items-center gap-2'):
+                speed_knob = ui.knob(
+                    min=0.25, max=2.0, step=0.25, value=self.speed,
+                    color='orange', track_color='grey-2', show_value=True
+                ).props('size=60').on('change', on_speed_change)
+                ui.label('Speed').classes('ml-2 text-xs text-gray-500')
