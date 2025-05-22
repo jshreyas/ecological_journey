@@ -383,13 +383,9 @@ def film_page(video_id: str):
         with ui.splitter(horizontal=False, value=70).classes('w-full h-[70vh] rounded shadow') as splitter:
             with splitter.before:
                 with ui.column().classes('w-full h-full p-4 gap-4') as player_container_ref:
+                    player_container['ref'] = player_container_ref  # Set ref first!
                     if autoplay_clip:
-                        VideoPlayer(
-                            video_id,
-                            speed=autoplay_clip.get('speed', 1.0),
-                            start=autoplay_clip.get('start', 0),
-                            end=autoplay_clip.get('end')
-                        )
+                        play_clip(autoplay_clip)
                     else:
                         VideoPlayer(video_id, speed=player_speed['value'])
                 player_container['ref'] = player_container_ref
