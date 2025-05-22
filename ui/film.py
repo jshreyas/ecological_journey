@@ -135,6 +135,14 @@ def film_page(video_id: str):
                     value=clip.get('description', '')
                 ).props('rows=4').classes('w-full')
 
+                # --- Speed input ---
+                with ui.row().classes('items-center gap-2'):
+                    speed_knob = ui.knob(
+                        min=0.25, max=2.0, step=0.25, value=clip.get('speed', 1.0),
+                        color='orange', track_color='grey-2', show_value=True
+                    ).props('size=60')
+                    ui.label('Speed').classes('ml-2 text-xs text-gray-500')
+
                 with ui.row().classes('justify-end gap-2 mt-4'):
                     def save_clip():
                         partners_list = [c[1:] for c in chips_list if c.startswith('@')]
@@ -147,6 +155,7 @@ def film_page(video_id: str):
                             'description': notes_input.value,
                             'labels': labels_list,
                             'partners': partners_list,
+                            'speed': speed_knob.value,  # <-- This now reads the current value
                         }
                         playlist_name = get_playlist_id_for_video(video_id)
                         token = app.storage.user.get("token")
@@ -191,18 +200,19 @@ def film_page(video_id: str):
         show_clip_form(clip, is_new=False)
 
     def play_clip(clip):
-        ui.notify( #TODO: didnt work, pick it up here
-            f"▶️ Playing: {clip['title']}",
+        ui.notify(
+            f"▶️ Playing: {clip['title']} at {clip.get('speed', 1.0)}x",
             type="info",
             position="bottom",
-            timeout=3000  # 3 seconds, or set to 0 for persistent until next notify
+            timeout=3000
         )
         start_time = clip.get("start", 0)
+        speed = clip.get("speed", 1.0)
         ref = player_container['ref']
         if ref:
             ref.clear()
             with ref:
-                VideoPlayer(video_id, start=start_time, end=clip.get("end"))
+                VideoPlayer(video_id, start=start_time, end=clip.get("end"), speed=speed)
 
     def add_clip_card(clip, highlight=False, autoplay=False):
         with ui.card().classes(
@@ -376,7 +386,7 @@ def film_page(video_id: str):
                     if autoplay_clip:
                         VideoPlayer(
                             video_id,
-                            speed=player_speed['value'],
+                            speed=autoplay_clip.get('speed', 1.0),
                             start=autoplay_clip.get('start', 0),
                             end=autoplay_clip.get('end')
                         )
