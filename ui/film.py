@@ -7,8 +7,14 @@ from utils_api import add_clip_to_video, update_clip_in_video, get_playlist_id_f
 from utils import format_time
 from films import navigate_to_film
 import random
-import re
+import os
 import uuid
+from dotenv import load_dotenv
+load_dotenv()
+
+
+BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
+
 
 #TODO: Populate demo videos to demo playlist
 DEMO_VIDEO_POOL = [
@@ -17,8 +23,21 @@ DEMO_VIDEO_POOL = [
 
 
 def film_page(video_id: str):
+    clip_id = ui.context.client.request.query_params.get("clip")
+    autoplay_clip = None
+    if clip_id:
+        video = load_video(video_id)
+        if not video:
+            ui.label(f"⚠️ Video: {video_id} not found!")
+            return
+        clips = video.get("clips", [])
+        autoplay_clip = next((c for c in clips if c['clip_id'] == clip_id), None)
+        if not autoplay_clip:
+            ui.label(f"⚠️ Clip: {clip_id} not found in video {video_id}!")
+            return
+        video_id = autoplay_clip.get('video_id', video_id)
     player_container = {'ref': None}
-    player_speed = {'value': 1.0}  # Store speed in a mutable dict for closure
+    player_speed = {'value': 1.0}
     demo_mode = False
     if video_id == "demo":
         demo_mode = True
@@ -172,7 +191,12 @@ def film_page(video_id: str):
         show_clip_form(clip, is_new=False)
 
     def play_clip(clip):
-        ui.notify(f"▶️ Playing: {clip['title']}", type="info")
+        ui.notify( #TODO: didnt work, pick it up here
+            f"▶️ Playing: {clip['title']}",
+            type="info",
+            position="bottom",
+            timeout=3000  # 3 seconds, or set to 0 for persistent until next notify
+        )
         start_time = clip.get("start", 0)
         ref = player_container['ref']
         if ref:
@@ -180,8 +204,10 @@ def film_page(video_id: str):
             with ref:
                 VideoPlayer(video_id, start=start_time, end=clip.get("end"))
 
-    def add_clip_card(clip):
-        with ui.card().classes('p-2 flex flex-col justify-between'):
+    def add_clip_card(clip, highlight=False, autoplay=False):
+        with ui.card().classes(
+            f"p-2 flex flex-col justify-between{' border-2 border-blue-500' if highlight else ''}"
+        ):
             with ui.column().classes('w-full gap-2'):
                 ui.label(clip["title"]).classes('font-medium text-sm truncate')
                 start_time = format_time(clip.get('start', 0))
@@ -190,18 +216,49 @@ def film_page(video_id: str):
             with ui.row().classes('justify-end gap-2 mt-2'):
                 ui.button(icon='play_arrow', on_click=lambda: play_clip(clip)).props('flat color=primary').tooltip('Play')
                 ui.button(icon='edit', on_click=lambda: on_edit_clip(clip)).props('flat color=secondary').tooltip('Edit')
+                ui.button(icon='share', on_click=lambda: share_clip(clip)).props('flat color=accent').tooltip('Share')
+            # Optionally, auto-play the clip if requested
+            if autoplay:
+                play_clip(clip)
+
+    def share_clip(clip):
+        # Generate shareable link
+        video_id = clip.get('video_id') or 'unknown'
+        clip_id = clip.get('clip_id')
+        share_url = f"{BASE_URL_SHARE}/film/{video_id}?clip={clip_id}"
+
+        with ui.dialog() as dialog, ui.card():
+            ui.label('Share this clip').classes('font-bold mb-2')
+            ui.input(value=share_url).props('readonly').classes('w-full').style('font-size:0.9em')
+            ui.button(
+                'Copy Link',
+                on_click=lambda: (
+                    ui.run_javascript(f'navigator.clipboard.writeText(`{share_url}`)'),
+                    ui.notify('Link copied!'),
+                    dialog.close()
+                )
+            ).classes('mt-2')
+            ui.button(
+                'Open Link',
+                on_click=lambda: ui.run_javascript(f'window.open("{share_url}", "_blank")')
+            ).classes('mt-2')
+            ui.button('Close', on_click=dialog.close).props('flat').classes('mt-1')
+        dialog.open()
 
     def refresh_clipboard():
         clipboard_container.clear()
         with clipboard_container:
-            # Existing clips
             video = load_video(video_id)
             clips = video.get("clips", [])
             if not clips:
                 ui.label("📭 No clips for this film yet.").classes('text-sm text-gray-500')
                 return
             for clip in clips:
-                add_clip_card(clip)
+                clip['video_id'] = video_id  # <-- Ensure video_id is present
+                if clip_id and clip['clip_id'] == clip_id:
+                    add_clip_card(clip, highlight=True, autoplay=True)
+                else:
+                    add_clip_card(clip)
 
     def handle_publish(video_metadata=None):
         token = app.storage.user.get("token")
@@ -216,9 +273,9 @@ def film_page(video_id: str):
             video_metadata["clips"] = video.get("clips", [])
             success = save_video_metadata(video_metadata, token)
             if success:
-                ui.notify("✅ Film metadata published", type="positive")
+                ui.notify("✅ Filmdata published", type="positive")
             else:
-                ui.notify("❌ Failed to publish metadata", type="negative")
+                ui.notify("❌ Failed to publish filmdata", type="negative")
         except Exception as e:
             ui.notify(f"❌ Error: {e}", type="negative")
 
@@ -316,12 +373,20 @@ def film_page(video_id: str):
         with ui.splitter(horizontal=False, value=70).classes('w-full h-[70vh] rounded shadow') as splitter:
             with splitter.before:
                 with ui.column().classes('w-full h-full p-4 gap-4') as player_container_ref:
-                    VideoPlayer(video_id, speed=player_speed['value'])
+                    if autoplay_clip:
+                        VideoPlayer(
+                            video_id,
+                            speed=player_speed['value'],
+                            start=autoplay_clip.get('start', 0),
+                            end=autoplay_clip.get('end')
+                        )
+                    else:
+                        VideoPlayer(video_id, speed=player_speed['value'])
                 player_container['ref'] = player_container_ref
 
             with splitter.after:
                 with ui.tabs().classes('w-full mb-2') as tabs:
-                    tab_videom = ui.tab('Film Metadata', icon='edit_note')
+                    tab_videom = ui.tab('Filmdata', icon='edit_note')
                     tab_clipmaker = ui.tab('Clipper', icon='movie_creation')
                 with ui.tab_panels(tabs, value=tab_videom).classes('w-full h-full'):
                     with ui.tab_panel(tab_videom):
