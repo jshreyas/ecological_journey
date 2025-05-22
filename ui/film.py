@@ -90,7 +90,7 @@ def film_page(video_id: str):
                         with ui.column().classes('w-full h-full justify-center items-center'):
                             speed_knob = ui.knob(
                                 min=0.25, max=2.0, step=0.25, value=clip.get('speed', 1.0),
-                                color='orange', track_color='grey-2', show_value=True
+                                track_color='grey-2', show_value=True
                             ).props('size=60')
                             ui.label('Speed').classes('text-center text-xs w-full')
 
