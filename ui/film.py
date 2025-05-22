@@ -82,7 +82,17 @@ def film_page(video_id: str):
                     return 0
 
             with ui.card().classes('w-full p-4 mt-2'):
-                title = ui.input('Title', value=clip.get('title', '')).classes('w-full')
+                with ui.splitter(horizontal=False, value=70).classes('w-full') as splitter:
+                    with splitter.before:
+                        title = ui.input('Title', value=clip.get('title', '')).classes('w-full')
+                    with splitter.after:
+                        # --- Speed input ---
+                        with ui.column().classes('w-full h-full justify-center items-center'):
+                            speed_knob = ui.knob(
+                                min=0.25, max=2.0, step=0.25, value=clip.get('speed', 1.0),
+                                track_color='grey-2', show_value=True
+                            ).props('size=60')
+                            ui.label('Speed').classes('text-center text-xs w-full')
 
                 # Double-ended range slider
                 range_slider = ui.range(
@@ -134,14 +144,6 @@ def film_page(video_id: str):
                     'Notes',
                     value=clip.get('description', '')
                 ).props('rows=4').classes('w-full')
-
-                # --- Speed input ---
-                with ui.row().classes('items-center gap-2'):
-                    speed_knob = ui.knob(
-                        min=0.25, max=2.0, step=0.25, value=clip.get('speed', 1.0),
-                        color='orange', track_color='grey-2', show_value=True
-                    ).props('size=60')
-                    ui.label('Speed').classes('ml-2 text-xs text-gray-500')
 
                 with ui.row().classes('justify-end gap-2 mt-4'):
                     def save_clip():
