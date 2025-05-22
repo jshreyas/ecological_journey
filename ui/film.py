@@ -213,7 +213,7 @@ def film_page(video_id: str):
             video_metadata["clips"] = video.get("clips", [])
             success = save_video_metadata(video_metadata, token)
             if success:
-                ui.notify("✅ Video metadata published", type="positive")
+                ui.notify("✅ Film metadata published", type="positive")
             else:
                 ui.notify("❌ Failed to publish metadata", type="negative")
         except Exception as e:
@@ -318,7 +318,7 @@ def film_page(video_id: str):
 
             with splitter.after:
                 with ui.tabs().classes('w-full mb-2') as tabs:
-                    tab_videom = ui.tab('Video Metadata', icon='edit_note')
+                    tab_videom = ui.tab('Film Metadata', icon='edit_note')
                     tab_clipmaker = ui.tab('Clipper', icon='movie_creation')
                 with ui.tab_panels(tabs, value=tab_videom).classes('w-full h-full'):
                     with ui.tab_panel(tab_videom):

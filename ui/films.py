@@ -16,15 +16,18 @@ def films_page():
     all_videos = load_videos()
     all_playlists = sorted(list({v['playlist_name'] for v in all_videos}))
 
+    # --- Collect all unique labels from all videos ---
+    all_labels = sorted({label for v in all_videos for label in v.get('labels', [])})
+
+    # --- Collect all unique partners from all videos ---
+    all_partners = sorted({partner for v in all_videos for partner in v.get('partners', [])})
+
     dates = [datetime.strptime(v['date'][:10], '%Y-%m-%d') for v in all_videos]
     min_date = min(dates).strftime('%Y-%m-%d') if dates else '1900-01-01'
     max_date = max(dates).strftime('%Y-%m-%d') if dates else '2100-01-01'
 
-    # Format the min_date and max_date into a human-readable format
     min_date_human = datetime.strptime(min_date, '%Y-%m-%d').strftime('%B %d, %Y')
     max_date_human = datetime.strptime(max_date, '%Y-%m-%d').strftime('%B %d, %Y')
-
-    # Use the human-readable format for the default date range
     default_date_range = f'{min_date_human} - {max_date_human}'
 
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
@@ -36,6 +39,22 @@ def films_page():
                     options=all_playlists,
                     value=all_playlists.copy(),
                     label='Playlist',
+                    multiple=True,
+                ).classes('w-full').props('use-chips')
+
+                # --- Label filter ---
+                label_filter = ui.select(
+                    options=all_labels,
+                    value=[],
+                    label='Labels',
+                    multiple=True,
+                ).classes('w-full').props('use-chips')
+
+                # --- Partner filter ---
+                partner_filter = ui.select(
+                    options=all_partners,
+                    value=[],
+                    label='Partners',
                     multiple=True,
                 ).classes('w-full').props('use-chips')
 
@@ -74,11 +93,13 @@ def films_page():
                     # Fallback to default date range if parsing fails
                     start_date, end_date = min_date, max_date
 
-                # Filter videos based on the selected playlist and date range
+                # --- Filter videos based on playlist, date, and labels ---
                 filtered_videos = [
                     v for v in all_videos
                     if v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
+                    and (not label_filter.value or any(label in v.get('labels', []) for label in label_filter.value))
+                    and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
                 ]
 
                 # Sort videos by date in descending order
@@ -121,8 +142,7 @@ def films_page():
                                 ui.label(f"⏱ {v['duration_human']}") \
                                     .classes('text-sm text-gray-500')
 
-                # Enhanced pagination controls
-                with video_grid:
+                    # Enhanced pagination controls
                     with ui.row().classes('justify-between items-center mt-6 col-span-full'):
                         ui.button('Previous', on_click=lambda: change_page(-1)).props('flat').classes('text-blue-500 hover:text-blue-700')
                         ui.label(f'Page {current_page["value"]} of {total_pages}').classes('text-sm font-medium text-gray-700')
