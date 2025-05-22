@@ -197,6 +197,9 @@ def film_page(video_id: str):
             # Existing clips
             video = load_video(video_id)
             clips = video.get("clips", [])
+            if not clips:
+                ui.label("📭 No clips for this film yet.").classes('text-sm text-gray-500')
+                return
             for clip in clips:
                 add_clip_card(clip)
 
@@ -234,7 +237,7 @@ def film_page(video_id: str):
             same_day_videos = [v for v in all_videos if v.get('date', '').startswith(current_video_date) and v['video_id'] != video_id]
 
             if not same_day_videos:
-                ui.label("📭 No other videos found from the same day.").classes('text-sm text-gray-500')
+                ui.label("📭 No other films found from the same day.").classes('text-sm text-gray-500')
                 return
 
             # Display thumbnails for videos from the same day
@@ -381,7 +384,8 @@ def film_page(video_id: str):
         with ui.grid(columns=5).classes('w-full gap-4 mb-8') as clipboard_container:
             refresh_clipboard()
 
-        ui.label('🎥 Filmboard: Videos from the Same Day').classes('text-xl font-semibold mt-8')
+        ui.separator()
+        ui.label('🎥 Filmboard: Films from the same day').classes('text-xl font-semibold mt-8')
         with ui.grid(columns=5).classes('w-full gap-4 mb-8') as filmboard_container:
             refresh_filmboard()
 
