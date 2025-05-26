@@ -23,7 +23,9 @@ DEMO_VIDEO_POOL = [
 
 
 def film_page(video_id: str):
-    clip_id = ui.context.client.request.query_params.get("clip")
+    query_params = ui.context.client.request.query_params
+    clip_id = query_params.get("clip")
+    play_clips_playlist = query_params.get("clips", "false").lower() == "true"
     autoplay_clip = None
     if clip_id:
         video = load_video(video_id)
@@ -216,6 +218,55 @@ def film_page(video_id: str):
             with ref:
                 VideoPlayer(video_id, start=start_time, end=clip.get("end"), speed=speed)
 
+   # --- Playlist mode: play all clips in sequence ---
+    clips_playlist_state = {'index': 0, 'clips': []}
+
+    def play_clips_playlist_mode():
+        video = load_video(video_id)
+        clips = video.get("clips", [])
+        if not clips:
+            ui.notify("No clips to play.", type="warning")
+            return
+        clips_playlist_state['clips'] = clips
+        clips_playlist_state['index'] = 0
+
+        def play_next_clip():
+            idx = clips_playlist_state['index']
+            if idx >= len(clips):
+                ui.notify("✅ Finished all clips.", type="positive")
+                return
+            clip = clips[idx]
+            start_time = clip.get("start", 0)
+            end_time = clip.get("end")
+            speed = clip.get("speed", 1.0)
+            ref = player_container['ref']
+            if ref:
+                ref.clear()
+                with ref:
+                    VideoPlayer(
+                        video_id,
+                        start=start_time,
+                        end=end_time,
+                        speed=speed,
+                        on_end=lambda: next_clip_callback()
+                    )
+            # Notify after UI update to ensure it always shows
+            ui.timer(
+                0,
+                lambda: ui.notify(
+                    f"▶️ Playing clip {idx+1}/{len(clips)}: {clip['title']}",
+                    type="info",
+                    timeout=2000
+                ),
+                once=True
+            )
+
+        def next_clip_callback():
+            clips_playlist_state['index'] += 1
+            play_next_clip()
+
+        play_next_clip()
+
     def add_clip_card(clip, highlight=False, autoplay=False):
         with ui.card().classes(
             f"p-2 flex flex-col justify-between{' border-2 border-blue-500' if highlight else ''}"
@@ -380,7 +431,11 @@ def film_page(video_id: str):
             with splitter.before:
                 with ui.column().classes('w-full h-full p-4 gap-4') as player_container_ref:
                     player_container['ref'] = player_container_ref  # Set ref first!
-                    if autoplay_clip:
+                    if play_clips_playlist:
+                        with player_container_ref:
+                            play_clips_playlist_mode()
+                            # ui.label("Loading playlist...").classes('text-center text-gray-400')
+                    elif autoplay_clip:
                         play_clip(autoplay_clip)
                     else:
                         VideoPlayer(video_id, speed=player_speed['value'])
@@ -458,7 +513,6 @@ def film_page(video_id: str):
 
     player_container['ref'] = player_container_ref
     player_container['textarea'] = None
-
 
 def chips_input_combined(initial=None):
     """Single chips input for both partners (@) and labels (#)."""
