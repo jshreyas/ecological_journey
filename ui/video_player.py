@@ -1,10 +1,20 @@
-from nicegui import ui
+from nicegui import ui, app
 from urllib.parse import urlparse, parse_qs
 
 
 class VideoPlayer:
 
-    def __init__(self, video_url: str, start: int = 0, end: int = 1000000, speed: float = 1.0, show_speed_slider: bool = True, width: int = 700, height: int = 400):
+    def __init__(
+        self,
+        video_url: str,
+        start: int = 0,
+        end: int = 1000000,
+        speed: float = 1.0,
+        show_speed_slider: bool = True,
+        width: int = 700,
+        height: int = 400,
+        on_end=None,  # <-- Add this argument
+    ):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
         self.end = end
@@ -12,6 +22,7 @@ class VideoPlayer:
         self.show_speed_slider = show_speed_slider
         self.width = width
         self.height = height
+        self.on_end = on_end  # <-- Store callback
         self._render()
 
     def _extract_video_id(self, url: str) -> str:
@@ -25,15 +36,32 @@ class VideoPlayer:
             return url  # assume it's already a video ID
 
     def _render(self):
+        # Create a unique element id for this player instance
+        import uuid
+        self.element_id = f"yt-player-{uuid.uuid4().hex[:8]}"
         ui.html(f'''
             <div id="yt-player-wrapper">
-                <div id="yt-player"></div>
+                <div id="{self.element_id}"></div>
             </div>
         ''')
 
         ui.add_head_html('''
             <script src="https://www.youtube.com/iframe_api"></script>
         ''')
+
+        # --- NiceGUI 2.x: use app.post for callback endpoint ---
+        if self.on_end:
+            endpoint = f"/_nicegui_api/{self.element_id}_on_end"
+            @app.post(endpoint)
+            async def _on_end_event():
+                if callable(self.on_end):
+                    self.on_end()
+                return {'status': 'ok'}
+
+        # JS: call Python endpoint when video/clip ends
+        js_on_end = f"""
+            fetch('/_nicegui_api/{self.element_id}_on_end', {{method: 'POST'}});
+        """ if self.on_end else ""
 
         ui.run_javascript(f'''
             window.ytConfig = {{
@@ -47,7 +75,7 @@ class VideoPlayer:
             let ytEndInterval;
 
             window.onYouTubeIframeAPIReady = function() {{
-                ytPlayer = new YT.Player('yt-player', {{
+                ytPlayer = new YT.Player('{self.element_id}', {{
                     height: '{self.height}',
                     width: '{self.width}',
                     videoId: window.ytConfig.videoId,
@@ -71,6 +99,7 @@ class VideoPlayer:
                     if (current >= window.ytConfig.end) {{
                         ytPlayer.pauseVideo();
                         clearInterval(ytEndInterval);
+                        {js_on_end}
                     }}
                 }}, 500);
             }}
@@ -88,6 +117,7 @@ class VideoPlayer:
                     if (current >= window.ytConfig.end) {{
                         ytPlayer.pauseVideo();
                         clearInterval(ytEndInterval);
+                        {js_on_end}
                     }}
                 }}, 500);
             }};
