@@ -233,7 +233,7 @@ def film_page(video_id: str):
         def play_next_clip():
             idx = clips_playlist_state['index']
             if idx >= len(clips):
-                ui.notify("✅ Finished all clips.", type="positive")
+                # ui.notify("✅ Finished all clips.", type="positive")
                 return
             clip = clips[idx]
             start_time = clip.get("start", 0)
@@ -251,15 +251,15 @@ def film_page(video_id: str):
                         on_end=lambda: next_clip_callback()
                     )
             # Notify after UI update to ensure it always shows
-            ui.timer(
-                0,
-                lambda: ui.notify(
-                    f"▶️ Playing clip {idx+1}/{len(clips)}: {clip['title']}",
-                    type="info",
-                    timeout=2000
-                ),
-                once=True
-            )
+            # ui.timer(
+            #     0,
+            #     lambda: ui.notify(
+            #         f"▶️ Playing clip {idx+1}/{len(clips)}: {clip['title']}",
+            #         type="info",
+            #         timeout=2000
+            #     ),
+            #     once=True
+            # )
 
         def next_clip_callback():
             clips_playlist_state['index'] += 1
