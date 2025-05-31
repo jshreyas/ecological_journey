@@ -181,7 +181,6 @@ async def get_teams(
             teams = await get_teams_for_user(user_id)
     else:
         teams = await db.teams.find().to_list(length=None)
-
     return convert_objectid(teams)
 
 
@@ -239,6 +238,7 @@ async def get_playlists(
     token: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
 ):
     if user_id:
+        # TODO: get rid of this query functionality in the api, and use the filter in the frontend instead
         # TODO: owned and member filters are not tested, and are inconsistent with all's response
         if filter == "owned":
             playlists = await get_playlist_by_owner(user_id)

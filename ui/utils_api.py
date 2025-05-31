@@ -5,33 +5,11 @@ import json
 import redis
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
+from cache import cache_del, cache_get, cache_set
 from utils import format_time
 load_dotenv()
 
 BASE_URL = os.getenv("BACKEND_URL")
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-
-# Setup Redis client
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
-
-def cache_get(key: str):
-    print(f"Fetching from cache for key: {key}")
-    value = redis_client.get(key)
-    if value:
-        try:
-            return json.loads(value)
-        except Exception:
-            return value
-    return None
-
-def cache_set(key: str, value, ex: int = 300):
-    print(f"Caching key: {key} with value: {value}")
-    try:
-        redis_client.set(key, json.dumps(value), ex=ex)
-    except Exception as e:
-        print(f"Redis set error: {e}")
-
 def get_headers(token: Optional[str] = None):
     headers = {"Content-Type": "application/json"}
     if token:
@@ -58,158 +36,145 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None):
 
 def create_team(name, token):
     response = api_post("/teams", data={"name": name}, token=token)
+    # Invalidate all teams cache if you cache them
+    cache_del("teams") #TODO
     return response
 
-def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
-    response = api_get(f"/teams?user_id={user_id}")
-    return response
-
-def create_playlist(video_data, token, name, playlist_id):
-    response = api_post("/playlists", data={"name": name, "playlist_id": playlist_id}, token=token)
-    #TODO: combine all these individual API calls to a single call
-    create_video(video_data, token, name)
-    #TODO: please do error handling
-
-def create_video(video_data, token, name):
-    for video in video_data:
-        response = api_post(f"/playlists/{name}/videos", data=video, token=token)
+_playlists_cache = None  # file-level in-memory cache
 
 def load_playlists() -> List[Dict[str, Any]]:
+    global _playlists_cache
+    if _playlists_cache is not None:
+        return _playlists_cache
     cache_key = "playlists"
     cached = cache_get(cache_key)
     if cached:
+        _playlists_cache = cached
         return cached
     data = api_get("/playlists")
     cache_set(cache_key, data)
+    _playlists_cache = data
     return data
 
-def load_playlists_for_user(user_id: str, filter: str = "all") -> List[Dict[str, Any]]:
-    cache_key = f"playlists_user_{user_id}_{filter}"
-    cached = cache_get(cache_key)
-    if cached:
-        return cached
-    data = api_get(f"/playlists?user_id={user_id}&filter={filter}")
-    cache_set(cache_key, data)
-    return data
+def _refresh_playlists_cache():
+    """Force refresh playlists from backend and update both Redis and in-memory cache."""
+    global _playlists_cache
+    playlists = api_get("/playlists")
+    cache_set("playlists", playlists)
+    _playlists_cache = playlists
 
-def format_duration(seconds: int) -> str:
-    """Convert seconds into a human-readable format (HH:MM:SS or MM:SS)."""
-    hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    if hours > 0:
-        return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"  # HH:MM:SS
-    return f"{int(minutes):02}:{int(seconds):02}"  # MM:SS
+def format_duration(seconds: float) -> str:
+    """Return a human-readable duration string from seconds."""
+    seconds = int(seconds)
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h:
+        return f"{h}:{m:02d}:{s:02d}"
+    else:
+        return f"{m}:{s:02d}"
 
 def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[Dict[str, Any]]:
-    cache_key = f"videos_{playlist_id or 'all'}"
-    cached = cache_get(cache_key)
-    if cached:
-        videos = cached
-    else:
-        playlists = load_playlists()
-        videos = []
-        for playlist in playlists:
-            if playlist_id is None or playlist.get("_id") == playlist_id:
-                for video in playlist.get("videos", []):
-                    video["playlist_id"] = playlist.get("_id")
-                    video["playlist_name"] = playlist.get("name")
-                    video["duration_human"] = format_duration(video.get("duration_seconds", 0))
-                    videos.append(video)
-        videos.sort(key=lambda x: x.get("date", ""), reverse=True)
-        cache_set(cache_key, videos)
+    playlists = load_playlists()
+    videos = []
+    for playlist in playlists:
+        if playlist_id is None or playlist.get("_id") == playlist_id:
+            for video in playlist.get("videos", []):
+                video = video.copy()
+                video["playlist_id"] = playlist.get("_id")
+                video["playlist_name"] = playlist.get("name")
+                # Add human-readable duration to each video
+                video["duration_human"] = format_duration(video.get("duration_seconds", 0))
+                videos.append(video)
+    videos.sort(key=lambda x: x.get("date", ""), reverse=True)
     if response_dict:
         return {video["video_id"]: video for video in videos if "video_id" in video}
     return videos
 
-def load_video(video_id):
-    cache_key = f"video_{video_id}"
+def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
+    cache_key = f"teams_user_{user_id}"
     cached = cache_get(cache_key)
     if cached:
         return cached
-    videos = load_videos(response_dict=True)
-    video = videos.get(video_id)
-    if video:
-        cache_set(cache_key, video)
-    return video
+    response = api_get(f"/teams?user_id={user_id}")
+    cache_set(cache_key, response)
+    return response
 
-def get_playlist_id_for_video(video_id: str) -> Optional[str]:
+def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
     playlists = load_playlists()
-    for playlist in playlists:
-        for video in playlist.get("videos", []):
-            
-            if video.get("video_id") == video_id:
-                return playlist.get("name") ##Fix
-    return None
-
-def load_clips(video_id: str) -> List[Dict[str, Any]]:
-    playlist_id = get_playlist_id_for_video(video_id)
-    if not playlist_id:
-        raise ValueError(f"Video with id {video_id} not found in any playlist.")
-    playlists = load_playlists()
-    for playlist in playlists:
-        if playlist.get("name") == playlist_id:
-            for video in playlist.get("videos", []):
-                if video.get("video_id") == video_id:
-                    return video.get("clips", [])
-    return []
-
-def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
-    videos = load_videos()
-    video_metadata = next((v for v in videos if v["video_id"] == video_id), {})
-    clips = video_metadata.get("clips", [])
-    duration = video_duration or video_metadata.get("duration_seconds")
-
-    lines = []
-
-    has_metadata = any(video_metadata.get(k) for k in ["partners", "labels", "type", "notes"])
-    has_clips = bool(clips)
-
-    if has_metadata:
-        if video_metadata.get("partners"):
-            lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
-        if video_metadata.get("labels"):
-            lines.append(" ".join(f"#{l}" for l in video_metadata["labels"]))
-        if video_metadata.get("type"):
-            lines.append(f"type: {video_metadata['type']}")
-        if video_metadata.get("notes"):
-            lines.append(f"notes: {video_metadata['notes']}")
-        lines.append("")
+    teams = fetch_teams_for_user(user_id)
+    # Combine all teams if teams is a dict (API returns {'owned': [], 'member': []})
+    if isinstance(teams, dict):
+        all_teams = (teams.get('owned', []) or []) + (teams.get('member', []) or [])
     else:
-        lines += [
-            "@partner1 @partner2 #position1 #position2",
-            "type: positional/sparring/rolling/instructional",
-            "notes: optional general notes about this video",
-            ""
-        ]
+        all_teams = teams or []
+    user_team_ids = {team.get("_id") for team in all_teams if user_id in team.get("member_ids", [])}
 
-    if not has_clips and duration:
-        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
-        clips = [{
-            "start": 0,
-            "end": duration,
-            "type": "autogen"
-        }]
+    owned = [pl for pl in playlists if pl.get("owner_id") == user_id]
+    member = [
+        pl for pl in playlists
+        if pl.get("owner_id") != user_id and pl.get("team_id") in user_team_ids
+    ]
+    # Remove duplicates by _id
+    owned_ids = {pl["_id"] for pl in owned}
+    filtered_member = [pl for pl in member if pl["_id"] not in owned_ids]
 
-    for clip in clips:
-        start = clip.get("start", 0)
-        end = clip.get("end", 0)
-        if duration and end > duration:
-            end = duration
+    if filter == "owned":
+        return {"owned": owned, "member": []}
+    elif filter == "member":
+        return {"owned": [], "member": filtered_member}
+    else:  # "all"
+        return {"owned": owned, "member": filtered_member}
 
-        if clip.get("type") != "clip":
-            lines.append(f"{format_time(start)} - {format_time(end)} | Full video | @autogen")
-            continue
+# --- PATCH ALL POST/PUTs TO REPOLULATE PLAYLIST CACHE ---
 
-        title = clip.get("title", "")
-        description = clip.get("description", "")
-        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
-        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
-        full_desc = " ".join(part for part in [description, partners, labels] if part)
+def create_playlist(video_data, token, name, playlist_id):
+    response = api_post("/playlists", data={"name": name, "playlist_id": playlist_id}, token=token)
+    create_video(video_data, token, name)
+    _refresh_playlists_cache()
+    return response
 
-        lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
+def create_video(video_data, token, name):
+    for video in video_data:
+        response = api_post(f"/playlists/{name}/videos", data=video, token=token)
+    _refresh_playlists_cache()
 
-    return "\n".join(lines)
+def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
+    result = api_post(endpoint, data=clip, token=token)
+    _refresh_playlists_cache()
+    return result
 
+def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
+    result = api_put(endpoint, data=clip, token=token)
+    _refresh_playlists_cache()
+    return result
+
+def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
+    playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
+    if not playlist_name:
+        print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
+        return False
+    try:
+        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
+        _refresh_playlists_cache()
+        return True
+    except requests.HTTPError as e:
+        print(f"Failed to save video data: {e}")
+        return False
+
+def save_video_metadata(video_metadata: dict, token: str) -> bool:
+    playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
+    if not playlist_name:
+        print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
+        return False
+    try:
+        reponse = api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
+        _refresh_playlists_cache()
+        return True
+    except Exception as e:
+        print(f"Failed to save video metadata: {e}")
+        return False
 
 def parse_clip_line(line: str) -> Optional[Dict[str, Any]]:
     try:
@@ -279,19 +244,84 @@ def parse_raw_text(raw_text: str) -> Dict[str, Any]:
 
     return video_data
 
-def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
-    playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
-    if not playlist_name:
-        print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
-        return False
+def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
+    videos = load_videos()
+    video_metadata = next((v for v in videos if v["video_id"] == video_id), {})
+    clips = video_metadata.get("clips", [])
+    duration = video_duration or video_metadata.get("duration_seconds")
 
-    try:
-        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
-        return True
-    except requests.HTTPError as e:
-        print(f"Failed to save video data: {e}")
-        return False
-       #TODO: if not successful, display reason in ui?
+    lines = []
+
+    has_metadata = any(video_metadata.get(k) for k in ["partners", "labels", "type", "notes"])
+    has_clips = bool(clips)
+
+    if has_metadata:
+        if video_metadata.get("partners"):
+            lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
+        if video_metadata.get("labels"):
+            lines.append(" ".join(f"#{l}" for l in video_metadata["labels"]))
+        if video_metadata.get("type"):
+            lines.append(f"type: {video_metadata['type']}")
+        if video_metadata.get("notes"):
+            lines.append(f"notes: {video_metadata['notes']}")
+        lines.append("")
+    else:
+        lines += [
+            "@partner1 @partner2 #position1 #position2",
+            "type: positional/sparring/rolling/instructional",
+            "notes: optional general notes about this video",
+            ""
+        ]
+
+    if not has_clips and duration:
+        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
+        clips = [{
+            "start": 0,
+            "end": duration,
+            "type": "autogen"
+        }]
+
+    for clip in clips:
+        start = clip.get("start", 0)
+        end = clip.get("end", 0)
+        if duration and end > duration:
+            end = duration
+
+        if clip.get("type") != "clip":
+            lines.append(f"{format_time(start)} - {format_time(end)} | Full video | @autogen")
+            continue
+
+        title = clip.get("title", "")
+        description = clip.get("description", "")
+        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
+        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
+        full_desc = " ".join(part for part in [description, partners, labels] if part)
+
+        lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
+
+    result = "\n".join(lines)
+    return result
+
+def get_playlist_id_for_video(video_id: str) -> Optional[str]:
+    playlists = load_playlists()
+    for playlist in playlists:
+        for video in playlist.get("videos", []):
+            if video.get("video_id") == video_id:
+                return playlist.get("name")
+    return None
+
+def load_clips(video_id: str) -> List[Dict[str, Any]]:
+    playlist_id = get_playlist_id_for_video(video_id)
+    if not playlist_id:
+        raise ValueError(f"Video with id {video_id} not found in any playlist.")
+    playlists = load_playlists()
+    for playlist in playlists:
+        if playlist.get("name") == playlist_id:
+            for video in playlist.get("videos", []):
+                if video.get("video_id") == video_id:
+                    clips = video.get("clips", [])
+                    return clips
+    return []
 
 def parse_and_save_clips(video_id: str, raw_text: str, token):
     video_data = parse_raw_text(raw_text)
@@ -299,30 +329,30 @@ def parse_and_save_clips(video_id: str, raw_text: str, token):
     return save_video_data_clips(video_data, token)
 
 def get_all_partners() -> List[str]:
+    cache_key = "all_partners"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
     partners_set = set()
     videos = load_videos()
-
     for video in videos:
         video_partners = video.get("partners", [])
         partners_set.update(video_partners)
-
         clips = video.get("clips", [])
         for clip in clips:
             if clip.get("type") == "clip":
                 partners_set.update(clip.get("partners", []))
-
-    return sorted(partners_set)
+    result = sorted(partners_set)
+    cache_set(cache_key, result)
+    return result
 
 def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
     result = []
     videos = load_videos()
-
     for video in videos:
         video_id = video["video_id"]
         video_partners = video.get("partners", [])
-
         clips = video.get("clips", [])
-
         for clip in clips:
             clip_partners = clip.get("partners", [])
             if partner in clip_partners or partner in video_partners:
@@ -336,31 +366,13 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
                 result.append(combined)
     return result
 
-def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str):
-    """Add a single clip to a video in a playlist."""
-    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    return api_post(endpoint, data=clip, token=token)
-
-def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str):
-    """Update a single clip in a video in a playlist."""
-    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    return api_put(endpoint, data=clip, token=token)
-
 def convert_video_metadata_to_raw_text(video: dict) -> str:
     partners_line = " ".join(f"@{p}" for p in video.get("partners", []))
     labels_line = " ".join(f"#{l}" for l in video.get("labels", []))
     notes = video.get("notes", "")
     return "\n".join(filter(None, [partners_line, labels_line, notes]))
 
-def save_video_metadata(video_metadata: dict, token: str) -> bool:
-    playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
-    if not playlist_name:
-        print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
-        return False
-    try:
-        # import pdb; pdb.set_trace()
-        api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
-        return True
-    except Exception as e:
-        print(f"Failed to save video metadata: {e}")
-        return False
+def load_video(video_id: str) -> Optional[Dict[str, Any]]:
+    """Return a single video dict by video_id, or None if not found."""
+    videos = load_videos(response_dict=True)
+    return videos.get(video_id)
