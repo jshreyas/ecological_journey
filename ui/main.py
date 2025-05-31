@@ -69,15 +69,26 @@ def login_or_signup(mode='login'):
                         ui.notify(f"❌ {response.text}", type="negative")
                 except Exception as e:
                     if retries_left > 0:
+                        # Retry again in 30 seconds
                         ui.timer(30.0, lambda: attempt_login(retries_left - 1), once=True)
                     else:
                         waiting_dialog.close()
                         ui.notify(f"⚠️ Backend unavailable: {str(e)}", type="warning")
 
             waiting_dialog.open()
-            attempt_login()
-
+            # Wait briefly to allow dialog to render before calling API
+            ui.timer(0.1, attempt_login, once=True)
     dialog.open()
+
+
+# ✅ UX Result:
+# When "Login" is clicked → spinner appears: “Waking up servers…”
+
+# Attempts backend login immediately.
+
+# Retries up to 3 times with 30s gaps (optional config).
+
+# Shows notification on success/failure.
 
 
 
