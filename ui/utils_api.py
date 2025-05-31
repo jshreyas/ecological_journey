@@ -1,8 +1,6 @@
 import os
 import re
 import requests
-import json
-import redis
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from cache import cache_del, cache_get, cache_set
@@ -76,6 +74,32 @@ def load_playlists() -> List[Dict[str, Any]]:
     _playlists_cache = data
     return data
 
+def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
+    playlists = load_playlists()
+    teams = fetch_teams_for_user(user_id)
+    # Combine all teams if teams is a dict (API returns {'owned': [], 'member': []})
+    if isinstance(teams, dict):
+        all_teams = (teams.get('owned', []) or []) + (teams.get('member', []) or [])
+    else:
+        all_teams = teams or []
+    user_team_ids = {team.get("_id") for team in all_teams if user_id in team.get("member_ids", [])}
+
+    owned = [pl for pl in playlists if pl.get("owner_id") == user_id]
+    member = [
+        pl for pl in playlists
+        if pl.get("owner_id") != user_id and pl.get("team_id") in user_team_ids
+    ]
+    # Remove duplicates by _id
+    owned_ids = {pl["_id"] for pl in owned}
+    filtered_member = [pl for pl in member if pl["_id"] not in owned_ids]
+
+    if filter == "owned":
+        return {"owned": owned, "member": []}
+    elif filter == "member":
+        return {"owned": [], "member": filtered_member}
+    else:  # "all"
+        return {"owned": owned, "member": filtered_member}
+
 def _refresh_playlists_cache():
     """Force refresh playlists from backend and update both Redis and in-memory cache."""
     global _playlists_cache
@@ -133,31 +157,63 @@ def load_clips(video_id: str) -> List[Dict[str, Any]]:
                     return clips
     return []
 
-def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
-    playlists = load_playlists()
-    teams = fetch_teams_for_user(user_id)
-    # Combine all teams if teams is a dict (API returns {'owned': [], 'member': []})
-    if isinstance(teams, dict):
-        all_teams = (teams.get('owned', []) or []) + (teams.get('member', []) or [])
+def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
+    videos = load_videos()
+    video_metadata = next((v for v in videos if v["video_id"] == video_id), {})
+    clips = video_metadata.get("clips", [])
+    duration = video_duration or video_metadata.get("duration_seconds")
+
+    lines = []
+
+    has_metadata = any(video_metadata.get(k) for k in ["partners", "labels", "type", "notes"])
+    has_clips = bool(clips)
+
+    if has_metadata:
+        if video_metadata.get("partners"):
+            lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
+        if video_metadata.get("labels"):
+            lines.append(" ".join(f"#{l}" for l in video_metadata["labels"]))
+        if video_metadata.get("type"):
+            lines.append(f"type: {video_metadata['type']}")
+        if video_metadata.get("notes"):
+            lines.append(f"notes: {video_metadata['notes']}")
+        lines.append("")
     else:
-        all_teams = teams or []
-    user_team_ids = {team.get("_id") for team in all_teams if user_id in team.get("member_ids", [])}
+        lines += [
+            "@partner1 @partner2 #position1 #position2",
+            "type: positional/sparring/rolling/instructional",
+            "notes: optional general notes about this video",
+            ""
+        ]
 
-    owned = [pl for pl in playlists if pl.get("owner_id") == user_id]
-    member = [
-        pl for pl in playlists
-        if pl.get("owner_id") != user_id and pl.get("team_id") in user_team_ids
-    ]
-    # Remove duplicates by _id
-    owned_ids = {pl["_id"] for pl in owned}
-    filtered_member = [pl for pl in member if pl["_id"] not in owned_ids]
+    if not has_clips and duration:
+        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
+        clips = [{
+            "start": 0,
+            "end": duration,
+            "type": "autogen"
+        }]
 
-    if filter == "owned":
-        return {"owned": owned, "member": []}
-    elif filter == "member":
-        return {"owned": [], "member": filtered_member}
-    else:  # "all"
-        return {"owned": owned, "member": filtered_member}
+    for clip in clips:
+        start = clip.get("start", 0)
+        end = clip.get("end", 0)
+        if duration and end > duration:
+            end = duration
+
+        if clip.get("type") != "clip":
+            lines.append(f"{format_time(start)} - {format_time(end)} | Full video | @autogen")
+            continue
+
+        title = clip.get("title", "")
+        description = clip.get("description", "")
+        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
+        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
+        full_desc = " ".join(part for part in [description, partners, labels] if part)
+
+        lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
+
+    result = "\n".join(lines)
+    return result
 
 def save_video_metadata(video_metadata: dict, token: str) -> bool:
     playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
@@ -239,64 +295,6 @@ def parse_raw_text(raw_text: str) -> Dict[str, Any]:
                 video_data["clips"].append(clip)
 
     return video_data
-
-def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
-    videos = load_videos()
-    video_metadata = next((v for v in videos if v["video_id"] == video_id), {})
-    clips = video_metadata.get("clips", [])
-    duration = video_duration or video_metadata.get("duration_seconds")
-
-    lines = []
-
-    has_metadata = any(video_metadata.get(k) for k in ["partners", "labels", "type", "notes"])
-    has_clips = bool(clips)
-
-    if has_metadata:
-        if video_metadata.get("partners"):
-            lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
-        if video_metadata.get("labels"):
-            lines.append(" ".join(f"#{l}" for l in video_metadata["labels"]))
-        if video_metadata.get("type"):
-            lines.append(f"type: {video_metadata['type']}")
-        if video_metadata.get("notes"):
-            lines.append(f"notes: {video_metadata['notes']}")
-        lines.append("")
-    else:
-        lines += [
-            "@partner1 @partner2 #position1 #position2",
-            "type: positional/sparring/rolling/instructional",
-            "notes: optional general notes about this video",
-            ""
-        ]
-
-    if not has_clips and duration:
-        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
-        clips = [{
-            "start": 0,
-            "end": duration,
-            "type": "autogen"
-        }]
-
-    for clip in clips:
-        start = clip.get("start", 0)
-        end = clip.get("end", 0)
-        if duration and end > duration:
-            end = duration
-
-        if clip.get("type") != "clip":
-            lines.append(f"{format_time(start)} - {format_time(end)} | Full video | @autogen")
-            continue
-
-        title = clip.get("title", "")
-        description = clip.get("description", "")
-        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
-        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
-        full_desc = " ".join(part for part in [description, partners, labels] if part)
-
-        lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
-
-    result = "\n".join(lines)
-    return result
 
 def parse_and_save_clips(video_id: str, raw_text: str, token):
     video_data = parse_raw_text(raw_text)
