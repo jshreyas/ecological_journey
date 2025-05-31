@@ -2,7 +2,6 @@ import os
 import requests
 import json
 from dotenv import load_dotenv
-from utils import format_time
 load_dotenv()
 
 CACHE_TTL = int(os.getenv("CACHE_TTL", 300))  # Cache TTL in seconds

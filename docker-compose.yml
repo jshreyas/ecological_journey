@@ -1,6 +1,6 @@
 services:
   mongo:
-    image: docker-all.artifactory.8451.cloud/mongo:6
+    image: mongo:6
     container_name: ecological_mongo
     ports:
       - "27017:27017"
@@ -8,7 +8,7 @@ services:
       - mongo_data:/data/db
 
   redis:
-    image: docker-all.artifactory.8451.cloud/redis:7
+    image: redis:7
     container_name: ecological_redis
     ports:
       - "6379:6379"
@@ -26,7 +26,6 @@ services:
       - "8000:8000"
     depends_on:
       - mongo
-      - redis
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
       - MONGODB_URI=${MONGODB_URI}
@@ -59,6 +58,8 @@ services:
       - API_KEY=${API_KEY}
       - BACKEND_URL=${BACKEND_URL}
       - BASE_URL_SHARE=${BASE_URL_SHARE}
+      # - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL} # only if testing Upstash Redis locally`
+      # - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN} # only if testing Upstash Redis locally`
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     command: ["python", "ui/main.py"]

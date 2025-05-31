@@ -79,7 +79,6 @@ def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[
     for playlist in playlists:
         if playlist_id is None or playlist.get("_id") == playlist_id:
             for video in playlist.get("videos", []):
-                video = video.copy()
                 video["playlist_id"] = playlist.get("_id")
                 video["playlist_name"] = playlist.get("name")
                 # Add human-readable duration to each video
@@ -89,6 +88,32 @@ def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[
     if response_dict:
         return {video["video_id"]: video for video in videos if "video_id" in video}
     return videos
+
+def load_video(video_id: str) -> Optional[Dict[str, Any]]:
+    """Return a single video dict by video_id, or None if not found."""
+    videos = load_videos(response_dict=True)
+    return videos.get(video_id)
+
+def get_playlist_id_for_video(video_id: str) -> Optional[str]:
+    playlists = load_playlists()
+    for playlist in playlists:
+        for video in playlist.get("videos", []):
+            if video.get("video_id") == video_id:
+                return playlist.get("name")
+    return None
+
+def load_clips(video_id: str) -> List[Dict[str, Any]]:
+    playlist_id = get_playlist_id_for_video(video_id)
+    if not playlist_id:
+        raise ValueError(f"Video with id {video_id} not found in any playlist.")
+    playlists = load_playlists()
+    for playlist in playlists:
+        if playlist.get("name") == playlist_id:
+            for video in playlist.get("videos", []):
+                if video.get("video_id") == video_id:
+                    clips = video.get("clips", [])
+                    return clips
+    return []
 
 def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
     cache_key = f"teams_user_{user_id}"
@@ -137,31 +162,6 @@ def create_video(video_data, token, name):
     for video in video_data:
         response = api_post(f"/playlists/{name}/videos", data=video, token=token)
     _refresh_playlists_cache()
-
-def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str):
-    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    result = api_post(endpoint, data=clip, token=token)
-    _refresh_playlists_cache()
-    return result
-
-def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str):
-    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    result = api_put(endpoint, data=clip, token=token)
-    _refresh_playlists_cache()
-    return result
-
-def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
-    playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
-    if not playlist_name:
-        print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
-        return False
-    try:
-        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
-        _refresh_playlists_cache()
-        return True
-    except requests.HTTPError as e:
-        print(f"Failed to save video data: {e}")
-        return False
 
 def save_video_metadata(video_metadata: dict, token: str) -> bool:
     playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
@@ -302,27 +302,6 @@ def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = Non
     result = "\n".join(lines)
     return result
 
-def get_playlist_id_for_video(video_id: str) -> Optional[str]:
-    playlists = load_playlists()
-    for playlist in playlists:
-        for video in playlist.get("videos", []):
-            if video.get("video_id") == video_id:
-                return playlist.get("name")
-    return None
-
-def load_clips(video_id: str) -> List[Dict[str, Any]]:
-    playlist_id = get_playlist_id_for_video(video_id)
-    if not playlist_id:
-        raise ValueError(f"Video with id {video_id} not found in any playlist.")
-    playlists = load_playlists()
-    for playlist in playlists:
-        if playlist.get("name") == playlist_id:
-            for video in playlist.get("videos", []):
-                if video.get("video_id") == video_id:
-                    clips = video.get("clips", [])
-                    return clips
-    return []
-
 def parse_and_save_clips(video_id: str, raw_text: str, token):
     video_data = parse_raw_text(raw_text)
     video_data["video_id"] = video_id
@@ -366,13 +345,33 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
                 result.append(combined)
     return result
 
+def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
+    result = api_post(endpoint, data=clip, token=token)
+    _refresh_playlists_cache()
+    return result
+
+def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
+    result = api_put(endpoint, data=clip, token=token)
+    _refresh_playlists_cache()
+    return result
+
 def convert_video_metadata_to_raw_text(video: dict) -> str:
     partners_line = " ".join(f"@{p}" for p in video.get("partners", []))
     labels_line = " ".join(f"#{l}" for l in video.get("labels", []))
     notes = video.get("notes", "")
     return "\n".join(filter(None, [partners_line, labels_line, notes]))
 
-def load_video(video_id: str) -> Optional[Dict[str, Any]]:
-    """Return a single video dict by video_id, or None if not found."""
-    videos = load_videos(response_dict=True)
-    return videos.get(video_id)
+def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
+    playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
+    if not playlist_name:
+        print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
+        return False
+    try:
+        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
+        _refresh_playlists_cache()
+        return True
+    except requests.HTTPError as e:
+        print(f"Failed to save video data: {e}")
+        return False
