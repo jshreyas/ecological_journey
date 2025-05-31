@@ -46,17 +46,36 @@ def login_or_signup(mode='login'):
             else:
                 data = {"email": email.value, "password": password.value}
                 data["username"] = username.value
-            response = api_post(endpoint, data)
-            if response.status_code == 200:
-                data = response.json()
-                app.storage.user["token"] = data["access_token"]
-                app.storage.user["user"] = data["username"]
-                app.storage.user["id"] = data["id"]
-                ui.notify("✅ Success", type="positive")
-                dialog.close()
-                ui.navigate.to("/")  # reload to refresh navbar
-            else:
-                ui.notify(f"❌ {response.text}", type="negative")
+
+            waiting_dialog = ui.dialog().props("persistent")
+            with waiting_dialog:
+                ui.spinner(size="lg")
+                ui.label("Waking up servers... Please wait.").classes("text-lg mt-2")
+
+            def attempt_login(retries_left=3):
+                try:
+                    response = api_post(endpoint, data)
+                    if response.status_code == 200:
+                        data = response.json()
+                        app.storage.user["token"] = data["access_token"]
+                        app.storage.user["user"] = data["username"]
+                        app.storage.user["id"] = data["id"]
+                        waiting_dialog.close()
+                        ui.notify("✅ Success", type="positive")
+                        dialog.close()
+                        ui.navigate.to("/")  # refresh navbar
+                    else:
+                        waiting_dialog.close()
+                        ui.notify(f"❌ {response.text}", type="negative")
+                except Exception as e:
+                    if retries_left > 0:
+                        ui.timer(30.0, lambda: attempt_login(retries_left - 1), once=True)
+                    else:
+                        waiting_dialog.close()
+                        ui.notify(f"⚠️ Backend unavailable: {str(e)}", type="warning")
+
+            waiting_dialog.open()
+            attempt_login()
 
     dialog.open()
 
