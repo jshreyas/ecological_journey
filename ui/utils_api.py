@@ -155,8 +155,7 @@ def load_clips(video_id: str) -> List[Dict[str, Any]]:
         if playlist.get("name") == playlist_id:
             for video in playlist.get("videos", []):
                 if video.get("video_id") == video_id:
-                    clips = video.get("clips", [])
-                    return clips
+                    return video.get("clips", [])
     return []
 
 def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
@@ -213,9 +212,7 @@ def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = Non
         full_desc = " ".join(part for part in [description, partners, labels] if part)
 
         lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
-
-    result = "\n".join(lines)
-    return result
+    return "\n".join(lines)
 
 def parse_clip_line(line: str) -> Optional[Dict[str, Any]]:
     try:
@@ -296,6 +293,7 @@ def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
         return True
     except requests.HTTPError as e:
         print(f"Failed to save video data: {e}")
+        #TODO: if not successful, display reason in ui?
         return False
 
 def parse_and_save_clips(video_id: str, raw_text: str, token):
