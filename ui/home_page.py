@@ -177,7 +177,7 @@ def home_page():
                                 ui.notify('Please enter a team name.', type='warning')
                                 return
 
-                            create_team(name, user_token)
+                            create_team(name, user_token, user_id)
                             ui.notify(f'Team "{name}" created successfully!')
                             refresh_teams()
                             team_name_input.value = ''

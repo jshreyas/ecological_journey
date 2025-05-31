@@ -34,10 +34,12 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None):
     response.raise_for_status()
     return response.json()
 
-def create_team(name, token):
+def create_team(name, token, user_id):
+    cache_key = f"teams_user_{user_id}"
     response = api_post("/teams", data={"name": name}, token=token)
-    # Invalidate all teams cache if you cache them
-    cache_del("teams") #TODO
+    # Refresh cache for this user
+    teams_get = api_get(f"/teams?user_id={user_id}")
+    cache_set(cache_key, teams_get)
     return response
 
 def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
