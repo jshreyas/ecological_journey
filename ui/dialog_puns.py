@@ -90,3 +90,15 @@ def caught_john_doe():
 
 def in_progress():
     random.choice(INPROGRESS_PUNS)()
+
+def handle_backend_error(response_text=None):
+    # dialog for drama
+    with ui.dialog() as d:
+        with ui.card().classes("bg-red-100 text-red-900 shadow-lg"):
+            ui.label(f"⚠️ Trouble in {generate_funny_title()} zone!").classes("text-lg font-bold")
+            ui.markdown(
+                "Our backend wizard appears to be napping.\n\n"
+                "While we wait, feel free to sip your coffee and try in a bit."
+            )
+            ui.button("Buzz again").on("click", d.close)
+    d.open()

@@ -9,7 +9,7 @@ from home_page import home_page
 from films import films_page
 from film import film_page
 from partner import partner_page
-from dialog_puns import caught_john_doe
+from dialog_puns import caught_john_doe, handle_backend_error
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
@@ -46,20 +46,40 @@ def login_or_signup(mode='login'):
             else:
                 data = {"email": email.value, "password": password.value}
                 data["username"] = username.value
-            response = api_post(endpoint, data)
-            if response.status_code == 200:
-                data = response.json()
-                app.storage.user["token"] = data["access_token"]
-                app.storage.user["user"] = data["username"]
-                app.storage.user["id"] = data["id"]
-                ui.notify("✅ Success", type="positive")
-                dialog.close()
-                ui.navigate.to("/")  # reload to refresh navbar
-            else:
-                ui.notify(f"❌ {response.text}", type="negative")
 
+            waiting_dialog = ui.dialog().props("persistent")
+            with waiting_dialog:
+                ui.spinner(size="lg")
+                ui.label("backend must be napping..").classes("text-lg mt-2")
+
+            waiting_dialog.open()  # <-- Open the dialog before scheduling the timer
+            interval = 15 #TODO: make this configurable
+            retries = 10 #TODO: make this configurable
+            def attempt_login(retries_left=retries):
+                print("Attempting login...")  # Debug print
+                try:
+                    response = api_post(endpoint, data)
+                    print("API called, status:", response.status_code)  # Debug print
+                    if response.status_code == 200:
+                        response_data = response.json()
+                        app.storage.user["token"] = response_data["access_token"]
+                        app.storage.user["user"] = response_data["username"]
+                        app.storage.user["id"] = response_data["id"]
+                        ui.navigate.to("/")  # refresh navbar
+                    else:
+                        waiting_dialog.close()
+                        ui.notify(f"❌ {response.text}", type="negative")
+                except Exception as e:
+                    print("Exception during login:", e)  # Debug print
+                    if retries_left > 0:
+                        ui.timer(interval, lambda: attempt_login(retries_left - 1), once=True)
+                    else:
+                        waiting_dialog.close()
+                        handle_backend_error()
+
+            # Wait briefly to allow dialog to render before calling API
+            ui.timer(0.1, attempt_login, once=True)
     dialog.open()
-
 
 
 def logout():
