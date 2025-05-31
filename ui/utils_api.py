@@ -1,13 +1,36 @@
 import os
 import re
 import requests
+import json
+import redis
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from utils import format_time
 load_dotenv()
 
-
 BASE_URL = os.getenv("BACKEND_URL")
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+
+# Setup Redis client
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+
+def cache_get(key: str):
+    print(f"Fetching from cache for key: {key}")
+    value = redis_client.get(key)
+    if value:
+        try:
+            return json.loads(value)
+        except Exception:
+            return value
+    return None
+
+def cache_set(key: str, value, ex: int = 300):
+    print(f"Caching key: {key} with value: {value}")
+    try:
+        redis_client.set(key, json.dumps(value), ex=ex)
+    except Exception as e:
+        print(f"Redis set error: {e}")
 
 def get_headers(token: Optional[str] = None):
     headers = {"Content-Type": "application/json"}
@@ -52,10 +75,22 @@ def create_video(video_data, token, name):
         response = api_post(f"/playlists/{name}/videos", data=video, token=token)
 
 def load_playlists() -> List[Dict[str, Any]]:
-    return api_get("/playlists")
+    cache_key = "playlists"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+    data = api_get("/playlists")
+    cache_set(cache_key, data)
+    return data
 
 def load_playlists_for_user(user_id: str, filter: str = "all") -> List[Dict[str, Any]]:
-    return api_get(f"/playlists?user_id={user_id}&filter={filter}")
+    cache_key = f"playlists_user_{user_id}_{filter}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+    data = api_get(f"/playlists?user_id={user_id}&filter={filter}")
+    cache_set(cache_key, data)
+    return data
 
 def format_duration(seconds: int) -> str:
     """Convert seconds into a human-readable format (HH:MM:SS or MM:SS)."""
@@ -66,26 +101,36 @@ def format_duration(seconds: int) -> str:
     return f"{int(minutes):02}:{int(seconds):02}"  # MM:SS
 
 def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[Dict[str, Any]]:
-    playlists = load_playlists()
-    videos = []
-    for playlist in playlists:
-        if playlist_id is None or playlist.get("_id") == playlist_id:
-            for video in playlist.get("videos", []):
-                video["playlist_id"] = playlist.get("_id")
-                video["playlist_name"] = playlist.get("name")
-                # Add human-readable duration to each video
-                video["duration_human"] = format_duration(video.get("duration_seconds", 0))
-                videos.append(video)
-    videos.sort(key=lambda x: x.get("date", ""), reverse=True)
+    cache_key = f"videos_{playlist_id or 'all'}"
+    cached = cache_get(cache_key)
+    if cached:
+        videos = cached
+    else:
+        playlists = load_playlists()
+        videos = []
+        for playlist in playlists:
+            if playlist_id is None or playlist.get("_id") == playlist_id:
+                for video in playlist.get("videos", []):
+                    video["playlist_id"] = playlist.get("_id")
+                    video["playlist_name"] = playlist.get("name")
+                    video["duration_human"] = format_duration(video.get("duration_seconds", 0))
+                    videos.append(video)
+        videos.sort(key=lambda x: x.get("date", ""), reverse=True)
+        cache_set(cache_key, videos)
     if response_dict:
         return {video["video_id"]: video for video in videos if "video_id" in video}
     return videos
 
 def load_video(video_id):
+    cache_key = f"video_{video_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
     videos = load_videos(response_dict=True)
-    # TODO: add error handling
-    if video_id in videos: 
-        return videos[video_id]
+    video = videos.get(video_id)
+    if video:
+        cache_set(cache_key, video)
+    return video
 
 def get_playlist_id_for_video(video_id: str) -> Optional[str]:
     playlists = load_playlists()
