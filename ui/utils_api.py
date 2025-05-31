@@ -10,6 +10,8 @@ from utils import format_time
 load_dotenv()
 
 BASE_URL = os.getenv("BACKEND_URL")
+_playlists_cache = None  # file-level in-memory cache
+
 def get_headers(token: Optional[str] = None):
     headers = {"Content-Type": "application/json"}
     if token:
@@ -40,7 +42,25 @@ def create_team(name, token):
     cache_del("teams") #TODO
     return response
 
-_playlists_cache = None  # file-level in-memory cache
+def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
+    cache_key = f"teams_user_{user_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+    response = api_get(f"/teams?user_id={user_id}")
+    cache_set(cache_key, response)
+    return response
+
+def create_playlist(video_data, token, name, playlist_id):
+    response = api_post("/playlists", data={"name": name, "playlist_id": playlist_id}, token=token)
+    create_video(video_data, token, name)
+    _refresh_playlists_cache()
+    return response
+
+def create_video(video_data, token, name):
+    for video in video_data:
+        response = api_post(f"/playlists/{name}/videos", data=video, token=token)
+    _refresh_playlists_cache()
 
 def load_playlists() -> List[Dict[str, Any]]:
     global _playlists_cache
@@ -63,15 +83,13 @@ def _refresh_playlists_cache():
     cache_set("playlists", playlists)
     _playlists_cache = playlists
 
-def format_duration(seconds: float) -> str:
-    """Return a human-readable duration string from seconds."""
-    seconds = int(seconds)
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-    if h:
-        return f"{h}:{m:02d}:{s:02d}"
-    else:
-        return f"{m}:{s:02d}"
+def format_duration(seconds: int) -> str:
+    """Convert seconds into a human-readable format (HH:MM:SS or MM:SS)."""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours > 0:
+        return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"  # HH:MM:SS
+    return f"{int(minutes):02}:{int(seconds):02}"  # MM:SS
 
 def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[Dict[str, Any]]:
     playlists = load_playlists()
@@ -99,7 +117,7 @@ def get_playlist_id_for_video(video_id: str) -> Optional[str]:
     for playlist in playlists:
         for video in playlist.get("videos", []):
             if video.get("video_id") == video_id:
-                return playlist.get("name")
+                return playlist.get("name") # TODO: Fix usage of playlist name vs id
     return None
 
 def load_clips(video_id: str) -> List[Dict[str, Any]]:
@@ -114,15 +132,6 @@ def load_clips(video_id: str) -> List[Dict[str, Any]]:
                     clips = video.get("clips", [])
                     return clips
     return []
-
-def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
-    cache_key = f"teams_user_{user_id}"
-    cached = cache_get(cache_key)
-    if cached:
-        return cached
-    response = api_get(f"/teams?user_id={user_id}")
-    cache_set(cache_key, response)
-    return response
 
 def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
     playlists = load_playlists()
@@ -149,19 +158,6 @@ def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List
         return {"owned": [], "member": filtered_member}
     else:  # "all"
         return {"owned": owned, "member": filtered_member}
-
-# --- PATCH ALL POST/PUTs TO REPOLULATE PLAYLIST CACHE ---
-
-def create_playlist(video_data, token, name, playlist_id):
-    response = api_post("/playlists", data={"name": name, "playlist_id": playlist_id}, token=token)
-    create_video(video_data, token, name)
-    _refresh_playlists_cache()
-    return response
-
-def create_video(video_data, token, name):
-    for video in video_data:
-        response = api_post(f"/playlists/{name}/videos", data=video, token=token)
-    _refresh_playlists_cache()
 
 def save_video_metadata(video_metadata: dict, token: str) -> bool:
     playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
