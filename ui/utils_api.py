@@ -51,7 +51,9 @@ def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
 
 def create_playlist(video_data, token, name, playlist_id):
     response = api_post("/playlists", data={"name": name, "playlist_id": playlist_id}, token=token)
+    #TODO: combine all these individual API calls to a single call
     create_video(video_data, token, name)
+    #TODO: please do error handling
     _refresh_playlists_cache()
     return response
 
@@ -215,19 +217,6 @@ def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = Non
     result = "\n".join(lines)
     return result
 
-def save_video_metadata(video_metadata: dict, token: str) -> bool:
-    playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
-    if not playlist_name:
-        print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
-        return False
-    try:
-        reponse = api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
-        _refresh_playlists_cache()
-        return True
-    except Exception as e:
-        print(f"Failed to save video metadata: {e}")
-        return False
-
 def parse_clip_line(line: str) -> Optional[Dict[str, Any]]:
     try:
         if "Clip Title Here" in line or "@autogen" in line:
@@ -296,6 +285,19 @@ def parse_raw_text(raw_text: str) -> Dict[str, Any]:
 
     return video_data
 
+def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
+    playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
+    if not playlist_name:
+        print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
+        return False
+    try:
+        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
+        _refresh_playlists_cache()
+        return True
+    except requests.HTTPError as e:
+        print(f"Failed to save video data: {e}")
+        return False
+
 def parse_and_save_clips(video_id: str, raw_text: str, token):
     video_data = parse_raw_text(raw_text)
     video_data["video_id"] = video_id
@@ -340,12 +342,14 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
     return result
 
 def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    """Add a single clip to a video in a playlist."""
     endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
     result = api_post(endpoint, data=clip, token=token)
     _refresh_playlists_cache()
     return result
 
 def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str):
+    """Update a single clip in a video in a playlist."""
     endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
     result = api_put(endpoint, data=clip, token=token)
     _refresh_playlists_cache()
@@ -357,15 +361,15 @@ def convert_video_metadata_to_raw_text(video: dict) -> str:
     notes = video.get("notes", "")
     return "\n".join(filter(None, [partners_line, labels_line, notes]))
 
-def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
-    playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
+def save_video_metadata(video_metadata: dict, token: str) -> bool:
+    playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
     if not playlist_name:
-        print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
+        print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
         return False
     try:
-        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
+        reponse = api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
         _refresh_playlists_cache()
         return True
-    except requests.HTTPError as e:
-        print(f"Failed to save video data: {e}")
+    except Exception as e:
+        print(f"Failed to save video metadata: {e}")
         return False
