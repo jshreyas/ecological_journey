@@ -50,7 +50,7 @@ def login_or_signup(mode='login'):
             waiting_dialog = ui.dialog().props("persistent")
             with waiting_dialog:
                 ui.spinner(size="lg")
-                ui.label("Checking with the backend...").classes("text-lg mt-2")
+                ui.label("backend must be napping..").classes("text-lg mt-2")
 
             waiting_dialog.open()  # <-- Open the dialog before scheduling the timer
             interval = 15 #TODO: make this configurable
@@ -65,9 +65,6 @@ def login_or_signup(mode='login'):
                         app.storage.user["token"] = response_data["access_token"]
                         app.storage.user["user"] = response_data["username"]
                         app.storage.user["id"] = response_data["id"]
-                        waiting_dialog.close()
-                        ui.notify("✅ Success", type="positive")
-                        dialog.close()
                         ui.navigate.to("/")  # refresh navbar
                     else:
                         waiting_dialog.close()
