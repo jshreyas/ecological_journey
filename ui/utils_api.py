@@ -3,11 +3,12 @@ import re
 import requests
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
+from cache import cache_del, cache_get, cache_set
 from utils import format_time
 load_dotenv()
 
-
 BASE_URL = os.getenv("BACKEND_URL")
+_playlists_cache = None  # file-level in-memory cache
 
 def get_headers(token: Optional[str] = None):
     headers = {"Content-Type": "application/json"}
@@ -33,12 +34,21 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None):
     response.raise_for_status()
     return response.json()
 
-def create_team(name, token):
+def create_team(name, token, user_id):
+    cache_key = f"teams_user_{user_id}"
     response = api_post("/teams", data={"name": name}, token=token)
+    # Refresh cache for this user
+    teams_get = api_get(f"/teams?user_id={user_id}")
+    cache_set(cache_key, teams_get)
     return response
 
 def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
+    cache_key = f"teams_user_{user_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
     response = api_get(f"/teams?user_id={user_id}")
+    cache_set(cache_key, response)
     return response
 
 def create_playlist(video_data, token, name, playlist_id):
@@ -46,16 +56,60 @@ def create_playlist(video_data, token, name, playlist_id):
     #TODO: combine all these individual API calls to a single call
     create_video(video_data, token, name)
     #TODO: please do error handling
+    _refresh_playlists_cache()
+    return response
 
 def create_video(video_data, token, name):
     for video in video_data:
         response = api_post(f"/playlists/{name}/videos", data=video, token=token)
+    _refresh_playlists_cache()
 
 def load_playlists() -> List[Dict[str, Any]]:
-    return api_get("/playlists")
+    global _playlists_cache
+    if _playlists_cache is not None:
+        return _playlists_cache
+    cache_key = "playlists"
+    cached = cache_get(cache_key)
+    if cached:
+        _playlists_cache = cached
+        return cached
+    data = api_get("/playlists")
+    cache_set(cache_key, data)
+    _playlists_cache = data
+    return data
 
-def load_playlists_for_user(user_id: str, filter: str = "all") -> List[Dict[str, Any]]:
-    return api_get(f"/playlists?user_id={user_id}&filter={filter}")
+def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
+    playlists = load_playlists()
+    teams = fetch_teams_for_user(user_id)
+    # Combine all teams if teams is a dict (API returns {'owned': [], 'member': []})
+    if isinstance(teams, dict):
+        all_teams = (teams.get('owned', []) or []) + (teams.get('member', []) or [])
+    else:
+        all_teams = teams or []
+    user_team_ids = {team.get("_id") for team in all_teams if user_id in team.get("member_ids", [])}
+
+    owned = [pl for pl in playlists if pl.get("owner_id") == user_id]
+    member = [
+        pl for pl in playlists
+        if pl.get("owner_id") != user_id and pl.get("team_id") in user_team_ids
+    ]
+    # Remove duplicates by _id
+    owned_ids = {pl["_id"] for pl in owned}
+    filtered_member = [pl for pl in member if pl["_id"] not in owned_ids]
+
+    if filter == "owned":
+        return {"owned": owned, "member": []}
+    elif filter == "member":
+        return {"owned": [], "member": filtered_member}
+    else:  # "all"
+        return {"owned": owned, "member": filtered_member}
+
+def _refresh_playlists_cache():
+    """Force refresh playlists from backend and update both Redis and in-memory cache."""
+    global _playlists_cache
+    playlists = api_get("/playlists")
+    cache_set("playlists", playlists)
+    _playlists_cache = playlists
 
 def format_duration(seconds: int) -> str:
     """Convert seconds into a human-readable format (HH:MM:SS or MM:SS)."""
@@ -81,19 +135,17 @@ def load_videos(playlist_id: Optional[str] = None, response_dict=False) -> List[
         return {video["video_id"]: video for video in videos if "video_id" in video}
     return videos
 
-def load_video(video_id):
+def load_video(video_id: str) -> Optional[Dict[str, Any]]:
+    """Return a single video dict by video_id, or None if not found."""
     videos = load_videos(response_dict=True)
-    # TODO: add error handling
-    if video_id in videos: 
-        return videos[video_id]
+    return videos.get(video_id)
 
 def get_playlist_id_for_video(video_id: str) -> Optional[str]:
     playlists = load_playlists()
     for playlist in playlists:
         for video in playlist.get("videos", []):
-            
             if video.get("video_id") == video_id:
-                return playlist.get("name") ##Fix
+                return playlist.get("name") # TODO: Fix usage of playlist name vs id
     return None
 
 def load_clips(video_id: str) -> List[Dict[str, Any]]:
@@ -162,9 +214,7 @@ def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = Non
         full_desc = " ".join(part for part in [description, partners, labels] if part)
 
         lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
-
     return "\n".join(lines)
-
 
 def parse_clip_line(line: str) -> Optional[Dict[str, Any]]:
     try:
@@ -239,14 +289,14 @@ def save_video_data_clips(video_data: Dict[str, Any], token) -> bool:
     if not playlist_name:
         print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
         return False
-
     try:
         api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
+        _refresh_playlists_cache()
         return True
     except requests.HTTPError as e:
         print(f"Failed to save video data: {e}")
+        #TODO: if not successful, display reason in ui?
         return False
-       #TODO: if not successful, display reason in ui?
 
 def parse_and_save_clips(video_id: str, raw_text: str, token):
     video_data = parse_raw_text(raw_text)
@@ -254,30 +304,30 @@ def parse_and_save_clips(video_id: str, raw_text: str, token):
     return save_video_data_clips(video_data, token)
 
 def get_all_partners() -> List[str]:
+    cache_key = "all_partners"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
     partners_set = set()
     videos = load_videos()
-
     for video in videos:
         video_partners = video.get("partners", [])
         partners_set.update(video_partners)
-
         clips = video.get("clips", [])
         for clip in clips:
             if clip.get("type") == "clip":
                 partners_set.update(clip.get("partners", []))
-
-    return sorted(partners_set)
+    result = sorted(partners_set)
+    cache_set(cache_key, result)
+    return result
 
 def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
     result = []
     videos = load_videos()
-
     for video in videos:
         video_id = video["video_id"]
         video_partners = video.get("partners", [])
-
         clips = video.get("clips", [])
-
         for clip in clips:
             clip_partners = clip.get("partners", [])
             if partner in clip_partners or partner in video_partners:
@@ -294,12 +344,16 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
 def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str):
     """Add a single clip to a video in a playlist."""
     endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    return api_post(endpoint, data=clip, token=token)
+    result = api_post(endpoint, data=clip, token=token)
+    _refresh_playlists_cache()
+    return result
 
 def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str):
     """Update a single clip in a video in a playlist."""
     endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    return api_put(endpoint, data=clip, token=token)
+    result = api_put(endpoint, data=clip, token=token)
+    _refresh_playlists_cache()
+    return result
 
 def convert_video_metadata_to_raw_text(video: dict) -> str:
     partners_line = " ".join(f"@{p}" for p in video.get("partners", []))
@@ -313,8 +367,8 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
         print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
         return False
     try:
-        # import pdb; pdb.set_trace()
-        api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
+        reponse = api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
+        _refresh_playlists_cache()
         return True
     except Exception as e:
         print(f"Failed to save video metadata: {e}")
