@@ -62,8 +62,10 @@ def login_or_signup(mode='login'):
                 print(f"Attempting login... Retries left: {retries_left}")  # Debug print
                 try:
                     if retries_left == retries:
-                        wake_response = api_get(endpoint="/docs")
-                        print("wake API called, status:", wake_response.status_code)  # Debug print
+                        ui.run_javascript(f"""
+                            fetch("{BACKEND_URL}/docs").then(r => console.log('Backend wakeup ping sent'))
+                        """)
+                        print("wake API called in js")  # Debug print
                     response = api_post(endpoint, data)
                     print("API called, status:", response.status_code)  # Debug print
 
