@@ -10,6 +10,8 @@ from films import films_page
 from film import film_page
 from partner import partner_page
 from dialog_puns import caught_john_doe, handle_backend_error
+import sys
+sys.stdout.reconfigure(line_buffering=True)
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
