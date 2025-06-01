@@ -52,25 +52,40 @@ def login_or_signup(mode='login'):
             waiting_dialog = ui.dialog().props("persistent")
             with waiting_dialog:
                 ui.spinner(size="lg")
-                ui.label("backend must be napping..").classes("text-lg mt-2")
+                ui.label("backend must be napping...").classes("text-lg mt-2")
 
-            waiting_dialog.open()  # <-- Open the dialog before scheduling the timer
-            interval = 15 #TODO: make this configurable
-            retries = 10 #TODO: make this configurable
+            waiting_dialog.open()
+            interval = 15 # TODO: make this configurable
+            retries = 10 # TODO: make this configurable
+
             def attempt_login(retries_left=retries):
-                print("Attempting login...")  # Debug print
+                print(f"Attempting login... Retries left: {retries_left}")  # Debug print
                 try:
+                    if retries_left == retries:
+                        wake_response = api_get(endpoint="/docs")
+                        print("wake API called, status:", wake_response.status_code)  # Debug print
                     response = api_post(endpoint, data)
                     print("API called, status:", response.status_code)  # Debug print
+
                     if response.status_code == 200:
                         response_data = response.json()
                         app.storage.user["token"] = response_data["access_token"]
                         app.storage.user["user"] = response_data["username"]
                         app.storage.user["id"] = response_data["id"]
+                        waiting_dialog.close()
+                        ui.notify("✅ Login successful", type="positive")
                         ui.navigate.to("/")  # refresh navbar
+
+                    elif response.status_code == 503:
+                        if retries_left > 0:
+                            print("Backend waking up, retrying...")
+                            ui.timer(interval, lambda: attempt_login(retries_left - 1), once=True)
+                        else:
+                            waiting_dialog.close()
+                            handle_backend_error()
                     else:
                         waiting_dialog.close()
-                        ui.notify(f"❌ {response.text}", type="negative")
+                        ui.notify(f"❌ {response.text or 'Login failed.'}", type="negative")
                 except Exception as e:
                     print("Exception during login:", e)  # Debug print
                     if retries_left > 0:
@@ -78,9 +93,7 @@ def login_or_signup(mode='login'):
                     else:
                         waiting_dialog.close()
                         handle_backend_error()
-
-            # Wait briefly to allow dialog to render before calling API
-            ui.timer(0.1, attempt_login, once=True)
+            attempt_login()
     dialog.open()
 
 
