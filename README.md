@@ -46,4 +46,10 @@ docker-compose up --build
 
 ---
 
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
+
+---
+
 🧠 See `docs/architecture.md` for more.
