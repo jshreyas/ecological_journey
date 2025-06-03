@@ -42,13 +42,38 @@ def clips_page():
                     multiple=True,
                 ).classes('w-full').props('use-chips')
 
+                # --- Label cloud filter ---
+                ui.label("Labels").classes("font-semibold text-gray-600")
+                label_chip_container = ui.row(wrap=True).classes("gap-2 max-h-40 overflow-auto")
+
+                selected_labels = set()
+
+                def toggle_label(label: str):
+                    if label in selected_labels:
+                        selected_labels.remove(label)
+                    else:
+                        selected_labels.add(label)
+                    render_chips()
+
+                def render_chips():
+                    label_chip_container.clear()
+                    with label_chip_container:
+                        for label in all_labels:
+                            chip = ui.chip(label)
+                            if label in selected_labels:
+                                chip.props('color=primary outline')
+                            else:
+                                chip.props('color=grey-4 text-black')
+                            chip.on('click', lambda l=label: toggle_label(l))
+
+                render_chips()
                 # --- Label filter ---
-                label_filter = ui.select(
-                    options=all_labels,
-                    value=[],
-                    label='Labels',
-                    multiple=True,
-                ).classes('w-full').props('use-chips')
+                # label_filter = ui.select(
+                #     options=all_labels,
+                #     value=[],
+                #     label='Labels',
+                #     multiple=True,
+                # ).classes('w-full').props('use-chips')
 
                 # --- Partner filter ---
                 partner_filter = ui.select(
@@ -102,7 +127,7 @@ def clips_page():
                     v for v in all_videos
                     if v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
-                    and (not label_filter.value or any(label in v.get('labels', []) for label in label_filter.value))
+                    and (not selected_labels or any(label in v.get('labels', []) for label in selected_labels))
                     and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
                 ]
 
