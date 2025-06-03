@@ -32,7 +32,7 @@ class Video(BaseModel):
     clips: List[Clip] = []
 
     class Config:
-        allow_population_by_field_name = True
+        validate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
 
@@ -47,6 +47,6 @@ class Playlist(BaseModel):
     playlist_id: Optional[str] = None
 
     class Config:
-        allow_population_by_field_name = True
+        validate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
