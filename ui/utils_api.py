@@ -155,6 +155,8 @@ def load_clips() -> List[Dict[str, Any]]:
         for video in playlist.get("videos", []):
             if video.get("clips", []):
                 for clip in video["clips"]:
+                    partners = (clip.get("partners") or []) + (video.get("partners") or [])
+                    labels = (clip.get("labels") or []) + (video.get("labels") or [])
                     clip_data = {
                         "video_id": video["video_id"],
                         "playlist_id": playlist["_id"],
@@ -165,8 +167,8 @@ def load_clips() -> List[Dict[str, Any]]:
                         "date": video.get("date", ""),
                         "duration_human": format_duration(clip.get("end", 0) - clip.get("start", 0)),
                         "description": clip.get("description", ""),
-                        "partners": clip.get("partners", []), # append video level partners
-                        "labels": clip.get("labels", []), # append video level labels
+                        "partners": partners,
+                        "labels": labels,
                         "type": clip.get("type", "clip"),
                         "clip_id": clip.get("clip_id", "")
                     }
