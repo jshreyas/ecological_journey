@@ -5,8 +5,8 @@ from datetime import datetime
 
 VIDEOS_PER_PAGE = 12
 
-def navigate_to_film(video_id, e):
-    ui.navigate.to(f'/film/{video_id}')
+def navigate_to_film(video_id, clip_id):
+    ui.navigate.to(f'/film/{video_id}?clip={clip_id}')
 
 def clips_page():
     current_page = {'value': 1}
@@ -137,7 +137,7 @@ def clips_page():
                                 # Enhanced video cards
                                 with ui.card().classes(
                                     'cursor-pointer hover:shadow-xl transition-shadow duration-200 border border-gray-300 rounded-lg'
-                                ).on('click', partial(navigate_to_film, v["video_id"])):
+                                ).on('click', partial(navigate_to_film, v["video_id"], v["clip_id"])):
                                     thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
                                     ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover mb-2')
                                     ui.label(v["title"]) \

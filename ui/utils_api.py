@@ -167,7 +167,8 @@ def load_clips() -> List[Dict[str, Any]]:
                         "description": clip.get("description", ""),
                         "partners": clip.get("partners", []), # append video level partners
                         "labels": clip.get("labels", []), # append video level labels
-                        "type": clip.get("type", "clip")
+                        "type": clip.get("type", "clip"),
+                        "clip_id": clip.get("clip_id", "")
                     }
                     clips.append(clip_data)
     clips.sort(key=lambda x: x.get("date", ""), reverse=True)
