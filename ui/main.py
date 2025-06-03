@@ -7,6 +7,7 @@ from nicegui import ui, app
 from about import about_page
 from home_page import home_page
 from films import films_page
+from clips import clips_page
 from film import film_page
 from partner import partner_page
 from dialog_puns import caught_john_doe, handle_backend_error
@@ -120,6 +121,7 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
                 ui.label(title).classes('text-2xl font-bold text-white leading-none')  # bigger font, no extra line height
             link('Home', '/')
             link('Films', '/films')
+            link('Clips', '/clips')
             link('Film Study', '/film_study')
             link('Partner Study', '/partner_study')
             link('About', '/about')
@@ -198,6 +200,11 @@ def film_study():
 def films():
     ecological_layout()
     films_page()
+
+@ui.page('/clips')
+def clips():
+    ecological_layout()
+    clips_page()
 
 @ui.page('/partner_study') ## TODO: think about the intention and layout again
 def show_partner_page():

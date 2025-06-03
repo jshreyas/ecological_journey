@@ -148,17 +148,30 @@ def get_playlist_id_for_video(video_id: str) -> Optional[str]:
                 return playlist.get("name") # TODO: Fix usage of playlist name vs id
     return None
 
-def load_clips(video_id: str) -> List[Dict[str, Any]]:
-    playlist_id = get_playlist_id_for_video(video_id)
-    if not playlist_id:
-        raise ValueError(f"Video with id {video_id} not found in any playlist.")
+def load_clips() -> List[Dict[str, Any]]:
+    clips = []
     playlists = load_playlists()
     for playlist in playlists:
-        if playlist.get("name") == playlist_id:
-            for video in playlist.get("videos", []):
-                if video.get("video_id") == video_id:
-                    return video.get("clips", [])
-    return []
+        for video in playlist.get("videos", []):
+            if video.get("clips", []):
+                for clip in video["clips"]:
+                    clip_data = {
+                        "video_id": video["video_id"],
+                        "playlist_id": playlist["_id"],
+                        "playlist_name": playlist["name"],
+                        "start": clip.get("start", 0),
+                        "end": clip.get("end", 0),
+                        "title": clip.get("title", ""),
+                        "date": video.get("date", ""),
+                        "duration_human": format_duration(clip.get("end", 0) - clip.get("start", 0)),
+                        "description": clip.get("description", ""),
+                        "partners": clip.get("partners", []), # append video level partners
+                        "labels": clip.get("labels", []), # append video level labels
+                        "type": clip.get("type", "clip")
+                    }
+                    clips.append(clip_data)
+    clips.sort(key=lambda x: x.get("date", ""), reverse=True)
+    return clips
 
 def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
     videos = load_videos()
