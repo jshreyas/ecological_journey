@@ -46,36 +46,38 @@ def clips_page():
                 ui.label("Labels").classes("font-semibold text-gray-600")
                 label_chip_container = ui.row(wrap=True).classes("gap-2 max-h-40 overflow-auto")
 
-                selected_labels = set()
+                class ReactiveLabelSet:
+                    def __init__(self):
+                        self.labels = set()
 
-                def toggle_label(label: str):
-                    if label in selected_labels:
-                        selected_labels.remove(label)
-                    else:
-                        selected_labels.add(label)
-                    render_chips()
+                    def toggle(self, label: str):
+                        if label in self.labels:
+                            self.labels.remove(label)
+                        else:
+                            self.labels.add(label)
+                        render_chips()  # Force re-render manually
+
+                    def has(self, label: str):
+                        return label in self.labels
+
+                    def values(self):
+                        return list(self.labels)
+
+                selected_labels = ReactiveLabelSet()
 
                 def render_chips():
                     label_chip_container.clear()
                     with label_chip_container:
                         for label in all_labels:
                             chip = ui.chip(label)
-                            if label in selected_labels:
+                            if selected_labels.has(label):
                                 chip.props('color=primary outline')
                             else:
                                 chip.props('color=grey-4 text-black')
-                            chip.on('click', lambda l=label: toggle_label(l))
+                            chip.on_click(partial(selected_labels.toggle, label))
 
                 render_chips()
-                # --- Label filter ---
-                # label_filter = ui.select(
-                #     options=all_labels,
-                #     value=[],
-                #     label='Labels',
-                #     multiple=True,
-                # ).classes('w-full').props('use-chips')
 
-                # --- Partner filter ---
                 partner_filter = ui.select(
                     options=all_partners,
                     value=[],
@@ -127,7 +129,7 @@ def clips_page():
                     v for v in all_videos
                     if v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
-                    and (not selected_labels or any(label in v.get('labels', []) for label in selected_labels))
+                    and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
                     and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
                 ]
 
@@ -144,9 +146,7 @@ def clips_page():
                 grouped_videos = {}
                 for v in paginated_videos:
                     day = v['date'][:10]
-                    if day not in grouped_videos:
-                        grouped_videos[day] = []
-                    grouped_videos[day].append(v)
+                    grouped_videos.setdefault(day, []).append(v)
 
                 # Clear and populate the video grid
                 video_grid.clear()
@@ -200,7 +200,7 @@ def clips_page():
                     v for v in all_videos
                     if v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
-                    and (not label_filter.value or any(label in v.get('labels', []) for label in label_filter.value))
+                    and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
                     and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
                 ]
                 total_pages = max(1, (len(filtered_videos) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)
