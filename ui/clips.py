@@ -105,7 +105,46 @@ def clips_page():
                     current_page['value'] = 1
                     render_videos()
 
-                ui.button('Apply Filters', on_click=apply_filters).classes('mt-4 w-full')
+                def save_filtered_clips():
+                    # Parse the date range from the input value
+                    date_range = date_input.value or default_date_range
+                    try:
+                        start_date, end_date = date_range.split(" - ")
+                        start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                        end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                    except ValueError:
+                        # Fallback to default date range if parsing fails
+                        start_date, end_date = min_date, max_date
+
+                    # --- Filter videos based on playlist, date, and labels ---
+                    filtered_clips = [
+                        v for v in all_videos
+                        if v['playlist_name'] in playlist_filter.value
+                        and start_date <= v['date'][:10] <= end_date
+                        and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
+                        and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
+                    ]
+
+                    filters_state = {
+                        "playlists": playlist_filter.value,
+                        "labels": selected_labels.values(),
+                        "partners": partner_filter.value,
+                        "date_range": [start_date, end_date],
+                    }
+                    # Ask for cliplist name via dialog
+                    with ui.dialog() as dialog, ui.card():
+                        ui.label("Name your cliplist:")
+                        name_input = ui.input(label='Cliplist Name')
+                        def confirm_save():
+                            # save_to_backend(name_input.value, filters_state, filtered_clips)
+                            ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
+                            dialog.close()
+                        ui.button("Save", on_click=confirm_save)
+                    dialog.open()
+
+                with ui.row().classes("justify-between w-full"):
+                    ui.button('Apply', on_click=apply_filters).classes('mt-4')
+                    ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
 
         with splitter.after:
             # Enhanced grid container
