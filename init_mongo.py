@@ -43,7 +43,7 @@ def create_playlist(token, name="Grappling Journal"): #TODO: dynamically pull th
     headers = {"Authorization": f"Bearer {token}"}
     data = {
         "name": name,
-        "owner_type": "user"
+        "owner_type": "user" #TODO: removed this, also check this file if its working as expected with all the changes
     }
     response = requests.post(url, json=data, headers=headers)
     print("Create Playlist:", response.status_code, response.json())
