@@ -44,118 +44,118 @@ def clips_page(cliplist_id=None):
 
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
-            with ui.column().classes('w-full h-full p-6 bg-gray-100 rounded-lg space-y-4'):
-                ui.label('🎛 Filters').classes('text-lg font-bold mb-4')
+            with ui.tabs().classes('w-full mb-2') as tabs:
+                tab_filter = ui.tab('🎛 Filters')
+                tab_cliplists = ui.tab('📂 Cliplists')
+            with ui.tab_panels(tabs=tabs, value=tab_filter).classes('w-full'):
+                with ui.tab_panel(tab_filter):
+                    with ui.column().classes('w-full h-full p-6 bg-gray-100 rounded-lg space-y-4'):
+                        playlist_filter = ui.select(
+                            options=all_playlists,
+                            value=all_playlists.copy(),
+                            label='Playlist',
+                            multiple=True,
+                        ).classes('w-full').props('use-chips')
 
-                playlist_filter = ui.select(
-                    options=all_playlists,
-                    value=all_playlists.copy(),
-                    label='Playlist',
-                    multiple=True,
-                ).classes('w-full').props('use-chips')
+                        # --- Label cloud filter ---
+                        ui.label("Labels").classes("font-semibold text-gray-600")
+                        label_chip_container = ui.row(wrap=True).classes("gap-2 max-h-40 overflow-auto")
 
-                # --- Label cloud filter ---
-                ui.label("Labels").classes("font-semibold text-gray-600")
-                label_chip_container = ui.row(wrap=True).classes("gap-2 max-h-40 overflow-auto")
+                        class ReactiveLabelSet:
+                            def __init__(self):
+                                self.labels = set()
+                            def toggle(self, label: str):
+                                if label in self.labels:
+                                    self.labels.remove(label)
+                                else:
+                                    self.labels.add(label)
+                                render_chips()
+                            def has(self, label: str):
+                                return label in self.labels
+                            def values(self):
+                                return list(self.labels)
 
-                class ReactiveLabelSet:
-                    def __init__(self):
-                        self.labels = set()
+                        selected_labels = ReactiveLabelSet()
+                        def render_chips():
+                            label_chip_container.clear()
+                            with label_chip_container:
+                                for label in all_labels:
+                                    chip = ui.chip(label)
+                                    if selected_labels.has(label):
+                                        chip.props('color=primary outline')
+                                    else:
+                                        chip.props('color=grey-4 text-black')
+                                    chip.on_click(partial(selected_labels.toggle, label))
+                        render_chips()
 
-                    def toggle(self, label: str):
-                        if label in self.labels:
-                            self.labels.remove(label)
-                        else:
-                            self.labels.add(label)
-                        render_chips()  # Force re-render manually
+                        partner_filter = ui.select(
+                            options=all_partners,
+                            value=[],
+                            label='Partners',
+                            multiple=True,
+                        ).classes('w-full').props('use-chips')
 
-                    def has(self, label: str):
-                        return label in self.labels
+                        # Collapsed date picker with selected date range display
+                        with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
+                            with ui.menu().props('no-parent-event') as menu:
+                                with ui.date(value={'from': min_date, 'to': max_date}).props('range').bind_value(
+                                    date_input,
+                                    forward=lambda x: f"{datetime.strptime(x['from'], '%Y-%m-%d').strftime('%B %d, %Y')} - {datetime.strptime(x['to'], '%Y-%m-%d').strftime('%B %d, %Y')}" if x else None,
+                                    backward=lambda x: {
+                                        'from': datetime.strptime(x.split(' - ')[0], '%B %d, %Y').strftime('%Y-%m-%d'),
+                                        'to': datetime.strptime(x.split(' - ')[1], '%B %d, %Y').strftime('%Y-%m-%d'),
+                                    } if ' - ' in (x or '') else None,
+                                ):
+                                    with ui.row().classes('justify-end'):
+                                        ui.button('Close', on_click=menu.close).props('flat')
+                            with date_input.add_slot('append'):
+                                ui.icon('edit_calendar').on('click', menu.open).classes('cursor-pointer')
 
-                    def values(self):
-                        return list(self.labels)
+                        def apply_filters():
+                            current_page['value'] = 1
+                            render_videos()
 
-                selected_labels = ReactiveLabelSet()
+                        def save_filtered_clips():
+                            date_range = date_input.value or default_date_range
+                            try:
+                                start_date, end_date = date_range.split(" - ")
+                                start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                                end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                            except ValueError:
+                                start_date, end_date = min_date, max_date
 
-                def render_chips():
-                    label_chip_container.clear()
-                    with label_chip_container:
-                        for label in all_labels:
-                            chip = ui.chip(label)
-                            if selected_labels.has(label):
-                                chip.props('color=primary outline')
-                            else:
-                                chip.props('color=grey-4 text-black')
-                            chip.on_click(partial(selected_labels.toggle, label))
-                render_chips()
+                            # --- Filter videos based on playlist, date, and labels ---
+                            filtered_clips = [
+                                v for v in all_videos
+                                if v['playlist_name'] in playlist_filter.value
+                                and start_date <= v['date'][:10] <= end_date
+                                and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
+                                and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
+                            ]
 
-                partner_filter = ui.select(
-                    options=all_partners,
-                    value=[],
-                    label='Partners',
-                    multiple=True,
-                ).classes('w-full').props('use-chips')
+                            filters_state = {
+                                "playlists": playlist_filter.value,
+                                "labels": selected_labels.values(),
+                                "partners": partner_filter.value,
+                                "date_range": [start_date, end_date],
+                            }
+                            # Ask for cliplist name via dialog
+                            with ui.dialog() as dialog, ui.card():
+                                ui.label("Name your cliplist:")
+                                name_input = ui.input(label='Cliplist Name')
+                                def confirm_save():
+                                    # save_to_backend(name_input.value, filters_state, filtered_clips)
+                                    ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
+                                    dialog.close()
+                                ui.button("Save", on_click=confirm_save)
+                            dialog.open()
 
-                # Collapsed date picker with selected date range display
-                with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
-                    with ui.menu().props('no-parent-event') as menu:
-                        with ui.date(value={'from': min_date, 'to': max_date}).props('range').bind_value(
-                            date_input,
-                            forward=lambda x: f"{datetime.strptime(x['from'], '%Y-%m-%d').strftime('%B %d, %Y')} - {datetime.strptime(x['to'], '%Y-%m-%d').strftime('%B %d, %Y')}" if x else None,
-                            backward=lambda x: {
-                                'from': datetime.strptime(x.split(' - ')[0], '%B %d, %Y').strftime('%Y-%m-%d'),
-                                'to': datetime.strptime(x.split(' - ')[1], '%B %d, %Y').strftime('%Y-%m-%d'),
-                            } if ' - ' in (x or '') else None,
-                        ):
-                            with ui.row().classes('justify-end'):
-                                ui.button('Close', on_click=menu.close).props('flat')
-                    with date_input.add_slot('append'):
-                        ui.icon('edit_calendar').on('click', menu.open).classes('cursor-pointer')
+                        with ui.row().classes("justify-between w-full"):
+                            ui.button('Apply', on_click=apply_filters).classes('mt-4')
+                            ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
 
-                def apply_filters():
-                    current_page['value'] = 1
-                    render_videos()
-
-                def save_filtered_clips():
-                    # Parse the date range from the input value
-                    date_range = date_input.value or default_date_range
-                    try:
-                        start_date, end_date = date_range.split(" - ")
-                        start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
-                        end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
-                    except ValueError:
-                        # Fallback to default date range if parsing fails
-                        start_date, end_date = min_date, max_date
-
-                    # --- Filter videos based on playlist, date, and labels ---
-                    filtered_clips = [
-                        v for v in all_videos
-                        if v['playlist_name'] in playlist_filter.value
-                        and start_date <= v['date'][:10] <= end_date
-                        and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
-                        and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
-                    ]
-
-                    filters_state = {
-                        "playlists": playlist_filter.value,
-                        "labels": selected_labels.values(),
-                        "partners": partner_filter.value,
-                        "date_range": [start_date, end_date],
-                    }
-                    # Ask for cliplist name via dialog
-                    with ui.dialog() as dialog, ui.card():
-                        ui.label("Name your cliplist:")
-                        name_input = ui.input(label='Cliplist Name')
-                        def confirm_save():
-                            # save_to_backend(name_input.value, filters_state, filtered_clips)
-                            ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
-                            dialog.close()
-                        ui.button("Save", on_click=confirm_save)
-                    dialog.open()
-
-                with ui.row().classes("justify-between w-full"):
-                    ui.button('Apply', on_click=apply_filters).classes('mt-4')
-                    ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
+                with ui.tab_panel(tab_cliplists):
+                    ui.label("📂 Here we will show saved cliplists to load into filters").classes('text-md text-gray-500 italic')
 
         with splitter.after:
             # Enhanced grid container
