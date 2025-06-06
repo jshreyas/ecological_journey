@@ -49,7 +49,7 @@ def clips_page(cliplist_id=None):
                 tab_cliplists = ui.tab('📂 Cliplists')
             with ui.tab_panels(tabs=tabs, value=tab_filter).classes('w-full'):
                 with ui.tab_panel(tab_filter):
-                    with ui.column().classes('w-full h-full p-6 bg-gray-100 rounded-lg space-y-4'):
+                    with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-lg space-y-4'):
                         playlist_filter = ui.select(
                             options=all_playlists,
                             value=all_playlists.copy(),
@@ -168,7 +168,7 @@ def clips_page(cliplist_id=None):
                             'clip_ids': set(cliplist['clip_ids']),
                             'filters': cliplist.get('filters', {})
                         }
-                        render_videos()
+                        render_videos(cliplist_filter_override)
 
                     def on_edit_cliplist(cliplist):
                         # 1. Populate each filter input from cliplist['filters']
@@ -222,7 +222,7 @@ def clips_page(cliplist_id=None):
                 'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-6 w-full p-4 bg-white rounded-lg shadow-lg'
             )
 
-            def render_videos():
+            def render_videos(cliplist_filter_override=None):
                 # Parse the date range from the input value
                 date_range = date_input.value or default_date_range
                 try:
@@ -234,15 +234,36 @@ def clips_page(cliplist_id=None):
                     start_date, end_date = min_date, max_date
 
                 # --- Filter videos based on playlist, date, and labels ---
+                # Determine filters to apply
+                filters_to_use = {
+                    "playlists": playlist_filter.value,
+                    "labels": selected_labels.values(),
+                    "partners": partner_filter.value,
+                    "date_range": [start_date, end_date],
+                }
+                if cliplist_filter_override and 'filters' in cliplist_filter_override:
+                    filters_to_use.update({
+                        "playlists": cliplist_filter_override['filters'].get('playlists', all_playlists),
+                        "labels": cliplist_filter_override['filters'].get('labels', []),
+                        "partners": cliplist_filter_override['filters'].get('partners', []),
+                        "date_range": cliplist_filter_override['filters'].get('date_range', [min_date, max_date]),
+                    })
+
+                # Apply date range override
+                date_range_override = filters_to_use["date_range"]
+                if date_range_override and len(date_range_override) == 2:
+                    start_date, end_date = date_range_override
+                else:
+                    start_date, end_date = min_date, max_date
+
+                # Apply all filters
                 filtered_videos = [
                     v for v in all_videos
-                    if (not cliplist_filter_override or v['clip_id'] in cliplist_filter_override['clip_ids'])
-                    and v['playlist_name'] in playlist_filter.value
+                    if v['playlist_name'] in filters_to_use['playlists']
                     and start_date <= v['date'][:10] <= end_date
-                    and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
-                    and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
+                    and (not filters_to_use['labels'] or any(label in v.get('labels', []) for label in filters_to_use['labels']))
+                    and (not filters_to_use['partners'] or any(partner in v.get('partners', []) for partner in filters_to_use['partners']))
                 ]
-
                 # Sort videos by date in descending order
                 videos_sorted = sorted(filtered_videos, key=lambda x: x['date'], reverse=True)
 
