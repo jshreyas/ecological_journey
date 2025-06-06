@@ -389,3 +389,7 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
     except Exception as e:
         print(f"Failed to save video metadata: {e}")
         return False
+
+
+def load_cliplist(cliplist_id: str):
+    return api_get(f"/cliplist/{cliplist_id}")

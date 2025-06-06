@@ -133,7 +133,7 @@ async def get_cliplists(_: HTTPAuthorizationCredentials = Depends(auth_scheme_op
 @router.get("/cliplist/{cliplist_id}")
 async def get_cliplist(
     cliplist_id: str,
-    user=Depends(get_current_user),
+    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)
 ):
     cliplist = await get_cliplist_by_id(cliplist_id)
     if not cliplist:

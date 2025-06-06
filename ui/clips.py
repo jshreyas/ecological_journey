@@ -1,14 +1,15 @@
 from nicegui import ui
-from utils_api import load_videos, load_clips
+from utils_api import load_videos, load_clips, load_cliplist  # <-- New import for cliplist loading
 from functools import partial
 from datetime import datetime
+from urllib.parse import urlparse
 
 VIDEOS_PER_PAGE = 12
 
 def navigate_to_film(video_id, clip_id):
     ui.navigate.to(f'/film/{video_id}?clip={clip_id}')
 
-def clips_page():
+def clips_page(cliplist_id=None):
     current_page = {'value': 1}
     ui.label("🎬 Clips, Clips, and more Clips!") \
         .classes('text-2xl font-bold mb-4 text-center')
@@ -29,6 +30,17 @@ def clips_page():
     min_date_human = datetime.strptime(min_date, '%Y-%m-%d').strftime('%B %d, %Y')
     max_date_human = datetime.strptime(max_date, '%Y-%m-%d').strftime('%B %d, %Y')
     default_date_range = f'{min_date_human} - {max_date_human}'
+
+    cliplist_filter_override = None
+    if cliplist_id:
+        try:
+            cliplist = load_cliplist(cliplist_id)
+            cliplist_filter_override = {
+                'clip_ids': set(cliplist['clip_ids']),
+                'filters': cliplist.get('filters', {})
+            }
+        except Exception as e:
+            ui.notify(f"⚠️ Failed to load cliplist: {e}", type="warning")
 
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
@@ -75,7 +87,6 @@ def clips_page():
                             else:
                                 chip.props('color=grey-4 text-black')
                             chip.on_click(partial(selected_labels.toggle, label))
-
                 render_chips()
 
                 partner_filter = ui.select(
@@ -166,7 +177,8 @@ def clips_page():
                 # --- Filter videos based on playlist, date, and labels ---
                 filtered_videos = [
                     v for v in all_videos
-                    if v['playlist_name'] in playlist_filter.value
+                    if (not cliplist_filter_override or v['clip_id'] in cliplist_filter_override['clip_ids'])
+                    and v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
                     and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
                     and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
@@ -204,12 +216,8 @@ def clips_page():
                                 ).on('click', partial(navigate_to_film, v["video_id"], v["clip_id"])):
                                     thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
                                     ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover mb-2')
-                                    ui.label(v["title"]) \
-                                        .tooltip(v["title"]) \
-                                        .classes('font-medium mt-2 truncate text-sm sm:text-base text-gray-700')
-                                    # Display duration instead of date
-                                    ui.label(f"⏱ {v['duration_human']}") \
-                                        .classes('text-sm text-gray-500')
+                                    ui.label(v["title"]).tooltip(v["title"]).classes('font-medium mt-2 truncate text-sm sm:text-base text-gray-700')
+                                    ui.label(f"⏱ {v['duration_human']}").classes('text-sm text-gray-500')
 
                         # Enhanced pagination controls
                         with ui.row().classes('justify-between items-center mt-6 col-span-full'):
@@ -219,7 +227,6 @@ def clips_page():
                                 ui.label()  # Empty placeholder for alignment
 
                             ui.label(f'Page {current_page["value"]} of {total_pages}').classes('text-sm font-medium text-gray-700')
-
                             if current_page["value"] < total_pages:
                                 ui.button('Next', on_click=lambda: change_page(1)).props('flat').classes('text-blue-500 hover:text-blue-700')
                             else:
@@ -237,11 +244,13 @@ def clips_page():
 
                 filtered_videos = [
                     v for v in all_videos
-                    if v['playlist_name'] in playlist_filter.value
+                    if (not cliplist_filter_override or v['clip_id'] in cliplist_filter_override['clip_ids'])
+                    and v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
                     and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
                     and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
                 ]
+
                 total_pages = max(1, (len(filtered_videos) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)
                 current_page['value'] = max(1, min(current_page['value'] + direction, total_pages))
                 render_videos()
