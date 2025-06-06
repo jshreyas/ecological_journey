@@ -1,5 +1,5 @@
-from nicegui import ui
-from utils_api import load_videos, load_clips, load_cliplist  # <-- New import for cliplist loading
+from nicegui import ui, app
+from utils_api import load_videos, load_clips, load_cliplist, save_cliplist
 from functools import partial
 from datetime import datetime
 from urllib.parse import urlparse
@@ -132,7 +132,7 @@ def clips_page(cliplist_id=None):
                                 and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
                                 and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
                             ]
-
+                            filtered_clip_ids = [v['video_id'] for v in filtered_clips]
                             filters_state = {
                                 "playlists": playlist_filter.value,
                                 "labels": selected_labels.values(),
@@ -143,10 +143,14 @@ def clips_page(cliplist_id=None):
                             with ui.dialog() as dialog, ui.card():
                                 ui.label("Name your cliplist:")
                                 name_input = ui.input(label='Cliplist Name')
-                                def confirm_save():
-                                    # save_to_backend(name_input.value, filters_state, filtered_clips)
+                                daterange_checkbox = ui.checkbox('Lock Date Range')
+                                def confirm_save(): #TODO: if not logged in, john doe response
+                                    if not daterange_checkbox.value:
+                                        filters_state['date_range'] = []
+                                    save_cliplist(name_input.value, filters_state, token=app.storage.user.get("token"))
                                     ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
                                     dialog.close()
+                                    # Refresh the cliplists tab
                                 ui.button("Save", on_click=confirm_save)
                             dialog.open()
 
@@ -154,8 +158,53 @@ def clips_page(cliplist_id=None):
                             ui.button('Apply', on_click=apply_filters).classes('mt-4')
                             ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
 
-                with ui.tab_panel(tab_cliplists):
-                    ui.label("📂 Here we will show saved cliplists to load into filters").classes('text-md text-gray-500 italic')
+                with ui.tab_panel(tab_cliplists).classes('w-full'):
+                    saved_cliplists = load_cliplist()
+
+                    cliplist_cards = ui.column().classes("overflow-y-auto h-full w-full gap-4")
+
+                    def on_select_cliplist(cliplist):
+                        cliplist_filter_override = {
+                            'clip_ids': set(cliplist['clip_ids']),
+                            'filters': cliplist.get('filters', {})
+                        }
+                        # cliplist_filter_override['clip_ids'] = set(cliplist['clip_ids'])
+                        render_videos()
+
+                    def on_edit_cliplist(cliplist):
+                        # 1. Populate each filter input from cliplist['filters']
+                        playlist_filter.value = cliplist['filters'].get('playlists', [])
+                        partner_filter.value = cliplist['filters'].get('partners', [])
+                        selected_labels.labels = set(cliplist['filters'].get('labels', []))
+                        # TODO: Handle empty date range
+                        date_range = cliplist['filters'].get('date_range')
+                        import pdb; pdb.set_trace()
+                        if date_range and len(date_range) == 2:
+                            date_input.value = f"{date_range[0]} - {date_range[1]}"
+                        else:
+                            date_input.value = ""
+
+                        #TODO: Handle empty date range
+                        # date_input.value = f"{cliplist['filters']['date_range'][0]} - {cliplist['filters']['date_range'][1]}"
+                        render_chips()
+                        # 2. Show Filters tab
+                        tabs.set_value(tab_filter)
+                        # 3. Render
+                        on_select_cliplist(cliplist)
+
+                    for cliplist in saved_cliplists:
+                        with cliplist_cards:
+                            with ui.card().classes('p-4 shadow-md bg-white rounded-lg border w-full'):
+                                ui.label(cliplist['name']).classes('font-bold text-lg')
+                                ui.label(f"🏷️ #labels: {', '.join(cliplist['filters'].get('labels', []))}").classes('text-sm text-gray-600')
+                                ui.label(f"🧑‍🤝‍🧑 @partners: {', '.join(cliplist['filters'].get('partners', []))}").classes('text-sm text-gray-600')
+                                ui.label(f"📂 playlists: {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-sm text-gray-600 italic mb-2')
+                                with ui.row().classes("gap-2"):
+                                    ui.button("Select", on_click=lambda c=cliplist: on_select_cliplist(c))
+                                    ui.button("Edit", color="primary", on_click=lambda c=cliplist: on_edit_cliplist(c))
+                                    # ui.button("🗑️", on_click=lambda: delete_cliplist(cliplist['id']), color="red").props('icon flat')
+
+
 
         with splitter.after:
             # Enhanced grid container
