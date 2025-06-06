@@ -292,7 +292,7 @@ def clips_page(cliplist_id=None):
                             for v in day_videos:
                                 # Enhanced video cards
                                 with ui.card().classes(
-                                    'cursor-pointer hover:shadow-xl transition-shadow duration-200 border border-gray-300 rounded-lg'
+                                    'cursor-pointer flex flex-col p-2 hover:shadow-xl transition-shadow duration-200 border border-gray-300 rounded-lg'
                                 ).on('click', partial(navigate_to_film, v["video_id"], v["clip_id"])):
                                     thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
                                     ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover mb-2')
