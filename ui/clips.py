@@ -168,7 +168,6 @@ def clips_page(cliplist_id=None):
                             'clip_ids': set(cliplist['clip_ids']),
                             'filters': cliplist.get('filters', {})
                         }
-                        # cliplist_filter_override['clip_ids'] = set(cliplist['clip_ids'])
                         render_videos()
 
                     def on_edit_cliplist(cliplist):
@@ -176,16 +175,27 @@ def clips_page(cliplist_id=None):
                         playlist_filter.value = cliplist['filters'].get('playlists', [])
                         partner_filter.value = cliplist['filters'].get('partners', [])
                         selected_labels.labels = set(cliplist['filters'].get('labels', []))
-                        # TODO: Handle empty date range
+
+                        def format_date_range_for_input(start, end):
+                            try:
+                                start_date = datetime.strptime(start, '%Y-%m-%d').strftime('%B %d, %Y')
+                                end_date = datetime.strptime(end, '%Y-%m-%d').strftime('%B %d, %Y')
+                            except ValueError:
+                                try:
+                                    # Already in human format
+                                    datetime.strptime(start, '%B %d, %Y')
+                                    datetime.strptime(end, '%B %d, %Y')
+                                    start_date, end_date = start, end
+                                except ValueError:
+                                    start_date, end_date = min_date_human, max_date_human
+                            return f"{start_date} - {end_date}"
+
                         date_range = cliplist['filters'].get('date_range')
-                        import pdb; pdb.set_trace()
                         if date_range and len(date_range) == 2:
-                            date_input.value = f"{date_range[0]} - {date_range[1]}"
+                            date_input.value = format_date_range_for_input(date_range[0], date_range[1])
                         else:
                             date_input.value = ""
 
-                        #TODO: Handle empty date range
-                        # date_input.value = f"{cliplist['filters']['date_range'][0]} - {cliplist['filters']['date_range'][1]}"
                         render_chips()
                         # 2. Show Filters tab
                         tabs.set_value(tab_filter)
