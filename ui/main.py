@@ -7,6 +7,7 @@ from nicegui import ui, app
 from about import about_page
 from home_page import home_page
 from films import films_page
+from playcliplist import playcliplist_page
 from clips import clips_page
 from film import film_page
 from partner import partner_page
@@ -125,6 +126,7 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
             link('Film Study', '/film_study')
             link('Partner Study', '/partner_study')
             link('About', '/about')
+            link('playcliplist', '/playcliplist')
 
         # Right: Auth Actions
         with ui.row().classes('items-center gap-4'):
@@ -216,6 +218,11 @@ def show_partner_page():
 def about():
     ecological_layout()
     about_page()
+
+@ui.page('/playcliplist')
+def playcliplist():
+    ecological_layout()
+    playcliplist_page()
 
 @ui.page('/film/{video_id}')
 def video_detail(video_id: str):
