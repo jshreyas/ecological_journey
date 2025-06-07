@@ -216,7 +216,7 @@ def film_page(video_id: str):
         if ref:
             ref.clear()
             with ref:
-                VideoPlayer(video_id, start=start_time, end=clip.get("end"), speed=speed)
+                VideoPlayer(video_id, start=start_time, end=clip.get("end"), speed=speed, parent=ref)
 
    # --- Playlist mode: play all clips in sequence ---
     clips_playlist_state = {'index': 0, 'clips': []}
@@ -248,7 +248,8 @@ def film_page(video_id: str):
                         start=start_time,
                         end=end_time,
                         speed=speed,
-                        on_end=lambda: next_clip_callback()
+                        on_end=lambda: next_clip_callback(),
+                        parent=ref
                     )
             # Notify after UI update to ensure it always shows
             # ui.timer(
@@ -438,7 +439,7 @@ def film_page(video_id: str):
                     elif autoplay_clip:
                         play_clip(autoplay_clip)
                     else:
-                        VideoPlayer(video_id, speed=player_speed['value'])
+                        VideoPlayer(video_id, speed=player_speed['value'], parent=player_container_ref)
                 player_container['ref'] = player_container_ref
 
             with splitter.after:
