@@ -3,7 +3,7 @@ name: Wake up Ecological Journey
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  #TODO: "*/5 13 * * *" every 5 mins during 6–7 AM PST
+    - cron: "*/5 13-14 * * *"  # every 5 mins during 6–8 AM PST
   workflow_dispatch:  # allows manual triggering from GitHub UI
 
 jobs:
