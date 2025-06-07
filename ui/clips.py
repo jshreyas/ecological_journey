@@ -6,6 +6,9 @@ from urllib.parse import urlparse
 
 VIDEOS_PER_PAGE = 12
 
+def navigate_to_cliplist(cliplist_id):
+    ui.navigate.to(f'/cliplist/{cliplist_id}')
+
 def navigate_to_film(video_id, clip_id):
     ui.navigate.to(f'/film/{video_id}?clip={clip_id}')
 
@@ -210,11 +213,11 @@ def clips_page(cliplist_id=None):
                                 ui.label(f"🧑‍🤝‍🧑 @partners: {', '.join(cliplist['filters'].get('partners', []))}").classes('text-sm text-gray-600')
                                 ui.label(f"📂 playlists: {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-sm text-gray-600 italic mb-2')
                                 with ui.row().classes("gap-2"):
-                                    ui.button("Select", on_click=lambda c=cliplist: on_select_cliplist(c))
-                                    ui.button("Edit", color="primary", on_click=lambda c=cliplist: on_edit_cliplist(c))
+                                    ui.button(icon='filter_alt', on_click=lambda c=cliplist: on_select_cliplist(c)).props('flat').tooltip('Filter')
+                                    ui.button(icon='edit', on_click=lambda c=cliplist: on_edit_cliplist(c)).props('flat color=secondary').tooltip('Edit')
+                                    ui.button(icon='play_arrow', on_click=lambda c=cliplist: navigate_to_cliplist(c["_id"])).props('flat').tooltip('Play')
+                                    # ui.button(icon='play_arrow', on_click=lambda: play_clip(clip)).props('flat color=primary').tooltip('Play')
                                     # ui.button("🗑️", on_click=lambda: delete_cliplist(cliplist['id']), color="red").props('icon flat')
-
-
 
         with splitter.after:
             # Enhanced grid container
