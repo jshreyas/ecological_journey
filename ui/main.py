@@ -123,10 +123,11 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
             link('Home', '/')
             link('Films', '/films')
             link('Clips', '/clips')
+            link('Play Cliplist', '/cliplist')
             link('Film Study', '/film_study')
             link('Partner Study', '/partner_study')
             link('About', '/about')
-            link('playcliplist', '/playcliplist')
+            
 
         # Right: Auth Actions
         with ui.row().classes('items-center gap-4'):
@@ -219,10 +220,12 @@ def about():
     ecological_layout()
     about_page()
 
-@ui.page('/playcliplist')
-def playcliplist():
+# "4757a82b-b79d-494e-af2b-27e01384d7a8"
+@ui.page('/cliplist')
+@ui.page('/cliplist/{cliplist_id}')
+def playcliplist(cliplist_id: str="4757a82b-b79d-494e-af2b-27e01384d7a8"):
     ecological_layout()
-    playcliplist_page()
+    playcliplist_page(cliplist_id)
 
 @ui.page('/film/{video_id}')
 def video_detail(video_id: str):

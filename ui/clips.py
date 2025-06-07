@@ -1,5 +1,5 @@
 from nicegui import ui, app
-from utils_api import load_videos, load_clips, load_cliplist, save_cliplist
+from utils_api import load_clips, load_cliplist, save_cliplist
 from functools import partial
 from datetime import datetime
 from urllib.parse import urlparse
