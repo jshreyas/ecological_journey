@@ -143,9 +143,8 @@ class VideoPlayer:
                     self.speed = speed_knob.value
                     ui.run_javascript(f"window.setYTSpeed({speed_knob.value});")
 
-                with ui.row().classes('items-center gap-2'):
+                with ui.row().classes('items-center justify-center mt-2 mx-6'):
                     speed_knob = ui.knob(
                         min=0.25, max=2.0, step=0.25, value=self.speed,
                         track_color='grey-2', show_value=True
                     ).props('size=60').on('change', on_speed_change)
-                    ui.label('Speed').classes('ml-2 text-xs text-gray-500')

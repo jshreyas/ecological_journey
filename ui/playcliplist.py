@@ -1,4 +1,5 @@
 from nicegui import ui
+from dialog_puns import in_progress
 from utils_api import load_cliplist, load_clips
 from video_player import VideoPlayer
 
@@ -13,6 +14,9 @@ queue = []
 
 def playcliplist_page(cliplist_id):
 
+    if not cliplist_id:
+        in_progress()
+        return
     global current_index, queue_buttons, queue
 
     all_videos = load_clips()
@@ -69,5 +73,3 @@ def playcliplist_page(cliplist_id):
 
     # Start
     play_clip(current_index)
-
-# .style('height: 100%; min-height: 400px height: 56.25vw; max-height: 90vh; width: 100%;')

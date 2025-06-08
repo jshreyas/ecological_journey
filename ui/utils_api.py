@@ -399,9 +399,7 @@ def save_cliplist(name, filters_state, token):
     data = {
         "name": name,
         "filters": filters_state,
-        # "clip_ids": filtered_clips
     }
-    import pdb; pdb.set_trace()  # Debugging breakpoint
     try:
         response = api_post("/cliplist", data=data, token=token)
         return response
