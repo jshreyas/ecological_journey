@@ -141,6 +141,7 @@ def clips_page():
                                     if not daterange_checkbox.value:
                                         filters_state['date_range'] = []
                                     save_cliplist(name_input.value, filters_state, token=app.storage.user.get("token"))
+                                    #TODO: check failure and notify user of the failure
                                     ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
                                     dialog.close()
                                     # Refresh the cliplists tab
