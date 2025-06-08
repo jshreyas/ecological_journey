@@ -1,7 +1,8 @@
 import os
 import re
 import requests
-from typing import List, Dict, Any, Optional
+
+from typing import Optional, Union, List, Dict, Any
 from dotenv import load_dotenv
 from cache import cache_del, cache_get, cache_set
 from utils import format_time
@@ -9,6 +10,7 @@ load_dotenv()
 
 BASE_URL = os.getenv("BACKEND_URL")
 _playlists_cache = None  # file-level in-memory cache
+_cliplist_cache = {}
 
 def get_headers(token: Optional[str] = None):
     headers = {"Content-Type": "application/json"}
@@ -390,18 +392,45 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
         print(f"Failed to save video metadata: {e}")
         return False
 
-def load_cliplist(cliplist_id: str=None):
-    if not cliplist_id:
-        return api_get("/cliplists")
-    return api_get(f"/cliplist/{cliplist_id}")
+def load_cliplist(cliplist_id: Optional[str] = None) -> Union[List[Dict[str, Any]], Dict[str, Any], None]:
+    global _cliplist_cache
+    cache_key = "cliplists"
 
-def save_cliplist(name, filters_state, token):
+    if cache_key in _cliplist_cache and _cliplist_cache.get(cache_key):
+        data = _cliplist_cache[cache_key]
+    else:
+        cached = cache_get(cache_key)
+        if cached:
+            _cliplist_cache[cache_key] = cached
+            data = cached
+        else:
+            data = api_get("/cliplists")
+            cache_set(cache_key, data)
+            _cliplist_cache[cache_key] = data
+
+    if not cliplist_id:
+        return data
+    else:
+        # Return the specific cliplist by id
+        for cliplist in data:
+            if cliplist.get("_id") == cliplist_id:
+                return cliplist
+        return None  # If not found
+
+def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optional[Dict[str, Any]]:
     data = {
         "name": name,
         "filters": filters_state,
     }
     try:
         response = api_post("/cliplist", data=data, token=token)
+
+        # Invalidate cache for cliplist listing
+        global _cliplist_cache
+        if "cliplists" in _cliplist_cache:
+            del _cliplist_cache["cliplists"]
+        cache_set("cliplists", None)
+
         return response
     except requests.HTTPError as e:
         print(f"Failed to save cliplist: {e}")
