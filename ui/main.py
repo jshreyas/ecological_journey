@@ -205,10 +205,9 @@ def films():
     films_page()
 
 @ui.page('/clips')
-@ui.page('/clips/view/{cliplist_id}')
-def clips(cliplist_id: str = None):
+def clips():
     ecological_layout()
-    clips_page(cliplist_id)
+    clips_page()
 
 # @ui.page('/partner_study') ## TODO: think about the intention and layout again
 # def show_partner_page():

@@ -13,7 +13,7 @@ def navigate_to_cliplist(cliplist_id):
 def navigate_to_film(video_id, clip_id):
     ui.navigate.to(f'/film/{video_id}?clip={clip_id}')
 
-def clips_page(cliplist_id=None):
+def clips_page():
     current_page = {'value': 1}
     ui.label("🎬 Clips, Clips, and more Clips!") \
         .classes('text-2xl font-bold mb-4 text-center')
@@ -36,16 +36,6 @@ def clips_page(cliplist_id=None):
     default_date_range = f'{min_date_human} - {max_date_human}'
 
     cliplist_filter_override = None
-    if cliplist_id:
-        try:
-            cliplist = load_cliplist(cliplist_id)
-            cliplist_filter_override = {
-                'clip_ids': set(cliplist['clip_ids']),
-                'filters': cliplist.get('filters', {})
-            }
-        except Exception as e:
-            ui.notify(f"⚠️ Failed to load cliplist: {e}", type="warning")
-
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
             with ui.tabs().classes('w-full mb-2') as tabs:
