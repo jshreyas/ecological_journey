@@ -7,6 +7,7 @@ from nicegui import ui, app
 from about import about_page
 from home_page import home_page
 from films import films_page
+from playcliplist import playcliplist_page
 from clips import clips_page
 from film import film_page
 from partner import partner_page
@@ -121,10 +122,12 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
                 ui.label(title).classes('text-2xl font-bold text-white leading-none')  # bigger font, no extra line height
             link('Home', '/')
             link('Films', '/films')
-            link('Clips', '/clips')
             link('Film Study', '/film_study')
-            link('Partner Study', '/partner_study')
+            link('Clips', '/clips')
+            link('Clip Study', '/cliplist')
+            # link('Partner Study', '/partner_study')
             link('About', '/about')
+            
 
         # Right: Auth Actions
         with ui.row().classes('items-center gap-4'):
@@ -206,15 +209,21 @@ def clips():
     ecological_layout()
     clips_page()
 
-@ui.page('/partner_study') ## TODO: think about the intention and layout again
-def show_partner_page():
-    ecological_layout()
-    partner_page()
+# @ui.page('/partner_study') ## TODO: think about the intention and layout again
+# def show_partner_page():
+#     ecological_layout()
+#     partner_page()
 
 @ui.page('/about')
 def about():
     ecological_layout()
     about_page()
+
+@ui.page('/cliplist')
+@ui.page('/cliplist/{cliplist_id}')
+def playcliplist(cliplist_id: str=None):
+    ecological_layout()
+    playcliplist_page(cliplist_id)
 
 @ui.page('/film/{video_id}')
 def video_detail(video_id: str):
