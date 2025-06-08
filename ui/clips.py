@@ -1,4 +1,5 @@
 from nicegui import ui, app
+from dialog_puns import in_progress
 from utils_api import load_clips, load_cliplist, save_cliplist
 from functools import partial
 from datetime import datetime
@@ -173,38 +174,6 @@ def clips_page(cliplist_id=None):
                         }
                         render_videos(cliplist_filter_override)
 
-                    def on_edit_cliplist(cliplist):
-                        # 1. Populate each filter input from cliplist['filters']
-                        playlist_filter.value = cliplist['filters'].get('playlists', [])
-                        partner_filter.value = cliplist['filters'].get('partners', [])
-                        selected_labels.labels = set(cliplist['filters'].get('labels', []))
-
-                        def format_date_range_for_input(start, end):
-                            try:
-                                start_date = datetime.strptime(start, '%Y-%m-%d').strftime('%B %d, %Y')
-                                end_date = datetime.strptime(end, '%Y-%m-%d').strftime('%B %d, %Y')
-                            except ValueError:
-                                try:
-                                    # Already in human format
-                                    datetime.strptime(start, '%B %d, %Y')
-                                    datetime.strptime(end, '%B %d, %Y')
-                                    start_date, end_date = start, end
-                                except ValueError:
-                                    start_date, end_date = min_date_human, max_date_human
-                            return f"{start_date} - {end_date}"
-
-                        date_range = cliplist['filters'].get('date_range')
-                        if date_range and len(date_range) == 2:
-                            date_input.value = format_date_range_for_input(date_range[0], date_range[1])
-                        else:
-                            date_input.value = ""
-
-                        render_chips()
-                        # 2. Show Filters tab
-                        tabs.set_value(tab_filter)
-                        # 3. Render
-                        on_select_cliplist(cliplist)
-
                     for cliplist in saved_cliplists:
                         with cliplist_cards:
                             with ui.card().classes('p-4 shadow-md bg-white rounded-lg border w-full'):
@@ -214,10 +183,8 @@ def clips_page(cliplist_id=None):
                                 ui.label(f"📂 playlists: {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-sm text-gray-600 italic mb-2')
                                 with ui.row().classes("gap-2"):
                                     ui.button(icon='filter_alt', on_click=lambda c=cliplist: on_select_cliplist(c)).props('flat').tooltip('Filter')
-                                    ui.button(icon='edit', on_click=lambda c=cliplist: on_edit_cliplist(c)).props('flat color=secondary').tooltip('Edit')
-                                    ui.button(icon='play_arrow', on_click=lambda c=cliplist: navigate_to_cliplist(c["_id"])).props('flat').tooltip('Play')
-                                    # ui.button(icon='play_arrow', on_click=lambda: play_clip(clip)).props('flat color=primary').tooltip('Play')
-                                    # ui.button("🗑️", on_click=lambda: delete_cliplist(cliplist['id']), color="red").props('icon flat')
+                                    ui.button(icon='play_arrow', on_click=lambda c=cliplist: navigate_to_cliplist(c["_id"])).props('flat color=secondary').tooltip('Play')
+                                    ui.button(icon='delete', on_click=lambda c=cliplist: in_progress()).props('flat color=red').tooltip('Trash')
 
         with splitter.after:
             # Enhanced grid container
