@@ -3,7 +3,6 @@ from dialog_puns import in_progress
 from utils_api import load_clips, load_cliplist, save_cliplist
 from functools import partial
 from datetime import datetime
-from urllib.parse import urlparse
 
 VIDEOS_PER_PAGE = 12
 
