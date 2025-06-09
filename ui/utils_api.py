@@ -12,6 +12,17 @@ BASE_URL = os.getenv("BACKEND_URL")
 _playlists_cache = None  # file-level in-memory cache
 _cliplist_cache = {}
 
+#TODO: currecntly clears the 2 heavy hitters, how about the rest and parameterization?
+def clear_cache():
+    # Clear in-process memory
+    global _cliplist_cache, _playlists_cache
+    _cliplist_cache = {}
+    _playlists_cache = None
+
+    # Clear Redis
+    cache_del("cliplists")
+    cache_del("playlists")
+
 def get_headers(token: Optional[str] = None):
     headers = {"Content-Type": "application/json"}
     if token:

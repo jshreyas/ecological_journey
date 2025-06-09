@@ -32,6 +32,7 @@ def playcliplist_page(cliplist_id):
 
     queue = filtered_videos.copy()
     queue_buttons = []
+    current_index = 0
     if not queue:
         ui.notify("No clips found for selected filters", type='warning')
         return
