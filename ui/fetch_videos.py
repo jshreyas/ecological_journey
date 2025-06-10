@@ -92,7 +92,7 @@ def fetch_playlist_metadata(playlist_id):
     else:
         return None
 
-def fetch_playlist_items(playlist_id, count=None):
+def fetch_playlist_items(playlist_id, latest_saved_date=None, count=None):
     videos = []
     next_page_token = ""
 
@@ -104,16 +104,23 @@ def fetch_playlist_items(playlist_id, count=None):
 
         data = response.json()
         for item in data.get("items", []):
+            snippet = item["snippet"]
+            published_at = snippet["publishedAt"]
+            published_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+
+            if latest_saved_date and published_dt < latest_saved_date:
+                # Stop fetching as we've reached already-synced videos
+                return videos
+
             if count and len(videos) >= count:
                 return videos
 
-            snippet = item["snippet"]
             video_id = snippet["resourceId"]["videoId"]
             video_data = {
                 "title": snippet["title"],
                 "video_id": video_id,
                 "youtube_url": f"https://www.youtube.com/watch?v={video_id}",
-                "date": snippet["publishedAt"],
+                "date": published_at,
                 "type": "",
                 "partners": [],
                 "positions": [],

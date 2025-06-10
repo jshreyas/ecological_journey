@@ -410,28 +410,32 @@ def open_team_modal(team):
     dialog.open()
 
 def sync_playlist(playlist_id, token, playlist_name, play_id):
-
     try:
-        # Step 1: Fetch current playlist data from source (YouTube, etc.)
-        latest_video_data = fetch_playlist_items(play_id)
-        latest_video_ids = {video['video_id'] for video in latest_video_data}
-
-        # Step 2: Fetch existing videos in DB for this playlist
+        # Step 1: Fetch existing videos from DB
         existing_videos = load_videos(playlist_id)
-        existing_video_ids = {video['video_id'] for video in existing_videos}
+        if existing_videos:
+            latest_saved_date_str = max(video["date"] for video in existing_videos)
+            latest_saved_date = datetime.datetime.fromisoformat(latest_saved_date_str.replace("Z", "+00:00"))
+            existing_video_ids = {video["video_id"] for video in existing_videos}
+        else:
+            latest_saved_date = None
+            existing_video_ids = set()
 
-        # Step 3: Identify new videos
-        new_video_data = [video for video in latest_video_data if video['video_id'] not in existing_video_ids]
+        # Step 2: Fetch only new videos from YouTube
+        latest_video_data = fetch_playlist_items(play_id, latest_saved_date)
+        new_video_data = [video for video in latest_video_data if video["video_id"] not in existing_video_ids]
+
         if not new_video_data:
             ui.notify('✅ Playlist is already up to date!')
             return
 
-        # Step 4: Append new videos
+        # Step 3: Append new videos
         create_video(new_video_data, token, playlist_name)
         ui.notify(f'✅ Synced {len(new_video_data)} new videos to "{playlist_name}".')
 
-    except Exception as exc:
-        ui.notify(f'❌ Sync failed: {str(exc)}')
+    except Exception as e:
+        print(f"❌ Sync failed: {str(e)}")
+        ui.notify(f"❌ Sync failed: {str(e)}")
 
 def create_team_modal():
     print("Opening modal to create a new team")
