@@ -134,18 +134,17 @@ def films_page():
                             human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
                             ui.label(f"📅 {human_readable_day}").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
                             for v in day_videos:
-                                # Enhanced video cards
-                                with ui.card().classes(
-                                    'cursor-pointer hover:shadow-xl transition-shadow duration-200 border border-gray-300 rounded-lg'
-                                ).on('click', partial(navigate_to_film, v["video_id"])):
+                                partners = v.get("partners", [])
+                                labels = v.get("labels", [])
+                                with ui.card().classes('cursor-pointer hover:shadow-lg p-2').on('click', partial(navigate_to_film, v["video_id"])):
+                                    with ui.tooltip().classes('bg-primary text-white'):
+                                        ui.html(f'<b>Partners</b>: {", ".join(f"@{p}" for p in partners)}') if partners else ui.label("No partners")
+                                        ui.html(f'<b>Labels</b>: {", ".join(f"#{l}" for l in labels)}') if labels else ui.label("No labels")
+                                        ui.html(f'<b>Clips</b>: {len(v.get("clips", 0))}')
                                     thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
                                     ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover mb-2')
-                                    ui.label(v["title"]) \
-                                        .tooltip(v["title"]) \
-                                        .classes('font-medium mt-2 truncate text-sm sm:text-base text-gray-700')
-                                    # Display duration instead of date
-                                    ui.label(f"⏱ {v['duration_human']}") \
-                                        .classes('text-sm text-gray-500')
+                                    ui.label(v["title"]).classes('font-medium truncate text-sm sm:text-base')
+                                    ui.label(f"⏱ {v['duration_human']}").classes('text-xs')
 
                         # Enhanced pagination controls
                         with ui.row().classes('justify-between items-center mt-6 col-span-full'):
