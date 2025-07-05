@@ -357,15 +357,18 @@ def film_page(video_id: str):
 
             # Display thumbnails for videos from the same day
             for v in same_day_videos:
+                partners = v.get("partners", [])
+                labels = v.get("labels", [])
                 with ui.card().classes('cursor-pointer hover:shadow-lg p-2').on('click', lambda e, vid=v['video_id']: navigate_to_film(vid, e)):
                     with ui.column().classes('w-full gap-2'):
-                        # Thumbnail
+                        with ui.tooltip().classes('bg-primary text-white'):
+                            ui.html(f'<b>Partners</b>: {", ".join(f"@{p}" for p in partners)}') if partners else ui.label("No partners")
+                            ui.html(f'<b>Labels</b>: {", ".join(f"#{l}" for l in labels)}') if labels else ui.label("No labels")
+                            ui.html(f'<b>Clips</b>: {len(v.get("clips", 0))}')
                         thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
                         ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover')
-                        # Title
                         ui.label(v["title"]).classes('font-medium text-sm truncate')
-                        # Duration
-                        ui.label(f"⏱ {format_time(v.get('duration_seconds', 0))}").classes('text-xs text-gray-500')
+                        ui.label(f"⏱ {format_time(v.get('duration_seconds', 0))}").classes('text-xs')
 
     def get_adjacent_videos():
         """Find the last video from the previous day and the first video from the next day."""
