@@ -256,7 +256,6 @@ def clips_page():
                             human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
                             total_for_day = all_grouped_counts.get(day, len(day_videos))
                             ui.label(f"📅 {human_readable_day} ({total_for_day})").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
-                            # ui.label(f"📅 {human_readable_day}").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
                             for v in day_videos:
                                 partners = v.get("partners", [])
                                 labels = v.get("labels", [])
