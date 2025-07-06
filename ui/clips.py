@@ -224,6 +224,13 @@ def clips_page():
                     and (not filters_to_use['labels'] or any(label in v.get('labels', []) for label in filters_to_use['labels']))
                     and (not filters_to_use['partners'] or any(partner in v.get('partners', []) for partner in filters_to_use['partners']))
                 ]
+
+                # --- Group ALL filtered videos by date for correct counts ---
+                all_grouped_counts = {}
+                for v in filtered_videos:
+                    day = v['date'][:10]
+                    all_grouped_counts[day] = all_grouped_counts.get(day, 0) + 1
+
                 # Sort videos by date in descending order
                 videos_sorted = sorted(filtered_videos, key=lambda x: x['date'], reverse=True)
 
@@ -246,9 +253,9 @@ def clips_page():
                         ui.label("No films found for the selected filters.").classes('text-center text-gray-400 col-span-full mb-8')
                     else:
                         for day, day_videos in grouped_videos.items():
-                            # Convert the date (day) to a human-readable format
                             human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
-                            ui.label(f"📅 {human_readable_day}").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
+                            total_for_day = all_grouped_counts.get(day, len(day_videos))
+                            ui.label(f"📅 {human_readable_day} ({total_for_day})").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
                             for v in day_videos:
                                 partners = v.get("partners", [])
                                 labels = v.get("labels", [])
