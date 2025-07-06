@@ -279,10 +279,36 @@ def film_page(video_id: str):
                     end_time = format_time(clip.get('end', 0))
                     ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs')
                     ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes('text-xs')
-                partners = clip.get('partners', [])
-                labels = clip.get('labels', [])
-                ui.html(f'<b>Partners</b>: {", ".join(f"@{p}" for p in partners)}').classes('text-xs') if partners else ui.label("No partners").classes('text-xs')
-                ui.html(f'<b>Labels</b>: {", ".join(f"#{l}" for l in labels)}').classes('text-xs') if labels else ui.label("No labels").classes('text-xs')
+            # --- Partners (clip in black, video in primary blue) ---
+            partners = clip.get('partners', [])
+            video_partners = video.get('partners', [])
+            partners_html = ""
+            if partners:
+                partners_html += ", ".join(f"<span style='color:black'>@{p}</span>" for p in partners)
+            if video_partners:
+                if partners_html:
+                    partners_html += ", "
+                partners_html += ", ".join(f"<span style='color:var(--q-primary)'>@{p}</span>" for p in video_partners)
+            if partners_html:
+                ui.html(f"<b>Partners</b>: {partners_html}").classes('text-xs')
+            else:
+                ui.label("No partners").classes('text-xs')
+
+            # --- Labels (clip in black, video in primary blue) ---
+            labels = clip.get('labels', [])
+            video_labels = video.get('labels', [])
+            labels_html = ""
+            if labels:
+                labels_html += ", ".join(f"<span style='color:black'>#{l}</span>" for l in labels)
+            if video_labels:
+                if labels_html:
+                    labels_html += ", "
+                labels_html += ", ".join(f"<span style='color:var(--q-primary)'>#{l}</span>" for l in video_labels)
+            if labels_html:
+                ui.html(f"<b>Labels</b>: {labels_html}").classes('text-xs')
+            else:
+                ui.label("No labels").classes('text-xs')
+
             with ui.row().classes('justify-end gap-2 mt-2'):
                 ui.button(icon='play_arrow', on_click=lambda: play_clip(clip)).props('flat color=primary').tooltip('Play')
                 ui.button(icon='edit', on_click=lambda: on_edit_clip(clip)).props('flat color=secondary').tooltip('Edit')
