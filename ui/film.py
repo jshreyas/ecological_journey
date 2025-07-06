@@ -535,12 +535,19 @@ def film_page(video_id: str):
             with splitter.separator:
                 ui.icon('drag_indicator').classes('text-gray-400')
 
-        ui.label('📋 Clipboard').classes('text-xl font-semibold mt-4')
+        # Clipboard heading with count
+        video = load_video(video_id)
+        clips = video.get("clips", [])
+        ui.label(f'📋 Clipboard ({len(clips)})').classes('text-xl font-semibold mt-4')
         with ui.grid(columns=5).classes('w-full gap-4 mb-8') as clipboard_container:
             refresh_clipboard()
 
         ui.separator()
-        ui.label('🎥 Filmboard: Films from the same day').classes('text-xl font-semibold mt-8')
+        # Filmboard heading with count
+        all_videos = load_videos()
+        current_video_date = video.get('date', '').split('T')[0]
+        same_day_videos = [v for v in all_videos if v.get('date', '').startswith(current_video_date) and v['video_id'] != video_id]
+        ui.label(f'🎥 Filmboard: Films from the same day ({len(same_day_videos) + 1})').classes('text-xl font-semibold mt-8')
         with ui.grid(columns=5).classes('w-full gap-4 mb-8') as filmboard_container:
             refresh_filmboard()
 
