@@ -274,9 +274,15 @@ def film_page(video_id: str):
         ):
             with ui.column().classes('w-full gap-2'):
                 ui.label(clip["title"]).classes('font-medium text-sm truncate')
-                start_time = format_time(clip.get('start', 0))
-                end_time = format_time(clip.get('end', 0))
-                ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs text-gray-500')
+                with ui.row().classes('w-full gap-2 justify-between'):
+                    start_time = format_time(clip.get('start', 0))
+                    end_time = format_time(clip.get('end', 0))
+                    ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs')
+                    ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes('text-xs')
+                partners = clip.get('partners', [])
+                labels = clip.get('labels', [])
+                ui.html(f'<b>Partners</b>: {", ".join(f"@{p}" for p in partners)}').classes('text-xs') if partners else ui.label("No partners").classes('text-xs')
+                ui.html(f'<b>Labels</b>: {", ".join(f"#{l}" for l in labels)}').classes('text-xs') if labels else ui.label("No labels").classes('text-xs')
             with ui.row().classes('justify-end gap-2 mt-2'):
                 ui.button(icon='play_arrow', on_click=lambda: play_clip(clip)).props('flat color=primary').tooltip('Play')
                 ui.button(icon='edit', on_click=lambda: on_edit_clip(clip)).props('flat color=secondary').tooltip('Edit')
