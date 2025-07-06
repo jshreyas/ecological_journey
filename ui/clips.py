@@ -250,8 +250,10 @@ def clips_page():
                             human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
                             ui.label(f"📅 {human_readable_day}").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
                             for v in day_videos:
-                                partners_html = ", ".join(p for p in v.get('partners', []))
-                                labels_html = ", ".join(l for l in v.get('labels', []))
+                                partners = v.get("partners", [])
+                                labels = v.get("labels", [])
+                                partners_html = ", ".join(p for p in partners) if partners else "No partners"
+                                labels_html = ", ".join(l for l in labels) if labels else "No labels"
 
                                 with ui.card().classes(
                                     'cursor-pointer flex flex-row flex-col p-2 hover:shadow-xl transition-shadow duration-200 border-gray-600'
@@ -259,15 +261,8 @@ def clips_page():
                                     with ui.row().classes('w-full gap-2 justify-between'):
                                         ui.label(v["title"]).tooltip(v["title"]).classes('truncate font-bold text-sm sm:text-base')
                                         ui.label(f"⏱ {v['duration_human']}").classes('text-xs')
-
-                                    if partners_html:
-                                        ui.html(f"<b>Partners</b>: {partners_html}").classes('text-xs')
-                                    else:
-                                        ui.label("No partners").classes('text-xs')
-                                    if labels_html:
-                                        ui.html(f"<b>Labels</b>: {labels_html}").classes('text-xs')
-                                    else:
-                                        ui.label("No labels").classes('text-xs')
+                                    ui.label(f"🎭 {partners_html}").classes('text-xs')
+                                    ui.label(f"🏷️ {labels_html}").classes('text-xs')
                                     ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-blue-500')
 
                         # Enhanced pagination controls

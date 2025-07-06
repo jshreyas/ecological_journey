@@ -136,15 +136,19 @@ def films_page():
                             for v in day_videos:
                                 partners = v.get("partners", [])
                                 labels = v.get("labels", [])
-                                with ui.card().classes('cursor-pointer hover:shadow-lg p-2').on('click', partial(navigate_to_film, v["video_id"])):
-                                    with ui.tooltip().classes('bg-primary text-white'):
-                                        ui.html(f'<b>Partners</b>: {", ".join(f"@{p}" for p in partners)}') if partners else ui.label("No partners")
-                                        ui.html(f'<b>Labels</b>: {", ".join(f"#{l}" for l in labels)}') if labels else ui.label("No labels")
-                                        ui.html(f'<b>Clips</b>: {len(v.get("clips", 0))}')
-                                    thumbnail_url = f'https://img.youtube.com/vi/{v["video_id"]}/0.jpg'
-                                    ui.image(thumbnail_url).classes('w-full rounded aspect-video object-cover mb-2')
-                                    ui.label(v["title"]).classes('font-medium truncate text-sm sm:text-base')
-                                    ui.label(f"⏱ {v['duration_human']}").classes('text-xs')
+                                partners_html = ", ".join(p for p in partners) if partners else "No partners"
+                                labels_html = ", ".join(l for l in labels) if labels else "No labels"
+                                with ui.card().classes(
+                                    'cursor-pointer flex flex-row flex-col p-2 hover:shadow-xl transition-shadow duration-200 border-gray-600'
+                                ).on('click', partial(navigate_to_film, v["video_id"])):
+                                    with ui.row().classes('w-full gap-2 justify-between'):
+                                        ui.label(v["title"]).tooltip(v["title"]).classes('truncate font-bold text-sm sm:text-base')
+                                        ui.label(f"⏱ {v['duration_human']}").classes('text-xs')
+                                    ui.label(f"🎭 {partners_html}").classes('text-xs')
+                                    ui.label(f"🏷️ {labels_html}").classes('text-xs')
+                                    with ui.row().classes('w-full gap-2 justify-between'):
+                                        ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-blue-500')
+                                        ui.label(f"🎬 {len(v.get('clips', 0))}").classes('text-xs')
 
                         # Enhanced pagination controls
                         with ui.row().classes('justify-between items-center mt-6 col-span-full'):
