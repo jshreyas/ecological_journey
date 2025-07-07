@@ -202,7 +202,7 @@ def clips():
     ecological_layout()
     clips_page()
 
-@ui.page('/partners') ## TODO: think about the intention and layout again
+@ui.page('/partners')
 def show_partner_page():
     ecological_layout()
     partner_page()

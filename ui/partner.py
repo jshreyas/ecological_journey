@@ -3,6 +3,7 @@ from utils_api import load_clips, load_videos
 import json
 from collections import defaultdict, Counter
 
+#TODO: layout, scrolling, hyperlinks, clickable metadata, etc
 def partner_page():
     with ui.column().classes("w-full items-center"):
         ui.label("🤝 Partner Network Graph").classes("text-2xl font-bold my-4")

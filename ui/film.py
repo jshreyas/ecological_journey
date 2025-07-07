@@ -270,7 +270,6 @@ def film_page(video_id: str):
             partners = clip.get('partners', [])
             video_partners = video.get('partners', [])
             partners_html = ""
-            #TODO: bug: when no partners in clip but in video metadata, then "No partners" is also shown along with video partners
             if partners:
                 partners_html = ", ".join(f"<span style='color:black'>{p}</span>" for p in partners)
             if video_partners:
