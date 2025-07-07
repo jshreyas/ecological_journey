@@ -16,12 +16,6 @@ load_dotenv()
 BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 
 
-#TODO: Populate demo videos to demo playlist
-DEMO_VIDEO_POOL = [
-    {"video_id": "Wv1cAFUIJzw", "title": "Demo Grappling Breakdown", "duration_seconds": 300},
-]
-
-
 def film_page(video_id: str):
     query_params = ui.context.client.request.query_params
     clip_id = query_params.get("clip")
@@ -40,14 +34,7 @@ def film_page(video_id: str):
         video_id = autoplay_clip.get('video_id', video_id)
     player_container = {'ref': None}
     player_speed = {'value': 1.0}
-    demo_mode = False
-    if video_id == "demo":
-        demo_mode = True
-    # Load actual video from DB or demo stub
-    if demo_mode:
-        selected = next((v for v in DEMO_VIDEO_POOL if v['video_id'] == video_id), None)
-        video = selected or random.choice(DEMO_VIDEO_POOL)
-        video_id = video['video_id']
+
     video = load_video(video_id)
     if not video:
         ui.label(f"⚠️ Video: {video_id} not found!")
@@ -283,6 +270,7 @@ def film_page(video_id: str):
             partners = clip.get('partners', [])
             video_partners = video.get('partners', [])
             partners_html = "No partners"
+            #TODO: bug: no partners in clip but video has partners
             if partners:
                 partners_html = ", ".join(f"<span style='color:black'>{p}</span>" for p in partners)
             if video_partners:
