@@ -269,26 +269,30 @@ def film_page(video_id: str):
             # --- Partners (clip in black, video in primary blue) ---
             partners = clip.get('partners', [])
             video_partners = video.get('partners', [])
-            partners_html = "No partners"
-            #TODO: bug: no partners in clip but video has partners
+            partners_html = ""
+            #TODO: bug: when no partners in clip but in video metadata, then "No partners" is also shown along with video partners
             if partners:
                 partners_html = ", ".join(f"<span style='color:black'>{p}</span>" for p in partners)
             if video_partners:
                 if partners_html:
                     partners_html += ", "
                 partners_html += ", ".join(f"<span style='color:var(--q-primary)'>{p}</span>" for p in video_partners)
+            if not partners_html:
+                partners_html = "No partners"
             ui.html(f"🎭 {partners_html}").classes('text-xs')
 
             # --- Labels (clip in black, video in primary blue) ---
             labels = clip.get('labels', [])
             video_labels = video.get('labels', [])
-            labels_html = "No labels"
+            labels_html = ""
             if labels:
                 labels_html = ", ".join(f"<span style='color:black'>{l}</span>" for l in labels)
             if video_labels:
                 if labels_html:
                     labels_html += ", "
                 labels_html += ", ".join(f"<span style='color:var(--q-primary)'>{l}</span>" for l in video_labels)
+            if not labels_html:
+                labels_html = "No labels"
             ui.html(f"🏷️ {labels_html}").classes('text-xs')
 
             with ui.row().classes('justify-end gap-2 mt-2'):
