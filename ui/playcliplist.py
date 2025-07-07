@@ -54,7 +54,8 @@ def playcliplist_page(cliplist_id):
         card = ui.card().classes(
             'w-full mb-2 transition-all duration-200 ease-in-out cursor-pointer'
         )
-        with card:
+        with card: #TODO: layout format the contents of the card
+            #TODO: on click play the clip doesnt work, it must be clashing with the autoplay's queue; either remove onclick or fix the logic
             col = ui.column().classes(card_tailwind).on('click', lambda idx=index: play_clip(idx))
             with col:
                 ui.label(title).classes('text-md font-semibold')
@@ -82,7 +83,7 @@ def playcliplist_page(cliplist_id):
                 video_url=queue[index]['video_id'],
                 start=queue[index]['start'],
                 end=queue[index]['end'],
-                speed=2.0,
+                speed=2.0, #TODO: pick from clip, else default to 2.0
                 on_end=lambda: next_clip() if is_autoplay else None,
                 parent=player_column
             )
