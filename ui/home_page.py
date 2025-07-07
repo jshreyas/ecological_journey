@@ -1,5 +1,5 @@
 from nicegui import ui, app
-from dialog_puns import caught_john_doe, in_progress
+from dialog_puns import caught_john_doe
 from fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils_api import create_video, load_playlists, load_videos, create_playlist, load_playlists_for_user, create_team, fetch_teams_for_user
 import datetime

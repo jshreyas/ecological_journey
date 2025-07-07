@@ -1,4 +1,5 @@
 from nicegui import ui
+from utils import format_time
 from dialog_puns import in_progress
 from utils_api import load_cliplist, load_clips
 from video_player import VideoPlayer
@@ -62,15 +63,41 @@ def playcliplist_page(cliplist_id):
         for i, btn in enumerate(queue_buttons):
             btn.props('color=secondary' if i == current_index else 'color=primary')
 
+    def render_clip_card(clip, index):
+        title = clip.get('title') or f"Clip {index + 1}"
+        partners = ', '.join(clip.get('partners', []))
+        labels = ', '.join(clip.get('labels', []))
+        start_time = format_time(clip.get('start', 0))
+        end_time = format_time(clip.get('end', 0))
+                
+        card_classes = 'bg-secondary text-white' if index == current_index else 'bg-white text-black'
+        card_tailwind = f'{card_classes} p-3 rounded-lg shadow-md hover:shadow-lg'
+
+        card = ui.card().classes(
+            'w-full mb-2 transition-all duration-200 ease-in-out cursor-pointer'
+        )
+        with card:
+            col = ui.column().classes(card_tailwind).on('click', lambda idx=index: play_clip(idx))
+            with col:
+                ui.label(title).classes('text-md font-semibold')
+                with ui.row().classes('w-full gap-2 justify-between'):
+                    ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs')
+                    ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes('text-xs')
+
+                if partners:
+                    ui.label(f"👥 {partners}").classes('text-sm opacity-80')
+                if labels:
+                    ui.label(f"🏷️ {labels}").classes('text-sm opacity-60')
+        return card
+
     # --- Layout ---
     with ui.splitter(value=70, horizontal=False).classes('w-full h-full') as splitter:
         with splitter.before:
             player_column = ui.column().classes('w-full h-full').style('height: 100%; height: 56.25vw; max-height: 70vh;')
         with splitter.after:
-            for i, clip in enumerate(queue):
-                title = clip.get('title') or f"clip-{i + 1}"
-                btn = ui.button(title, on_click=lambda i=i: play_clip(i)).classes('w-full')
-                queue_buttons.append(btn)
+            with ui.scroll_area().classes('w-full h-full p-2').style('height: 100%; height: 56.25vw; max-height: 70vh;'):
+                for i, clip in enumerate(queue):
+                    queue_buttons.append(render_clip_card(clip, i))
 
     # Start
     play_clip(current_index)

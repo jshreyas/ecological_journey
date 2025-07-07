@@ -103,7 +103,7 @@ def partner_page():
 
         # Fixed-height metadata area
         ui.add_body_html("""
-        <div id='cy' style='height: 700px; width: 100%; border: 1px solid #ccc;'></div>
+        <div id='cy' style='position: relative; height: 500px; width: 100%; border: 1px solid #ccc;'></div>
         <div id='meta' style='margin-top:10px; min-height:60px; max-height:80px; overflow:auto; background:#fafafa; border-radius:6px; border:1px solid #eee; padding:8px;'></div>
         """)
         ui.add_body_html(f"""
