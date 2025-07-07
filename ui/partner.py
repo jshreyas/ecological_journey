@@ -1,131 +1,193 @@
 from nicegui import ui
-from utils_api import get_all_partners, find_clips_by_partner
-from utils import format_time, embed_youtube_player
-import random
+from utils_api import load_clips, load_videos
+import json
+from collections import defaultdict, Counter
 
+#TODO: layout, scrolling, hyperlinks, clickable metadata, etc
 def partner_page():
+    with ui.column().classes("w-full items-center"):
+        ui.label("🤝 Partner Network Graph").classes("text-2xl font-bold my-4")
 
-    ui.label('🥋 Grappling Engine v0.1').classes('text-2xl font-bold mb-2')
-    ui.label('Calibrating stance and breath... Please hold.').classes('italic text-gray-600')
+        all_clips = load_clips()
+        all_videos = load_videos()
 
-    with ui.card().classes('w-full p-4 mt-4'):
-        ui.label('🧪 Training Dojo Console').classes('text-lg font-semibold')
-        ui.label('[dojo] >> running `simulate_sparring(partner="bot_jiujitsu_v0.4")`...')
+        # Assign a color to each playlist
+        all_playlists = sorted({c['playlist_name'] for c in all_clips if 'playlist_name' in c} |
+                               {v['playlist_name'] for v in all_videos if 'playlist_name' in v})
+        palette = [
+            "#4F8A8B", "#F9ED69", "#F08A5D", "#B83B5E", "#6A2C70", "#3B6978", "#204051", "#FF6F3C", "#A3A847"
+        ]
+        playlist_colors = {pl: palette[i % len(palette)] for i, pl in enumerate(all_playlists)}
 
-        progress = ui.linear_progress(value=0.0).classes('mt-2 mb-2')
+        # Gather partner playlist usage
+        partner_playlist_counter = defaultdict(Counter)
+        for clip in all_clips:
+            for p in clip.get('partners', []):
+                partner_playlist_counter[p][clip.get('playlist_name', 'Unknown')] += 1
+        for video in all_videos:
+            for p in video.get('partners', []):
+                partner_playlist_counter[p][video.get('playlist_name', 'Unknown')] += 1
 
-        def update_progress():
-            current = progress.value
-            if current < 1.0:
-                new_value = min(current + random.uniform(0.02, 0.06), 1.0)
-                progress.set_value(new_value)
-                ui.timer(0.15, update_progress, once=True)
-            else:
-                ui.notify('✅ Sparring complete. Check your journal.', type='positive')
+        partner_set = set()
+        for clip in all_clips:
+            partner_set.update(clip.get('partners', []))
+        for video in all_videos:
+            partner_set.update(video.get('partners', []))
+        partners = sorted(partner_set)
 
-        ui.timer(0.5, update_progress, once=True)
+        usage_counts = {
+            partner: sum(partner in clip.get('partners', []) for clip in all_clips) +
+                     sum(partner in video.get('partners', []) for video in all_videos)
+            for partner in partners
+        }
 
-    with ui.row().classes('mt-6 gap-2'):
-        ui.icon('construction').classes('text-yellow-600 text-3xl')
-        ui.label('This section is still under construction.').classes('text-yellow-700 text-xl font-semibold')
+        HIGH_USAGE_THRESHOLD = 10
+        nodes = []
+        for partner in partners:
+            playlist, _ = partner_playlist_counter[partner].most_common(1)[0] if partner_playlist_counter[partner] else ('Unknown', 0)
+            color = playlist_colors.get(playlist, "#888")
+            node_data = {
+                "id": partner,
+                "label": partner,
+                "count": usage_counts[partner],
+                "playlist": playlist,
+                "color": color,
+            }
+            classes = "high-usage" if usage_counts[partner] >= HIGH_USAGE_THRESHOLD else ""
+            node = {"data": node_data}
+            if classes:
+                node["classes"] = classes
+            nodes.append(node)
 
-    ui.button('Return to Safety', on_click=lambda: ui.navigate.to('/')).props('icon=home')
+        edge_weights = defaultdict(lambda: {"clips": 0, "films": 0})
+        for clip in all_clips:
+            ps = clip.get('partners', [])
+            for i in range(len(ps)):
+                for j in range(i + 1, len(ps)):
+                    key = tuple(sorted([ps[i], ps[j]]))
+                    edge_weights[key]["clips"] += 1
+        for video in all_videos:
+            ps = video.get('partners', [])
+            for i in range(len(ps)):
+                for j in range(i + 1, len(ps)):
+                    key = tuple(sorted([ps[i], ps[j]]))
+                    edge_weights[key]["films"] += 1
 
-#     partners = get_all_partners()
-#     if not partners:
-#         ui.label('No partners found!').classes('text-red-500')
-#         return
+        edges = []
+        for (p1, p2), counts in edge_weights.items():
+            total = counts["clips"] + counts["films"]
+            if total == 0:
+                continue
+            playlist_counter = Counter()
+            for clip in all_clips:
+                if p1 in clip.get('partners', []) and p2 in clip.get('partners', []):
+                    playlist_counter[clip.get('playlist_name', 'Unknown')] += 1
+            for video in all_videos:
+                if p1 in video.get('partners', []) and p2 in video.get('partners', []):
+                    playlist_counter[video.get('playlist_name', 'Unknown')] += 1
+            playlist, _ = playlist_counter.most_common(1)[0] if playlist_counter else ('Unknown', 0)
+            color = playlist_colors.get(playlist, "#888")
+            edge_data = {
+                "id": f"{p1}_{p2}",
+                "source": p1,
+                "target": p2,
+                "weight": total,
+                "color": color,
+                "clips": counts["clips"],
+                "films": counts["films"],
+            }
+            edges.append({"data": edge_data})
 
-#     selected_partner = None
-#     all_clips = []
-#     label_checkboxes = {}
-#     player_container = ui.column().classes('w-full mt-4')
+        elements = nodes + edges
+        elements_json = json.dumps(elements)
 
-#     def get_all_labels(clips):
-#         labels_set = set()
-#         has_no_label = False
-#         for clip in clips:
-#             labels = clip.get("labels") or []
-#             if labels:
-#                 labels_set.update(labels)
-#             else:
-#                 has_no_label = True
-#         all_labels = sorted(labels_set)
-#         if has_no_label:
-#             all_labels.append("No Label")
-#         return all_labels
+        # Fixed-height metadata area
+        ui.add_body_html("""
+        <div id='cy' style='height: 700px; width: 100%; border: 1px solid #ccc;'></div>
+        <div id='meta' style='margin-top:10px; min-height:60px; max-height:80px; overflow:auto; background:#fafafa; border-radius:6px; border:1px solid #eee; padding:8px;'></div>
+        """)
+        ui.add_body_html(f"""
+        <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
+        <script>
+        function renderCytoscape() {{
+            if (typeof cytoscape === 'undefined' || !document.getElementById('cy')) {{
+                setTimeout(renderCytoscape, 100);
+                return;
+            }}
+            const elements = {elements_json};
+            const cy = cytoscape({{
+                container: document.getElementById('cy'),
+                elements: elements,
+                style: [
+                    {{
+                        selector: 'node',
+                        style: {{
+                            'label': 'data(label)',
+                            'background-color': 'data(color)',
+                            'width': 'mapData(count, 1, 100, 20, 50)',
+                            'height': 'mapData(count, 1, 100, 20, 50)',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'color': '#fff',
+                            'font-size': 16,
+                            'text-outline-width': 2,
+                            'text-outline-color': '#222',
+                            'shadow-blur': 0,
+                            'shadow-color': '#000',
+                            'shadow-opacity': 0
+                        }}
+                    }},
+                    {{
+                        selector: 'node.high-usage',
+                        style: {{
+                            'shadow-blur': 30,
+                            'shadow-color': '#FFD700',
+                            'shadow-opacity': 0.7
+                        }}
+                    }},
+                    {{
+                        selector: 'edge',
+                        style: {{
+                            'width': 'mapData(weight, 1, 100, 1, 10)',
+                            'line-color': 'data(color)',
+                            'curve-style': 'bezier',
+                            'opacity': 0.8
+                        }}
+                    }}
+                ],
+                layout: {{
+                    name: 'circle',
+                    padding: 20
+                }}
+            }});
 
-#     def is_clip_visible(clip, selected_labels):
-#         labels = clip.get("labels") or []
-#         is_empty = not labels
-#         if is_empty and "No Label" in selected_labels:
-#             return True
-#         return any(label in selected_labels for label in labels)
+            function showMeta(html) {{
+                document.getElementById('meta').innerHTML = html;
+            }}
 
-#     def update_clip_buttons():
-#         clips_column.clear()
-
-#         selected_labels = [label for label, cb in label_checkboxes.items() if cb.value]
-
-#         visible_clips = [clip for clip in all_clips if is_clip_visible(clip, selected_labels)]
-
-#         with clips_column:
-#             for i, clip in enumerate(visible_clips):
-#                 title = clip.get('title', f'Clip {i+1}')
-#                 start_time = format_time(clip['start'])
-#                 end_time = format_time(clip['end'])
-#                 label = f"{title} ({start_time} → {end_time})"
-
-#                 def make_on_click(v):
-#                     def on_click():
-#                         player_container.clear()
-#                         with player_container:
-#                             embed_youtube_player(
-#                                 v["video_id"],
-#                                 start=v["start"],
-#                                 end=v["end"],
-#                                 speed=1.0,
-#                             )
-#                     return on_click
-
-#                 ui.button(label, on_click=make_on_click(clip)).classes(
-#                     'w-full text-left p-4 bg-gray-100 rounded shadow-md hover:bg-gray-200'
-#                 )
-
-#     def update_clips(partner):
-#         nonlocal all_clips, label_checkboxes
-#         clips_column.clear()
-#         filters_column.clear()
-#         player_container.clear()
-#         label_checkboxes = {}
-
-#         all_clips = find_clips_by_partner(partner)
-#         all_labels = get_all_labels(all_clips)
-
-#         with filters_column:
-#             ui.label('🎯 Filter by Labels').classes('text-lg font-bold')
-#             for label in all_labels:
-#                 cb = ui.checkbox(label, value=True, on_change=update_clip_buttons)
-#                 label_checkboxes[label] = cb
-
-#         update_clip_buttons()
-
-#     def on_partner_change(e):
-#         nonlocal selected_partner
-#         selected_partner = e.value
-#         update_clips(selected_partner)
-
-#     ui.select(partners, clearable=True, on_change=on_partner_change)
-
-#     with ui.splitter(horizontal=False, reverse=False, value=80).classes('w-full mt-4') as splitter:
-#         with splitter.before:
-#             clips_column = ui.column().classes('w-full gap-2')
-#         with splitter.after:
-#             filters_column = ui.column().classes('ml-2 gap-2')
-#         with splitter.separator:
-#             ui.icon('filter_alt').classes('text-blue')
-
-#     update_clips(selected_partner)
-
-
-# partner_page()
+            cy.on('mouseover', 'node', function(evt) {{
+                const d = evt.target.data();
+                showMeta(`<b>Partner:</b> ${{d.label}}<br><b>Playlist:</b> ${{d.playlist}}<br><b>Usage:</b> ${{d.count}}`);
+            }});
+            cy.on('mouseout', 'node', function(evt) {{
+                showMeta('');
+            }});
+            cy.on('tap', 'node', function(evt) {{
+                const d = evt.target.data();
+                showMeta(`<b>Partner:</b> ${{d.label}}<br><b>Playlist:</b> ${{d.playlist}}<br><b>Usage:</b> ${{d.count}}`);
+            }});
+            cy.on('mouseover', 'edge', function(evt) {{
+                const d = evt.target.data();
+                showMeta(`<b>Edge:</b> ${{d.source}} - ${{d.target}}<br><b>Shared clips:</b> ${{d.clips}}<br><b>Shared films:</b> ${{d.films}}`);
+            }});
+            cy.on('mouseout', 'edge', function(evt) {{
+                showMeta('');
+            }});
+            cy.on('tap', 'edge', function(evt) {{
+                const d = evt.target.data();
+                showMeta(`<b>Edge:</b> ${{d.source}} - ${{d.target}}<br><b>Shared clips:</b> ${{d.clips}}<br><b>Shared films:</b> ${{d.films}}`);
+            }});
+        }}
+        renderCytoscape();
+        </script>
+        """)

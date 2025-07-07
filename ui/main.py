@@ -122,10 +122,8 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
                 ui.label(title).classes('text-2xl font-bold text-white leading-none')  # bigger font, no extra line height
             link('Home', '/')
             link('Films', '/films')
-            link('Film Study', '/film_study')
             link('Clips', '/clips')
-            link('Clip Study', '/cliplist')
-            # link('Partner Study', '/partner_study')
+            link('Partners', '/partners')
             link('About', '/about')
             
 
@@ -194,11 +192,6 @@ def home():
     ecological_layout()
     home_page()
 
-@ui.page('/film_study')
-def film_study():
-    ecological_layout()
-    film_page("demo")
-
 @ui.page('/films')
 def films():
     ecological_layout()
@@ -209,17 +202,16 @@ def clips():
     ecological_layout()
     clips_page()
 
-# @ui.page('/partner_study') ## TODO: think about the intention and layout again
-# def show_partner_page():
-#     ecological_layout()
-#     partner_page()
+@ui.page('/partners')
+def show_partner_page():
+    ecological_layout()
+    partner_page()
 
 @ui.page('/about')
 def about():
     ecological_layout()
     about_page()
 
-@ui.page('/cliplist')
 @ui.page('/cliplist/{cliplist_id}')
 def playcliplist(cliplist_id: str=None):
     ecological_layout()
