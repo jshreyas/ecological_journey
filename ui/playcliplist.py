@@ -49,12 +49,12 @@ def playcliplist_page(cliplist_id):
         end_time = format_time(clip.get('end', 0))
 
         card_classes = 'bg-secondary text-white' if index == current_index else 'bg-white text-black'
-        card_tailwind = f'{card_classes} p-3 rounded-lg shadow-md hover:shadow-lg'
+        card_tailwind = f'{card_classes} p-3 rounded-lg shadow-md hover:shadow-lg w-full'
 
         card = ui.card().classes(
             'w-full mb-2 transition-all duration-200 ease-in-out cursor-pointer'
         )
-        with card: #TODO: layout format the contents of the card
+        with card:
             #TODO: on click play the clip doesnt work, it must be clashing with the autoplay's queue; either remove onclick or fix the logic
             col = ui.column().classes(card_tailwind).on('click', lambda idx=index: play_clip(idx))
             with col:
@@ -63,7 +63,7 @@ def playcliplist_page(cliplist_id):
                     ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs')
                     ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes('text-xs')
                 if partners:
-                    ui.label(f"👥 {partners}").classes('text-sm opacity-80')
+                    ui.label(f"🎭 {partners}").classes('text-sm opacity-80')
                 if labels:
                     ui.label(f"🏷️ {labels}").classes('text-sm opacity-60')
         return card
