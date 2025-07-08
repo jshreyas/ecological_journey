@@ -4,7 +4,7 @@ from utils_api import load_clips, load_cliplist, save_cliplist
 from functools import partial
 from datetime import datetime
 
-VIDEOS_PER_PAGE = 12
+VIDEOS_PER_PAGE = 30
 
 def navigate_to_cliplist(cliplist_id):
     ui.navigate.to(f'/cliplist/{cliplist_id}')
@@ -179,7 +179,7 @@ def clips_page():
         with splitter.after:
             # Enhanced grid container
             video_grid = ui.grid().classes(
-                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-6 w-full p-4 bg-white rounded-lg shadow-lg'
+                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full p-4 bg-white rounded-lg shadow-lg'
             )
 
             def render_videos(cliplist_filter_override=None):
@@ -255,7 +255,7 @@ def clips_page():
                         for day, day_videos in grouped_videos.items():
                             human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
                             total_for_day = all_grouped_counts.get(day, len(day_videos))
-                            ui.label(f"📅 {human_readable_day} ({total_for_day})").classes('text-xl font-semibold text-blue-500 col-span-full mb-4')
+                            ui.label(f"📅 {human_readable_day} ({total_for_day})").classes('text-xl font-semibold text-primary col-span-full mb-2')
                             for v in day_videos:
                                 partners = v.get("partners", [])
                                 labels = v.get("labels", [])
@@ -270,18 +270,19 @@ def clips_page():
                                         ui.label(f"⏱ {v['duration_human']}").classes('text-xs')
                                     ui.label(f"🎭 {partners_html}").classes('text-xs')
                                     ui.label(f"🏷️ {labels_html}").classes('text-xs')
-                                    ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-blue-500')
+                                    ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-primary')
+                            ui.separator().classes('border-gray-300 col-span-full')
 
                         # Enhanced pagination controls
-                        with ui.row().classes('justify-between items-center mt-6 col-span-full'):
+                        with ui.row().classes('justify-between items-center col-span-full'):
                             if current_page["value"] > 1:
-                                ui.button('Previous', on_click=lambda: change_page(-1)).props('flat').classes('text-blue-500 hover:text-blue-700')
+                                ui.button('Previous', on_click=lambda: change_page(-1)).props('flat').classes('text-primary hover:text-blue-700')
                             else:
                                 ui.label()  # Empty placeholder for alignment
 
                             ui.label(f'Page {current_page["value"]} of {total_pages}').classes('text-sm font-medium text-gray-700')
                             if current_page["value"] < total_pages:
-                                ui.button('Next', on_click=lambda: change_page(1)).props('flat').classes('text-blue-500 hover:text-blue-700')
+                                ui.button('Next', on_click=lambda: change_page(1)).props('flat').classes('text-primary hover:text-blue-700')
                             else:
                                 ui.label()  # Empty placeholder for alignment
 

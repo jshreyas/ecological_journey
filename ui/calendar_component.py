@@ -37,7 +37,7 @@ def calendar_container(grouped_videos_by_day):
                     ui.label(str(day)).classes('text-sm font-bold text-gray-800')
                     if videos:
                         ui.link(f'{len(videos)} film(s)', f'/film/{videos[0]["video_id"]}') \
-                            .classes('text-blue-500 text-xs underline')
+                            .classes('text-xs no-underline')
                         for video in videos:
                             ui.label(video['title']).classes('text-xs text-gray-500 truncate')
 
@@ -45,9 +45,9 @@ def calendar_container(grouped_videos_by_day):
     with ui.column().classes('w-full h-full items-center gap-4'):
         # Navigation Buttons with Month Label
         with ui.row().classes('justify-between w-1/2 items-center mb-4'):
-            ui.button('← Previous', on_click=lambda: change_month(-1)).props('flat').classes('text-blue-500 hover:bg-blue-100')
-            month_label = ui.label('').classes('text-xl font-bold text-blue-500')  # Dynamically updated label
-            ui.button('Next →', on_click=lambda: change_month(1)).props('flat').classes('text-blue-500 hover:bg-blue-100')
+            ui.button('← Previous', on_click=lambda: change_month(-1)).props('flat').classes('hover:bg-blue-100')
+            month_label = ui.label('').classes('text-xl font-bold')  # Dynamically updated label
+            ui.button('Next →', on_click=lambda: change_month(1)).props('flat').classes('hover:bg-blue-100')
 
         # Calendar Grid
         with ui.row().classes('w-full h-full max-w-5xl flex-1 bg-white rounded-lg shadow-lg overflow-hidden'):
