@@ -39,7 +39,6 @@ def clips_page():
         with splitter.before:
             with ui.tabs().classes('w-full mb-2') as tabs:
                 tab_filter = ui.tab('🎛 Filters')
-                tab_cliplists = ui.tab('📂 Cliplists')
             with ui.tab_panels(tabs=tabs, value=tab_filter).classes('w-full'):
                 with ui.tab_panel(tab_filter):
                     with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-lg space-y-4'):
@@ -151,30 +150,6 @@ def clips_page():
                         with ui.row().classes("justify-between w-full"):
                             ui.button('Apply', on_click=apply_filters).classes('mt-4')
                             ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
-
-                with ui.tab_panel(tab_cliplists).classes('w-full'):
-                    saved_cliplists = load_cliplist()
-
-                    cliplist_cards = ui.column().classes("overflow-y-auto h-full w-full gap-4")
-
-                    def on_select_cliplist(cliplist):
-                        cliplist_filter_override = {
-                            'clip_ids': set(cliplist['clip_ids']),
-                            'filters': cliplist.get('filters', {})
-                        }
-                        render_videos(cliplist_filter_override)
-
-                    for cliplist in saved_cliplists:
-                        with cliplist_cards:
-                            with ui.card().classes('p-4 shadow-md bg-white rounded-lg border w-full'):
-                                ui.label(cliplist['name']).classes('font-bold text-lg')
-                                ui.label(f"🏷️ #labels: {', '.join(cliplist['filters'].get('labels', []))}").classes('text-sm text-gray-600')
-                                ui.label(f"🧑‍🤝‍🧑 @partners: {', '.join(cliplist['filters'].get('partners', []))}").classes('text-sm text-gray-600')
-                                ui.label(f"📂 playlists: {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-sm text-gray-600 italic mb-2')
-                                with ui.row().classes("gap-2"):
-                                    ui.button(icon='filter_alt', on_click=lambda c=cliplist: on_select_cliplist(c)).props('flat').tooltip('Filter')
-                                    ui.button(icon='play_arrow', on_click=lambda c=cliplist: navigate_to_cliplist(c["_id"])).props('flat color=secondary').tooltip('Play')
-                                    ui.button(icon='delete', on_click=lambda c=cliplist: in_progress()).props('flat color=red').tooltip('Trash')
 
         with splitter.after:
             # Enhanced grid container
