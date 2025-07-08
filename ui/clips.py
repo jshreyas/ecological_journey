@@ -179,7 +179,7 @@ def clips_page():
         with splitter.after:
             # Enhanced grid container
             video_grid = ui.grid().classes(
-                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 w-full p-4 bg-white rounded-lg shadow-lg'
+                'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full p-4 bg-white rounded-lg shadow-lg'
             )
 
             def render_videos(cliplist_filter_override=None):
@@ -271,7 +271,7 @@ def clips_page():
                                     ui.label(f"🎭 {partners_html}").classes('text-xs')
                                     ui.label(f"🏷️ {labels_html}").classes('text-xs')
                                     ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-primary')
-                            ui.separator().classes('my-2 border-gray-300 col-span-full')
+                            ui.separator().classes('border-gray-300 col-span-full')
 
                         # Enhanced pagination controls
                         with ui.row().classes('justify-between items-center col-span-full'):
