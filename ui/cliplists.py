@@ -7,7 +7,7 @@ def cliplists_page():
         pass
 
     def render_media_grid_page(title, render_filters, render_grid):
-        with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
+        with ui.splitter(horizontal=False, value=0).classes('w-full h-full rounded shadow') as splitter:
             with splitter.before:
                 render_filters()
             with splitter.after:
