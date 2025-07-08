@@ -387,7 +387,7 @@ def film_page(video_id: str):
                     ui.label(f"🎭 {partners_html}").classes('text-xs')
                     ui.label(f"🏷️ {labels_html}").classes('text-xs')
                     with ui.row().classes('w-full gap-2 justify-between'):
-                        ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-blue-500')
+                        ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-primary')
                         ui.label(f"🎬 {len(v.get('clips', 0))}").classes('text-xs')
 
     def get_adjacent_videos():
@@ -432,8 +432,8 @@ def film_page(video_id: str):
                 # Previous
                 if prev_video:
                     with ui.row().classes('items-center cursor-pointer justify-start').on('click', lambda e: navigate_to_film(prev_video['video_id'], e)):
-                        ui.icon('arrow_back').classes('text-blue-500')
-                        ui.label(f"Previous: {prev_video['title']}").classes('text-sm text-blue-500 truncate')
+                        ui.icon('arrow_back').classes('text-primary text-bold')
+                        ui.label(f"Previous: {prev_video['title']}").classes('text-sm text-primary text-bold truncate')
                 else:
                     ui.label().classes('')  # Empty cell
 
@@ -444,8 +444,8 @@ def film_page(video_id: str):
                 # Next
                 if next_video:
                     with ui.row().classes('items-center cursor-pointer justify-end').on('click', lambda e: navigate_to_film(next_video['video_id'], e)):
-                        ui.label(f"Next: {next_video['title']}").classes('text-sm text-blue-500 truncate')
-                        ui.icon('arrow_forward').classes('text-blue-500')
+                        ui.label(f"Next: {next_video['title']}").classes('text-sm text-primary text-bold truncate')
+                        ui.icon('arrow_forward').classes('text-primary text-bold')
                 else:
                     ui.label().classes('')  # Empty cell
 
