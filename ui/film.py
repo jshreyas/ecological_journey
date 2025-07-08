@@ -6,7 +6,7 @@ from utils_api import load_video, load_videos, save_video_metadata
 from utils_api import add_clip_to_video, update_clip_in_video, get_playlist_id_for_video
 from utils import format_time
 from films import navigate_to_film
-import random
+from datetime import datetime
 import os
 import uuid
 from dotenv import load_dotenv
@@ -433,7 +433,7 @@ def film_page(video_id: str):
                 if prev_video:
                     with ui.row().classes('items-center cursor-pointer justify-start').on('click', lambda e: navigate_to_film(prev_video['video_id'], e)):
                         ui.icon('arrow_back').classes('text-primary text-bold')
-                        ui.label(f"Previous: {prev_video['title']}").classes('text-sm text-primary text-bold truncate')
+                        ui.label(f"Previous Day: {datetime.strptime(prev_video['date'], '%Y-%m-%dT%H:%M:%SZ').strftime('%B %d, %Y')}").classes('text-sm text-primary text-bold truncate')
                 else:
                     ui.label().classes('')  # Empty cell
 
@@ -444,7 +444,7 @@ def film_page(video_id: str):
                 # Next
                 if next_video:
                     with ui.row().classes('items-center cursor-pointer justify-end').on('click', lambda e: navigate_to_film(next_video['video_id'], e)):
-                        ui.label(f"Next: {next_video['title']}").classes('text-sm text-primary text-bold truncate')
+                        ui.label(f"Next Day: {datetime.strptime(next_video['date'], '%Y-%m-%dT%H:%M:%SZ').strftime('%B %d, %Y')}").classes('text-sm text-primary text-bold truncate')
                         ui.icon('arrow_forward').classes('text-primary text-bold')
                 else:
                     ui.label().classes('')  # Empty cell
@@ -538,7 +538,7 @@ def film_page(video_id: str):
         all_videos = load_videos()
         current_video_date = video.get('date', '').split('T')[0]
         same_day_videos = [v for v in all_videos if v.get('date', '').startswith(current_video_date) and v['video_id'] != video_id]
-        ui.label(f'🎥 Filmboard ({len(same_day_videos) + 1})').classes('text-xl font-semibold mt-8')
+        ui.label(f'🎥 More films from 🗓️ {datetime.strptime(current_video_date, "%Y-%m-%d").strftime("%B %d, %Y")} ({len(same_day_videos) + 1})').classes('text-xl font-semibold mt-8')
         with ui.grid(columns=5).classes('w-full gap-4 mb-8') as filmboard_container:
             refresh_filmboard()
 

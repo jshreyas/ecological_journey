@@ -10,6 +10,7 @@ from films import films_page
 from playcliplist import playcliplist_page
 from clips import clips_page
 from film import film_page
+from cliplists import cliplists_page
 from partner import partner_page
 from dialog_puns import caught_john_doe, handle_backend_error
 import sys
@@ -123,6 +124,7 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
             link('Home', '/')
             link('Films', '/films')
             link('Clips', '/clips')
+            link('Cliplists', '/cliplists')
             link('Partners', '/partners')
             link('About', '/about')
             
@@ -201,6 +203,11 @@ def films():
 def clips():
     ecological_layout()
     clips_page()
+
+@ui.page('/cliplists')
+def cliplists():
+    ecological_layout()
+    cliplists_page()
 
 @ui.page('/partners')
 def show_partner_page():

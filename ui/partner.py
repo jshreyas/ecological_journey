@@ -3,11 +3,8 @@ from utils_api import load_clips, load_videos
 import json
 from collections import defaultdict, Counter
 
-#TODO: layout, scrolling, hyperlinks, clickable metadata, etc
 def partner_page():
-    with ui.column().classes("w-full items-center"):
-        ui.label("🤝 Partner Network Graph").classes("text-2xl font-bold my-4")
-
+    with ui.column().classes("items-center"):
         all_clips = load_clips()
         all_videos = load_videos()
 
@@ -103,9 +100,11 @@ def partner_page():
 
         # Fixed-height metadata area
         ui.add_body_html("""
-        <div id='cy' style='position: relative; height: 500px; width: 100%; border: 1px solid #ccc;'></div>
+        <div id='cy' style='position: relative; margin-top:80px; height: 500px; width: 60%; border: 1px solid #ccc;'></div>
         <div id='meta' style='margin-top:10px; min-height:60px; max-height:80px; overflow:auto; background:#fafafa; border-radius:6px; border:1px solid #eee; padding:8px;'></div>
         """)
+
+        # Use a script that injects the JSON string directly
         ui.add_body_html(f"""
         <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
         <script>
@@ -114,8 +113,12 @@ def partner_page():
                 setTimeout(renderCytoscape, 100);
                 return;
             }}
+            // Remove any previous Cytoscape instance
+            if (window.cy && window.cy.destroy) {{
+                window.cy.destroy();
+            }}
             const elements = {elements_json};
-            const cy = cytoscape({{
+            window.cy = cytoscape({{
                 container: document.getElementById('cy'),
                 elements: elements,
                 style: [
@@ -131,10 +134,7 @@ def partner_page():
                             'color': '#fff',
                             'font-size': 16,
                             'text-outline-width': 2,
-                            'text-outline-color': '#222',
-                            'shadow-blur': 0,
-                            'shadow-color': '#000',
-                            'shadow-opacity': 0
+                            'text-outline-color': '#222'
                         }}
                     }},
                     {{
@@ -153,6 +153,13 @@ def partner_page():
                             'curve-style': 'bezier',
                             'opacity': 0.8
                         }}
+                    }},
+                    {{
+                        selector: '.faded',
+                        style: {{
+                            'opacity': 0.15,
+                            'text-opacity': 0.1
+                        }}
                     }}
                 ],
                 layout: {{
@@ -165,25 +172,47 @@ def partner_page():
                 document.getElementById('meta').innerHTML = html;
             }}
 
-            cy.on('mouseover', 'node', function(evt) {{
+            function focusOnNode(node) {{
+                const neighborhood = node.closedNeighborhood();
+
+                window.cy.animate({{
+                    fit: {{
+                        eles: neighborhood,
+                        padding: 60
+                    }},
+                    duration: 500
+                }});
+
+                window.cy.elements().removeClass('faded');
+                window.cy.elements().not(neighborhood).addClass('faded');
+
+                const d = node.data();
+                showMeta(`<b>Partner:</b> ${{d.label}}<br><b>Playlist:</b> ${{d.playlist}}<br><b>Usage:</b> ${{d.count}}`);
+            }}
+
+            window.cy.on('tap', 'node', function(evt) {{
+                focusOnNode(evt.target);
+            }});
+
+            window.cy.on('mouseover', 'node', function(evt) {{
                 const d = evt.target.data();
                 showMeta(`<b>Partner:</b> ${{d.label}}<br><b>Playlist:</b> ${{d.playlist}}<br><b>Usage:</b> ${{d.count}}`);
             }});
-            cy.on('mouseout', 'node', function(evt) {{
+
+            window.cy.on('mouseout', 'node', function(evt) {{
                 showMeta('');
             }});
-            cy.on('tap', 'node', function(evt) {{
-                const d = evt.target.data();
-                showMeta(`<b>Partner:</b> ${{d.label}}<br><b>Playlist:</b> ${{d.playlist}}<br><b>Usage:</b> ${{d.count}}`);
-            }});
-            cy.on('mouseover', 'edge', function(evt) {{
+
+            window.cy.on('mouseover', 'edge', function(evt) {{
                 const d = evt.target.data();
                 showMeta(`<b>Edge:</b> ${{d.source}} - ${{d.target}}<br><b>Shared clips:</b> ${{d.clips}}<br><b>Shared films:</b> ${{d.films}}`);
             }});
-            cy.on('mouseout', 'edge', function(evt) {{
+
+            window.cy.on('mouseout', 'edge', function(evt) {{
                 showMeta('');
             }});
-            cy.on('tap', 'edge', function(evt) {{
+
+            window.cy.on('tap', 'edge', function(evt) {{
                 const d = evt.target.data();
                 showMeta(`<b>Edge:</b> ${{d.source}} - ${{d.target}}<br><b>Shared clips:</b> ${{d.clips}}<br><b>Shared films:</b> ${{d.films}}`);
             }});
