@@ -2,15 +2,14 @@ from nicegui import ui
 from utils_api import load_cliplist
 
 def cliplists_page():
+    ui.label("🎬 Cliplists!").classes('text-2xl font-bold mb-4 text-center')
     def render_filters():
-        pass  # No filters for this page
+        pass
 
     def render_media_grid_page(title, render_filters, render_grid):
         with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
             with splitter.before:
-                # with ui.column().classes('w-full h-full p-6 bg-gray-100 rounded-lg space-y-4'):
-                    # render_filters()
-                pass
+                render_filters()
             with splitter.after:
                 render_grid()
 
@@ -28,7 +27,6 @@ def cliplists_page():
                     ui.label(f"🏷️ {', '.join(cliplist['filters'].get('labels', []))}").classes('text-xs')
                     ui.label(f"🎭 {', '.join(cliplist['filters'].get('partners', []))}").classes('text-xs')
                     ui.label(f"📂 {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-xs text-primary')
-                        
         return video_grid
 
     render_media_grid_page("📂 Cliplists", render_filters, render_grid)
