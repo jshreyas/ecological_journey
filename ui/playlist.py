@@ -1,5 +1,5 @@
 from nicegui import ui
-from clips import parse_query_expression
+from utils import parse_query_expression
 from utils import format_time
 from dialog_puns import in_progress
 from utils_api import load_cliplist, load_clips

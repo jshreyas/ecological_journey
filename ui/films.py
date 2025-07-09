@@ -1,6 +1,6 @@
 from nicegui import ui
 from utils_api import load_videos
-from clips import parse_query_expression
+from utils import parse_query_expression
 from functools import partial
 from datetime import datetime
 

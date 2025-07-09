@@ -128,3 +128,52 @@ def get_video_orientation_internal(video_id: str) -> str:
         return "Unknown (no resolution data found)"
     except Exception as e:
         return f"Error: {str(e)}"
+
+# --- Utility for parsing and checking query syntax ---
+def parse_query_expression(tokens):
+    # Precedence: NOT > AND > OR
+
+    def parse(tokens):
+        def parse_not(index):
+            if tokens[index] == 'NOT':
+                sub_expr, next_index = parse_not(index + 1)
+                return ('NOT', sub_expr), next_index
+            else:
+                return tokens[index], index + 1
+
+        def parse_and(index):
+            left, index = parse_not(index)
+            while index < len(tokens) and tokens[index] == 'AND':
+                right, index = parse_not(index + 1)
+                left = ('AND', left, right)
+            return left, index
+
+        def parse_or(index):
+            left, index = parse_and(index)
+            while index < len(tokens) and tokens[index] == 'OR':
+                right, index = parse_and(index + 1)
+                left = ('OR', left, right)
+            return left, index
+
+        ast, _ = parse_or(0)
+        return ast
+
+    def evaluate_ast(ast, clip_labels):
+        if isinstance(ast, str):
+            return ast in clip_labels
+        if isinstance(ast, tuple):
+            op = ast[0]
+            if op == 'NOT':
+                return not evaluate_ast(ast[1], clip_labels)
+            elif op == 'AND':
+                return evaluate_ast(ast[1], clip_labels) and evaluate_ast(ast[2], clip_labels)
+            elif op == 'OR':
+                return evaluate_ast(ast[1], clip_labels) or evaluate_ast(ast[2], clip_labels)
+        return True  # Fallback
+
+    ast = parse(tokens)
+
+    def evaluate(clip_labels):
+        return evaluate_ast(ast, clip_labels)
+
+    return evaluate
