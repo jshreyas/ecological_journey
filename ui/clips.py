@@ -93,6 +93,7 @@ def clips_page():
                         ).classes('w-full').props('use-chips')
 
                         # --- Label Query Builder ---
+                        ui.label("Labels").classes("font-semibold text-gray-600")
                         #TODO: bug: "label NOT" should throw invalid syntax
                         query_tokens = []
                         query_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
@@ -150,6 +151,7 @@ def clips_page():
 
                         ui.separator().classes('border-gray-300 w-full')
                         # --- Partner Query Builder ---
+                        ui.label("Partners").classes("font-semibold text-gray-600")
                         pquery_tokens = []
                         pquery_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
                             "ex: 'partner1 AND partner2 OR NOT partner3'"
