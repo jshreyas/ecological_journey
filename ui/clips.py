@@ -208,15 +208,71 @@ def clips_page():
                                 chip = ui.chip(partner).on_click(partial(on_partner_click, partner))
                                 chip.props('color=grey-3 text-black text-xs')
 
-
-                        # Date Range Picker (optional, can be added back if needed)
+                        ui.separator().classes('border-gray-300 w-full')
+                        # Collapsed date picker with selected date range display
+                        with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
+                            with ui.menu().props('no-parent-event') as menu:
+                                with ui.date(value={'from': min_date, 'to': max_date}).props('range').bind_value(
+                                    date_input,
+                                    forward=lambda x: f"{datetime.strptime(x['from'], '%Y-%m-%d').strftime('%B %d, %Y')} - {datetime.strptime(x['to'], '%Y-%m-%d').strftime('%B %d, %Y')}" if x else None,
+                                    backward=lambda x: {
+                                        'from': datetime.strptime(x.split(' - ')[0], '%B %d, %Y').strftime('%Y-%m-%d'),
+                                        'to': datetime.strptime(x.split(' - ')[1], '%B %d, %Y').strftime('%Y-%m-%d'),
+                                    } if ' - ' in (x or '') else None,
+                                ):
+                                    with ui.row().classes('justify-end'):
+                                        ui.button('Close', on_click=menu.close).props('flat')
+                            with date_input.add_slot('append'):
+                                ui.icon('edit_calendar').on('click', menu.open).classes('cursor-pointer')
 
                         def apply_filters():
                             current_page['value'] = 1
                             render_videos()
 
+                        #TODO: update this to save label queries instead of just labels
+                        def save_filtered_clips():
+                            date_range = date_input.value or default_date_range
+                            try:
+                                start_date, end_date = date_range.split(" - ")
+                                start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                                end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                            except ValueError:
+                                start_date, end_date = min_date, max_date
+
+                            # --- Filter videos based on playlist, date, and labels ---
+                            filtered_clips = [
+                                v for v in all_videos
+                                if v['playlist_name'] in playlist_filter.value
+                                and start_date <= v['date'][:10] <= end_date
+                                and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
+                                and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
+                            ]
+                            filtered_clip_ids = [v['video_id'] for v in filtered_clips]
+                            filters_state = {
+                                "playlists": playlist_filter.value,
+                                "labels": selected_labels.values(),
+                                "partners": partner_filter.value,
+                                "date_range": [start_date, end_date],
+                            }
+                            # Ask for cliplist name via dialog
+                            with ui.dialog() as dialog, ui.card():
+                                ui.label("Name your cliplist:")
+                                name_input = ui.input(label='Cliplist Name')
+                                daterange_checkbox = ui.checkbox('Lock Date Range')
+                                def confirm_save(): #TODO: if not logged in, john doe response
+                                    if not daterange_checkbox.value:
+                                        filters_state['date_range'] = []
+                                    save_cliplist(name_input.value, filters_state, token=app.storage.user.get("token"))
+                                    #TODO: check failure and notify user of the failure
+                                    ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
+                                    dialog.close()
+                                    # Refresh the cliplists tab
+                                ui.button("Save", on_click=confirm_save)
+                            dialog.open()
+
                         with ui.row().classes("justify-between w-full"):
                             ui.button('Apply', on_click=apply_filters).classes('mt-4')
+                            ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
 
         with splitter.after:
             video_grid = ui.grid().classes(
@@ -224,8 +280,15 @@ def clips_page():
             )
 
             def render_videos():
-                # Basic date filter logic (add back if you want date filtering)
-                start_date, end_date = min_date, max_date
+                # Parse the date range from the input value
+                date_range = date_input.value or default_date_range
+                try:
+                    start_date, end_date = date_range.split(" - ")
+                    start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                    end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                except ValueError:
+                    # Fallback to default date range if parsing fails
+                    start_date, end_date = min_date, max_date
 
                 parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
                 pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
@@ -301,7 +364,13 @@ def clips_page():
 
             def change_page(direction):
                 # Recalculate filtered_videos for correct total_pages
-                start_date, end_date = min_date, max_date
+                date_range = date_input.value or default_date_range
+                try:
+                    start_date, end_date = date_range.split(" - ")
+                    start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                    end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                except ValueError:
+                    start_date, end_date = min_date, max_date
                 parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
                 pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
 
