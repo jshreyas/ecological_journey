@@ -93,6 +93,7 @@ def clips_page():
                         ).classes('w-full').props('use-chips')
 
                         # --- Label Query Builder ---
+                        #TODO: bug: "label NOT" should throw invalid syntax
                         query_tokens = []
                         query_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
                             "ex: 'label1 AND label2 OR NOT label3'"
@@ -153,7 +154,7 @@ def clips_page():
                         pquery_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
                             "ex: 'partner1 AND partner2 OR NOT partner3'"
                         )
-
+                        #TODO: label and partner query builders are very similar, consider refactoring to abstract out common functionality
                         def refresh_pquery_bar():
                             pquery_display_row.clear()
                             with pquery_display_row:
@@ -224,7 +225,6 @@ def clips_page():
                             current_page['value'] = 1
                             render_videos()
 
-                        #TODO: update this to save label queries instead of just labels
                         def save_filtered_clips():
                             date_range = date_input.value or default_date_range
                             try:
@@ -298,7 +298,7 @@ def clips_page():
                     and parsed_fn(v.get('labels', []))
                     and pparsed_fn(v.get('partners', []))
                 ]
-                ui.notify("🔍 Filtered videos: " + str(len(filtered_videos)), color='info')
+                ui.notify("🔍 Filtered videos: " + str(len(filtered_videos)), color='green')
                 # --- Group ALL filtered videos by date for correct counts ---
                 all_grouped_counts = {}
                 for v in filtered_videos:
