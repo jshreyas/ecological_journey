@@ -6,6 +6,7 @@ from typing import Optional, Union, List, Dict, Any
 from dotenv import load_dotenv
 from cache import cache_del, cache_get, cache_set
 from utils import format_time
+from utils import parse_query_expression
 load_dotenv()
 
 BASE_URL = os.getenv("BACKEND_URL")
@@ -446,3 +447,21 @@ def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optio
     except requests.HTTPError as e:
         print(f"Failed to save cliplist: {e}")
         return None
+
+def get_filtered_clips(cliplist_id):
+    all_videos = load_clips()
+    cliplist = load_cliplist(cliplist_id)
+    filters_to_use = cliplist.get('filters', {})
+
+    parsed_fn = parse_query_expression(filters_to_use.get('labels')) if filters_to_use.get('labels') else lambda labels: True
+    pparsed_fn = parse_query_expression(filters_to_use.get('partners')) if filters_to_use.get('partners') else lambda partners: True
+    date_range = filters_to_use.get("date_range", [])
+    has_date_filter = len(date_range) == 2
+
+    return [
+        v for v in all_videos
+        if v['playlist_name'] in filters_to_use.get('playlists', [])
+        and (not has_date_filter or (date_range[0] <= v['date'][:10] <= date_range[1]))
+        and parsed_fn(v.get('labels', []))
+        and pparsed_fn(v.get('partners', []))
+    ]

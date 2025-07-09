@@ -8,7 +8,6 @@ def partner_page():
         all_clips = load_clips()
         all_videos = load_videos()
 
-        # Assign a color to each playlist
         all_playlists = sorted({c['playlist_name'] for c in all_clips if 'playlist_name' in c} |
                                {v['playlist_name'] for v in all_videos if 'playlist_name' in v})
         palette = [
@@ -16,7 +15,6 @@ def partner_page():
         ]
         playlist_colors = {pl: palette[i % len(palette)] for i, pl in enumerate(all_playlists)}
 
-        # Gather partner playlist usage
         partner_playlist_counter = defaultdict(Counter)
         for clip in all_clips:
             for p in clip.get('partners', []):
@@ -98,13 +96,11 @@ def partner_page():
         elements = nodes + edges
         elements_json = json.dumps(elements)
 
-        # Fixed-height metadata area
         ui.add_body_html("""
         <div id='cy' style='position: relative; margin-top:80px; height: 500px; width: 60%; border: 1px solid #ccc;'></div>
         <div id='meta' style='margin-top:10px; min-height:60px; max-height:80px; overflow:auto; background:#fafafa; border-radius:6px; border:1px solid #eee; padding:8px;'></div>
         """)
 
-        # Use a script that injects the JSON string directly
         ui.add_body_html(f"""
         <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
         <script>
@@ -113,7 +109,6 @@ def partner_page():
                 setTimeout(renderCytoscape, 100);
                 return;
             }}
-            // Remove any previous Cytoscape instance
             if (window.cy && window.cy.destroy) {{
                 window.cy.destroy();
             }}
@@ -122,50 +117,35 @@ def partner_page():
                 container: document.getElementById('cy'),
                 elements: elements,
                 style: [
-                    {{
-                        selector: 'node',
-                        style: {{
-                            'label': 'data(label)',
-                            'background-color': 'data(color)',
-                            'width': 'mapData(count, 1, 100, 20, 50)',
-                            'height': 'mapData(count, 1, 100, 20, 50)',
-                            'text-valign': 'center',
-                            'text-halign': 'center',
-                            'color': '#fff',
-                            'font-size': 16,
-                            'text-outline-width': 2,
-                            'text-outline-color': '#222'
-                        }}
-                    }},
-                    {{
-                        selector: 'node.high-usage',
-                        style: {{
-                            'shadow-blur': 30,
-                            'shadow-color': '#FFD700',
-                            'shadow-opacity': 0.7
-                        }}
-                    }},
-                    {{
-                        selector: 'edge',
-                        style: {{
-                            'width': 'mapData(weight, 1, 100, 1, 10)',
-                            'line-color': 'data(color)',
-                            'curve-style': 'bezier',
-                            'opacity': 0.8
-                        }}
-                    }},
-                    {{
-                        selector: '.faded',
-                        style: {{
-                            'opacity': 0.15,
-                            'text-opacity': 0.1
-                        }}
-                    }}
+                    {{ selector: 'node', style: {{
+                        'label': 'data(label)',
+                        'background-color': 'data(color)',
+                        'width': 'mapData(count, 1, 100, 20, 50)',
+                        'height': 'mapData(count, 1, 100, 20, 50)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'color': '#fff',
+                        'font-size': 16,
+                        'text-outline-width': 2,
+                        'text-outline-color': '#222'
+                    }} }},
+                    {{ selector: 'node.high-usage', style: {{
+                        'shadow-blur': 30,
+                        'shadow-color': '#FFD700',
+                        'shadow-opacity': 0.7
+                    }} }},
+                    {{ selector: 'edge', style: {{
+                        'width': 'mapData(weight, 1, 100, 1, 10)',
+                        'line-color': 'data(color)',
+                        'curve-style': 'bezier',
+                        'opacity': 0.8
+                    }} }},
+                    {{ selector: '.faded', style: {{
+                        'opacity': 0.15,
+                        'text-opacity': 0.1
+                    }} }}
                 ],
-                layout: {{
-                    name: 'circle',
-                    padding: 20
-                }}
+                layout: {{ name: 'circle', padding: 20 }}
             }});
 
             function showMeta(html) {{
@@ -174,13 +154,31 @@ def partner_page():
 
             function focusOnNode(node) {{
                 const neighborhood = node.closedNeighborhood();
+                const connectedNodes = node.connectedEdges().connectedNodes();
+
+                node.style({{
+                    'width': 120,
+                    'height': 120,
+                    'font-size': 22
+                }});
+
+                connectedNodes.forEach(n => {{
+                    n.style({{
+                        'width': 60,
+                        'height': 60,
+                        'font-size': 18
+                    }});
+                }});
 
                 window.cy.animate({{
-                    fit: {{
-                        eles: neighborhood,
-                        padding: 60
-                    }},
+                    fit: {{ eles: neighborhood, padding: 60 }},
                     duration: 500
+                }});
+
+                window.cy.nodes().not(neighborhood).style({{
+                    'width': 20,
+                    'height': 20,
+                    'font-size': 12
                 }});
 
                 window.cy.elements().removeClass('faded');
@@ -191,6 +189,7 @@ def partner_page():
             }}
 
             window.cy.on('tap', 'node', function(evt) {{
+                window.cy.nodes().forEach(n => n.removeStyle());
                 focusOnNode(evt.target);
             }});
 
@@ -216,6 +215,9 @@ def partner_page():
                 const d = evt.target.data();
                 showMeta(`<b>Edge:</b> ${{d.source}} - ${{d.target}}<br><b>Shared clips:</b> ${{d.clips}}<br><b>Shared films:</b> ${{d.films}}`);
             }});
+
+            const defaultNode = window.cy.nodes().sort((a, b) => b.data('count') - a.data('count'))[0];
+            if (defaultNode) focusOnNode(defaultNode);
         }}
         renderCytoscape();
         </script>

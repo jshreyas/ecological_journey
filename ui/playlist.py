@@ -1,8 +1,7 @@
 from nicegui import ui
-from utils import parse_query_expression
 from utils import format_time
 from dialog_puns import in_progress
-from utils_api import load_cliplist, load_clips
+from utils_api import get_filtered_clips
 from video_player import VideoPlayer
 
 current_index = 0
@@ -17,23 +16,7 @@ def playlist_page(cliplist_id):
         return
     global current_index
 
-    all_videos = load_clips()
-    cliplist = load_cliplist(cliplist_id)
-    filters_to_use = cliplist.get('filters', {})
-
-    parsed_fn = parse_query_expression(filters_to_use.get('labels')) if filters_to_use.get('labels') else lambda labels: True
-    pparsed_fn = parse_query_expression(filters_to_use.get('partners')) if filters_to_use.get('partners') else lambda partners: True
-    date_range = filters_to_use.get("date_range", [])
-    has_date_filter = len(date_range) == 2
-
-    filtered_videos = [
-        v for v in all_videos
-        if v['playlist_name'] in filters_to_use.get('playlists', [])
-        and (not has_date_filter or (date_range[0] <= v['date'][:10] <= date_range[1]))
-        and parsed_fn(v.get('labels', []))
-        and pparsed_fn(v.get('partners', []))
-    ]
-
+    filtered_videos = get_filtered_clips(cliplist_id)
     queue = filtered_videos.copy()
     current_index = 0
     if not queue:

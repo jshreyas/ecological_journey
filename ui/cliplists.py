@@ -1,5 +1,6 @@
 from nicegui import ui
-from utils_api import load_cliplist
+from utils_api import load_cliplist, get_filtered_clips
+from datetime import datetime
 
 def cliplists_page():
     ui.label("🎬 Clips, Lists, and Cliplists!").classes('text-2xl font-bold mb-4 text-center')
@@ -42,6 +43,28 @@ def cliplists_page():
                         ]
                         ui.html(f'🎭🔎 {" ".join(html_parts)}').classes('text-xs')
                     ui.label(f"📂 {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-xs text-primary')
+                    date_range = cliplist['filters'].get('date_range', [])
+                    if date_range:
+                        start = datetime.strptime(date_range[0], '%Y-%m-%d').strftime('%B %d, %Y')
+                        end = datetime.strptime(date_range[1], '%Y-%m-%d').strftime('%B %d, %Y')
+                        ui.label(f"📅 {start} to {end}").classes('text-xs text-primary')
+                    filtered_videos = get_filtered_clips(cliplist["_id"])
+                    total_duration = sum(
+                        (v['end'] - v['start']) for v in filtered_videos if 'start' in v and 'end' in v
+                    )
+                    if total_duration:
+                        if total_duration >= 3600:
+                            total_duration_str = f"{total_duration // 3600}h {(total_duration % 3600) // 60}m {(total_duration % 60)}s"
+                        elif total_duration >= 60:
+                            total_duration_str = f"{(total_duration % 3600) // 60}m {(total_duration % 60)}s"
+                        else:
+                            total_duration_str = f"{total_duration % 60}s"
+                    else:
+                        total_duration_str = "0s"
+
+                    with ui.row().classes('justify-between w-full items-center mt-2'):
+                        ui.label(f"🎥 {len(filtered_videos)} clips").classes('text-xs')
+                        ui.label(f"⏱️ {total_duration_str}").classes('text-xs')
         return video_grid
 
     render_media_grid_page(render_filters, render_grid)
