@@ -80,199 +80,195 @@ def clips_page():
 
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
-            with ui.tabs().classes('w-full h-full') as tabs:
-                tab_filter = ui.tab('🎛 Filters')
-            with ui.tab_panels(tabs=tabs, value=tab_filter).classes('w-full h-full'):
-                with ui.tab_panel(tab_filter):
-                    with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-lg space-y-2'):
-                        playlist_filter = ui.select(
-                            options=all_playlists,
-                            value=all_playlists.copy(),
-                            label='Playlist',
-                            multiple=True,
-                        ).classes('w-full').props('use-chips')
+            with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-lg'):
+                playlist_filter = ui.select(
+                    options=all_playlists,
+                    value=all_playlists.copy(),
+                    label='Playlist',
+                    multiple=True,
+                ).classes('w-full').props('use-chips')
 
-                        # --- Label Query Builder ---
-                        ui.label("Labels").classes("font-semibold text-gray-600")
-                        #TODO: bug: "label NOT" should throw invalid syntax
-                        query_tokens = []
-                        query_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
-                            "ex: 'label1 AND label2 OR NOT label3'"
-                        )
+                # --- Label Query Builder ---
+                ui.label("Labels").classes("font-semibold text-gray-600")
+                #TODO: bug: "label NOT" should throw invalid syntax
+                query_tokens = []
+                query_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
+                    "ex: 'label1 AND label2 OR NOT label3'"
+                )
 
-                        def refresh_query_bar():
-                            query_display_row.clear()
-                            with query_display_row:
-                                for token in query_tokens:
-                                    ui.chip(token).classes('text-xs bg-blue-100 text-blue-800').props('outline').on_click(lambda t=token: query_tokens.remove(t) or refresh_query_bar())
-                            try:
-                                _ = parse_query_expression(query_tokens)
-                                ui.notify("✅ Valid syntax")
-                            except Exception:
-                                ui.notify("⚠️ Invalid label query", color='negative')
+                def refresh_query_bar():
+                    query_display_row.clear()
+                    with query_display_row:
+                        for token in query_tokens:
+                            ui.chip(token).classes('text-xs bg-blue-100 text-blue-800').props('outline').on_click(lambda t=token: query_tokens.remove(t) or refresh_query_bar())
+                    try:
+                        _ = parse_query_expression(query_tokens)
+                        ui.notify("✅ Valid syntax")
+                    except Exception:
+                        ui.notify("⚠️ Invalid label query", color='negative')
 
-                        def add_operator(op):
-                            if not query_tokens:
-                                if op == 'NOT':
-                                    query_tokens.append(op)
-                            else:
-                                last = query_tokens[-1]
-                                if op == 'NOT':
-                                    # Allow NOT after AND/OR/label, but not after NOT
-                                    if last not in ('NOT',):
-                                        query_tokens.append(op)
-                                elif last not in ('AND', 'OR', 'NOT'):
-                                    query_tokens.append(op)
-                            refresh_query_bar()
+                def add_operator(op):
+                    if not query_tokens:
+                        if op == 'NOT':
+                            query_tokens.append(op)
+                    else:
+                        last = query_tokens[-1]
+                        if op == 'NOT':
+                            # Allow NOT after AND/OR/label, but not after NOT
+                            if last not in ('NOT',):
+                                query_tokens.append(op)
+                        elif last not in ('AND', 'OR', 'NOT'):
+                            query_tokens.append(op)
+                    refresh_query_bar()
 
-                        def on_label_click(label):
-                            if query_tokens:
-                                last = query_tokens[-1]
-                                if last not in ('AND', 'OR', 'NOT'):
-                                    # If last is a label, force operator OR between labels)
-                                    query_tokens.append("OR")
-                            query_tokens.append(label)
-                            refresh_query_bar()
+                def on_label_click(label):
+                    if query_tokens:
+                        last = query_tokens[-1]
+                        if last not in ('AND', 'OR', 'NOT'):
+                            # If last is a label, force operator OR between labels)
+                            query_tokens.append("OR")
+                    query_tokens.append(label)
+                    refresh_query_bar()
 
-                        label_chip_container = ui.row(wrap=True).classes(
-                            "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
-                        )
+                label_chip_container = ui.row(wrap=True).classes(
+                    "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
+                )
 
-                        with label_chip_container:
-                            # Sticky operator chips
-                            with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
-                                for op in ['AND', 'OR', 'NOT']:
-                                    ui.chip(op).on_click(partial(add_operator, op)).classes('text-xs bg-grey-4 text-primary')
+                with label_chip_container:
+                    # Sticky operator chips
+                    with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
+                        for op in ['AND', 'OR', 'NOT']:
+                            ui.chip(op).on_click(partial(add_operator, op)).classes('text-xs bg-grey-4 text-primary')
 
-                            # Scrollable label chips
-                            for label in all_labels:
-                                chip = ui.chip(label).on_click(partial(on_label_click, label))
-                                chip.props('color=grey-3 text-black text-xs')
+                    # Scrollable label chips
+                    for label in all_labels:
+                        chip = ui.chip(label).on_click(partial(on_label_click, label))
+                        chip.props('color=grey-3 text-black text-xs')
 
-                        ui.separator().classes('border-gray-300 w-full')
-                        # --- Partner Query Builder ---
-                        ui.label("Partners").classes("font-semibold text-gray-600")
-                        pquery_tokens = []
-                        pquery_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
-                            "ex: 'partner1 AND partner2 OR NOT partner3'"
-                        )
-                        #TODO: label and partner query builders are very similar, consider refactoring to abstract out common functionality
-                        def refresh_pquery_bar():
-                            pquery_display_row.clear()
-                            with pquery_display_row:
-                                for token in pquery_tokens:
-                                    ui.chip(token).classes('text-xs bg-blue-100 text-blue-800').props('outline').on_click(lambda t=token: pquery_tokens.remove(t) or refresh_pquery_bar())
-                            try:
-                                _ = parse_query_expression(pquery_tokens)
-                                ui.notify("✅ Valid syntax")
-                            except Exception as exc:
-                                ui.notify(f"⚠️ Invalid partner query: {exc}", color='negative')
+                ui.separator().classes('border-gray-300 w-full')
+                # --- Partner Query Builder ---
+                ui.label("Partners").classes("font-semibold text-gray-600")
+                pquery_tokens = []
+                pquery_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
+                    "ex: 'partner1 AND partner2 OR NOT partner3'"
+                )
+                #TODO: label and partner query builders are very similar, consider refactoring to abstract out common functionality
+                def refresh_pquery_bar():
+                    pquery_display_row.clear()
+                    with pquery_display_row:
+                        for token in pquery_tokens:
+                            ui.chip(token).classes('text-xs bg-blue-100 text-blue-800').props('outline').on_click(lambda t=token: pquery_tokens.remove(t) or refresh_pquery_bar())
+                    try:
+                        _ = parse_query_expression(pquery_tokens)
+                        ui.notify("✅ Valid syntax")
+                    except Exception as exc:
+                        ui.notify(f"⚠️ Invalid partner query: {exc}", color='negative')
 
-                        def padd_operator(op):
-                            if not pquery_tokens:
-                                if op == 'NOT':
-                                    pquery_tokens.append(op)
-                            else:
-                                last = pquery_tokens[-1]
-                                if op == 'NOT':
-                                    # Allow NOT after AND/OR/label, but not after NOT
-                                    if last not in ('NOT',):
-                                        pquery_tokens.append(op)
-                                elif last not in ('AND', 'OR', 'NOT'):
-                                    pquery_tokens.append(op)
-                            refresh_pquery_bar()
+                def padd_operator(op):
+                    if not pquery_tokens:
+                        if op == 'NOT':
+                            pquery_tokens.append(op)
+                    else:
+                        last = pquery_tokens[-1]
+                        if op == 'NOT':
+                            # Allow NOT after AND/OR/label, but not after NOT
+                            if last not in ('NOT',):
+                                pquery_tokens.append(op)
+                        elif last not in ('AND', 'OR', 'NOT'):
+                            pquery_tokens.append(op)
+                    refresh_pquery_bar()
 
-                        def on_partner_click(label):
-                            if pquery_tokens:
-                                last = pquery_tokens[-1]
-                                if last not in ('AND', 'OR', 'NOT'):
-                                    # If last is a partner, force operator OR between partners)
-                                    pquery_tokens.append("OR")
-                            pquery_tokens.append(label)
-                            refresh_pquery_bar()
+                def on_partner_click(label):
+                    if pquery_tokens:
+                        last = pquery_tokens[-1]
+                        if last not in ('AND', 'OR', 'NOT'):
+                            # If last is a partner, force operator OR between partners)
+                            pquery_tokens.append("OR")
+                    pquery_tokens.append(label)
+                    refresh_pquery_bar()
 
-                        partner_chip_container = ui.row(wrap=True).classes(
-                            "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
-                        )
+                partner_chip_container = ui.row(wrap=True).classes(
+                    "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
+                )
 
-                        with partner_chip_container:
-                            # Sticky operator chips
-                            with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
-                                for op in ['AND', 'OR', 'NOT']:
-                                    ui.chip(op).on_click(partial(padd_operator, op)).classes('text-xs bg-grey-4 text-primary')
+                with partner_chip_container:
+                    # Sticky operator chips
+                    with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
+                        for op in ['AND', 'OR', 'NOT']:
+                            ui.chip(op).on_click(partial(padd_operator, op)).classes('text-xs bg-grey-4 text-primary')
 
-                            # Scrollable partner chips
-                            for partner in all_partners:
-                                chip = ui.chip(partner).on_click(partial(on_partner_click, partner))
-                                chip.props('color=grey-3 text-black text-xs')
+                    # Scrollable partner chips
+                    for partner in all_partners:
+                        chip = ui.chip(partner).on_click(partial(on_partner_click, partner))
+                        chip.props('color=grey-3 text-black text-xs')
 
-                        ui.separator().classes('border-gray-300 w-full')
-                        # Collapsed date picker with selected date range display
-                        with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
-                            with ui.menu().props('no-parent-event') as menu:
-                                with ui.date(value={'from': min_date, 'to': max_date}).props('range').bind_value(
-                                    date_input,
-                                    forward=lambda x: f"{datetime.strptime(x['from'], '%Y-%m-%d').strftime('%B %d, %Y')} - {datetime.strptime(x['to'], '%Y-%m-%d').strftime('%B %d, %Y')}" if x else None,
-                                    backward=lambda x: {
-                                        'from': datetime.strptime(x.split(' - ')[0], '%B %d, %Y').strftime('%Y-%m-%d'),
-                                        'to': datetime.strptime(x.split(' - ')[1], '%B %d, %Y').strftime('%Y-%m-%d'),
-                                    } if ' - ' in (x or '') else None,
-                                ):
-                                    with ui.row().classes('justify-end'):
-                                        ui.button('Close', on_click=menu.close).props('flat')
-                            with date_input.add_slot('append'):
-                                ui.icon('edit_calendar').on('click', menu.open).classes('cursor-pointer')
+                ui.separator().classes('border-gray-300 w-full')
+                # Collapsed date picker with selected date range display
+                with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
+                    with ui.menu().props('no-parent-event') as menu:
+                        with ui.date(value={'from': min_date, 'to': max_date}).props('range').bind_value(
+                            date_input,
+                            forward=lambda x: f"{datetime.strptime(x['from'], '%Y-%m-%d').strftime('%B %d, %Y')} - {datetime.strptime(x['to'], '%Y-%m-%d').strftime('%B %d, %Y')}" if x else None,
+                            backward=lambda x: {
+                                'from': datetime.strptime(x.split(' - ')[0], '%B %d, %Y').strftime('%Y-%m-%d'),
+                                'to': datetime.strptime(x.split(' - ')[1], '%B %d, %Y').strftime('%Y-%m-%d'),
+                            } if ' - ' in (x or '') else None,
+                        ):
+                            with ui.row().classes('justify-end'):
+                                ui.button('Close', on_click=menu.close).props('flat')
+                    with date_input.add_slot('append'):
+                        ui.icon('edit_calendar').on('click', menu.open).classes('cursor-pointer')
 
-                        def apply_filters():
-                            current_page['value'] = 1
-                            render_videos()
+                def apply_filters():
+                    current_page['value'] = 1
+                    render_videos()
 
-                        def save_filtered_clips():
-                            date_range = date_input.value or default_date_range
-                            try:
-                                start_date, end_date = date_range.split(" - ")
-                                start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
-                                end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
-                            except ValueError:
-                                start_date, end_date = min_date, max_date
+                def save_filtered_clips():
+                    date_range = date_input.value or default_date_range
+                    try:
+                        start_date, end_date = date_range.split(" - ")
+                        start_date = datetime.strptime(start_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                        end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
+                    except ValueError:
+                        start_date, end_date = min_date, max_date
 
-                            parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
-                            pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
+                    parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
+                    pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
 
-                            # --- Filter videos based on playlist, date, and labels ---
-                            filtered_clips = [
-                                v for v in all_videos
-                                if v['playlist_name'] in playlist_filter.value
-                                and start_date <= v['date'][:10] <= end_date
-                                and parsed_fn(v.get('labels', []))
-                                and pparsed_fn(v.get('partners', []))
-                            ]
-                            filtered_clip_ids = [v['video_id'] for v in filtered_clips]
-                            filters_state = {
-                                "playlists": playlist_filter.value,
-                                "labels": query_tokens,
-                                "partners": pquery_tokens,
-                                "date_range": [start_date, end_date],
-                            }
-                            # Ask for cliplist name via dialog
-                            with ui.dialog() as dialog, ui.card():
-                                ui.label("Name your cliplist:")
-                                name_input = ui.input(label='Cliplist Name')
-                                daterange_checkbox = ui.checkbox('Lock Date Range')
-                                def confirm_save(): #TODO: if not logged in, john doe response
-                                    if not daterange_checkbox.value:
-                                        filters_state['date_range'] = []
-                                    save_cliplist(name_input.value, filters_state, token=app.storage.user.get("token"))
-                                    #TODO: check failure and notify user of the failure
-                                    ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
-                                    dialog.close()
-                                    # Refresh the cliplists tab
-                                ui.button("Save", on_click=confirm_save)
-                            dialog.open()
+                    # --- Filter videos based on playlist, date, and labels ---
+                    filtered_clips = [
+                        v for v in all_videos
+                        if v['playlist_name'] in playlist_filter.value
+                        and start_date <= v['date'][:10] <= end_date
+                        and parsed_fn(v.get('labels', []))
+                        and pparsed_fn(v.get('partners', []))
+                    ]
+                    filtered_clip_ids = [v['video_id'] for v in filtered_clips]
+                    filters_state = {
+                        "playlists": playlist_filter.value,
+                        "labels": query_tokens,
+                        "partners": pquery_tokens,
+                        "date_range": [start_date, end_date],
+                    }
+                    # Ask for cliplist name via dialog
+                    with ui.dialog() as dialog, ui.card():
+                        ui.label("Name your cliplist:")
+                        name_input = ui.input(label='Cliplist Name')
+                        daterange_checkbox = ui.checkbox('Lock Date Range')
+                        def confirm_save(): #TODO: if not logged in, john doe response
+                            if not daterange_checkbox.value:
+                                filters_state['date_range'] = []
+                            save_cliplist(name_input.value, filters_state, token=app.storage.user.get("token"))
+                            #TODO: check failure and notify user of the failure
+                            ui.notify(f"✅ Save successful with {name_input.value} and filters_state: {filters_state}", type="positive")
+                            dialog.close()
+                            # Refresh the cliplists tab
+                        ui.button("Save", on_click=confirm_save)
+                    dialog.open()
 
-                        with ui.row().classes("justify-between w-full"):
-                            ui.button('Apply', on_click=apply_filters).classes('mt-4')
-                            ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
+                with ui.row().classes("justify-between w-full"):
+                    ui.button('Apply', on_click=apply_filters).classes('mt-4')
+                    ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
 
         with splitter.after:
             video_grid = ui.grid().classes(
@@ -300,7 +296,7 @@ def clips_page():
                     and parsed_fn(v.get('labels', []))
                     and pparsed_fn(v.get('partners', []))
                 ]
-                ui.notify("🔍 Filtered videos: " + str(len(filtered_videos)), color='green')
+                ui.notify("🔍 Filtered clips: " + str(len(filtered_videos)), color='green')
                 # --- Group ALL filtered videos by date for correct counts ---
                 all_grouped_counts = {}
                 for v in filtered_videos:
