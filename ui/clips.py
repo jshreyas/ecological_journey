@@ -56,10 +56,6 @@ def parse_query_expression(tokens):
 
     return evaluate
 
-
-def navigate_to_cliplist(cliplist_id):
-    ui.navigate.to(f'/cliplist/{cliplist_id}')
-
 def navigate_to_film(video_id, clip_id):
     ui.navigate.to(f'/film/{video_id}?clip={clip_id}')
 
@@ -82,7 +78,6 @@ def clips_page():
     max_date_human = datetime.strptime(max_date, '%Y-%m-%d').strftime('%B %d, %Y')
     default_date_range = f'{min_date_human} - {max_date_human}'
 
-    cliplist_filter_override = None
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
             with ui.tabs().classes('w-full h-full') as tabs:
@@ -239,19 +234,22 @@ def clips_page():
                             except ValueError:
                                 start_date, end_date = min_date, max_date
 
+                            parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
+                            pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
+
                             # --- Filter videos based on playlist, date, and labels ---
                             filtered_clips = [
                                 v for v in all_videos
                                 if v['playlist_name'] in playlist_filter.value
                                 and start_date <= v['date'][:10] <= end_date
-                                and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
-                                and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
+                                and parsed_fn(v.get('labels', []))
+                                and pparsed_fn(v.get('partners', []))
                             ]
                             filtered_clip_ids = [v['video_id'] for v in filtered_clips]
                             filters_state = {
                                 "playlists": playlist_filter.value,
-                                "labels": selected_labels.values(),
-                                "partners": partner_filter.value,
+                                "labels": query_tokens,
+                                "partners": pquery_tokens,
                                 "date_range": [start_date, end_date],
                             }
                             # Ask for cliplist name via dialog

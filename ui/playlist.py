@@ -1,4 +1,5 @@
 from nicegui import ui
+from clips import parse_query_expression
 from utils import format_time
 from dialog_puns import in_progress
 from utils_api import load_cliplist, load_clips
@@ -9,7 +10,7 @@ is_autoplay = True
 is_loop = True
 
 
-def playcliplist_page(cliplist_id):
+def playlist_page(cliplist_id):
 
     if not cliplist_id:
         in_progress()
@@ -20,11 +21,17 @@ def playcliplist_page(cliplist_id):
     cliplist = load_cliplist(cliplist_id)
     filters_to_use = cliplist.get('filters', {})
 
+    parsed_fn = parse_query_expression(filters_to_use.get('labels')) if filters_to_use.get('labels') else lambda labels: True
+    pparsed_fn = parse_query_expression(filters_to_use.get('partners')) if filters_to_use.get('partners') else lambda partners: True
+    date_range = filters_to_use.get("date_range", [])
+    has_date_filter = len(date_range) == 2
+
     filtered_videos = [
         v for v in all_videos
         if v['playlist_name'] in filters_to_use.get('playlists', [])
-        and (not filters_to_use.get('labels') or any(label in v.get('labels', []) for label in filters_to_use.get('labels', [])))
-        and (not filters_to_use.get('partners') or any(partner in v.get('partners', []) for partner in filters_to_use.get('partners', [])))
+        and (not has_date_filter or (date_range[0] <= v['date'][:10] <= date_range[1]))
+        and parsed_fn(v.get('labels', []))
+        and pparsed_fn(v.get('partners', []))
     ]
 
     queue = filtered_videos.copy()
