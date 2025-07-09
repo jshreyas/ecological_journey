@@ -2,7 +2,7 @@ from nicegui import ui
 from utils_api import load_cliplist
 
 def cliplists_page():
-    ui.label("🎬 Cliplists!").classes('text-2xl font-bold mb-4 text-center')
+    ui.label("🎬 Clips, Lists, and Cliplists!").classes('text-2xl font-bold mb-4 text-center')
 
     def render_filters():
         pass
@@ -24,11 +24,23 @@ def cliplists_page():
                 with ui.card().classes('p-4 shadow-md bg-white rounded-lg border w-full'):
                     with ui.row().classes("gap-2 w-full justify-between"):
                         ui.label(cliplist['name']).classes('font-bold text-lg')
-                        ui.button(icon='play_arrow', on_click=lambda c=cliplist: ui.navigate.to(f'/cliplist/{c["_id"]}')).props('flat color=secondary').tooltip('Play')
-                    ui.label(f"🏷️ {', '.join(cliplist['filters'].get('labels', []))}").classes('text-xs')
+                        ui.button(icon='play_arrow', on_click=lambda c=cliplist: ui.navigate.to(f'/playlist/{c["_id"]}')).props('flat color=secondary').tooltip('Play')
+
+                    operator_set = ['AND', 'OR', 'NOT']
+                    labels = cliplist['filters'].get('labels', [])
+                    if labels:
+                        html_parts = [
+                            f'<span class="{"text-primary" if label in operator_set else "text-black"}">{label}</span>'
+                            for label in labels
+                        ]
+                        ui.html(f'🏷️🔎 {" ".join(html_parts)}').classes('text-xs')
                     partners = cliplist['filters'].get('partners', [])
                     if partners:
-                        ui.label(f"🎭 {', '.join(partners)}").classes('text-xs')
+                        html_parts = [
+                            f'<span class="{"text-primary" if partner in operator_set else "text-black"}">{partner}</span>'
+                            for partner in partners
+                        ]
+                        ui.html(f'🎭🔎 {" ".join(html_parts)}').classes('text-xs')
                     ui.label(f"📂 {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-xs text-primary')
         return video_grid
 

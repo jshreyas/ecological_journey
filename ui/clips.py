@@ -3,11 +3,58 @@ from dialog_puns import in_progress
 from utils_api import load_clips, load_cliplist, save_cliplist
 from functools import partial
 from datetime import datetime
+import re
 
 VIDEOS_PER_PAGE = 30
 
-def navigate_to_cliplist(cliplist_id):
-    ui.navigate.to(f'/cliplist/{cliplist_id}')
+# --- Utility for parsing and checking query syntax ---
+def parse_query_expression(tokens):
+    # Precedence: NOT > AND > OR
+
+    def parse(tokens):
+        def parse_not(index):
+            if tokens[index] == 'NOT':
+                sub_expr, next_index = parse_not(index + 1)
+                return ('NOT', sub_expr), next_index
+            else:
+                return tokens[index], index + 1
+
+        def parse_and(index):
+            left, index = parse_not(index)
+            while index < len(tokens) and tokens[index] == 'AND':
+                right, index = parse_not(index + 1)
+                left = ('AND', left, right)
+            return left, index
+
+        def parse_or(index):
+            left, index = parse_and(index)
+            while index < len(tokens) and tokens[index] == 'OR':
+                right, index = parse_and(index + 1)
+                left = ('OR', left, right)
+            return left, index
+
+        ast, _ = parse_or(0)
+        return ast
+
+    def evaluate_ast(ast, clip_labels):
+        if isinstance(ast, str):
+            return ast in clip_labels
+        if isinstance(ast, tuple):
+            op = ast[0]
+            if op == 'NOT':
+                return not evaluate_ast(ast[1], clip_labels)
+            elif op == 'AND':
+                return evaluate_ast(ast[1], clip_labels) and evaluate_ast(ast[2], clip_labels)
+            elif op == 'OR':
+                return evaluate_ast(ast[1], clip_labels) or evaluate_ast(ast[2], clip_labels)
+        return True  # Fallback
+
+    ast = parse(tokens)
+
+    def evaluate(clip_labels):
+        return evaluate_ast(ast, clip_labels)
+
+    return evaluate
 
 def navigate_to_film(video_id, clip_id):
     ui.navigate.to(f'/film/{video_id}?clip={clip_id}')
@@ -19,29 +66,25 @@ def clips_page():
 
     all_videos = load_clips()
     all_playlists = sorted(list({v['playlist_name'] for v in all_videos}))
-
     # --- Collect all unique labels from all videos ---
     all_labels = sorted({label for v in all_videos for label in v.get('labels', [])})
-
     # --- Collect all unique partners from all videos ---
     all_partners = sorted({partner for v in all_videos for partner in v.get('partners', [])})
 
     dates = [datetime.strptime(v['date'][:10], '%Y-%m-%d') for v in all_videos]
     min_date = min(dates).strftime('%Y-%m-%d') if dates else '1900-01-01'
     max_date = max(dates).strftime('%Y-%m-%d') if dates else '2100-01-01'
-
     min_date_human = datetime.strptime(min_date, '%Y-%m-%d').strftime('%B %d, %Y')
     max_date_human = datetime.strptime(max_date, '%Y-%m-%d').strftime('%B %d, %Y')
     default_date_range = f'{min_date_human} - {max_date_human}'
 
-    cliplist_filter_override = None
     with ui.splitter(horizontal=False, value=20).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
-            with ui.tabs().classes('w-full mb-2') as tabs:
+            with ui.tabs().classes('w-full h-full') as tabs:
                 tab_filter = ui.tab('🎛 Filters')
-            with ui.tab_panels(tabs=tabs, value=tab_filter).classes('w-full'):
+            with ui.tab_panels(tabs=tabs, value=tab_filter).classes('w-full h-full'):
                 with ui.tab_panel(tab_filter):
-                    with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-lg space-y-4'):
+                    with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-lg space-y-2'):
                         playlist_filter = ui.select(
                             options=all_playlists,
                             value=all_playlists.copy(),
@@ -49,44 +92,121 @@ def clips_page():
                             multiple=True,
                         ).classes('w-full').props('use-chips')
 
-                        # --- Label cloud filter ---
+                        # --- Label Query Builder ---
                         ui.label("Labels").classes("font-semibold text-gray-600")
-                        label_chip_container = ui.row(wrap=True).classes("gap-2 max-h-40 overflow-auto")
+                        #TODO: bug: "label NOT" should throw invalid syntax
+                        query_tokens = []
+                        query_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
+                            "ex: 'label1 AND label2 OR NOT label3'"
+                        )
 
-                        class ReactiveLabelSet:
-                            def __init__(self):
-                                self.labels = set()
-                            def toggle(self, label: str):
-                                if label in self.labels:
-                                    self.labels.remove(label)
-                                else:
-                                    self.labels.add(label)
-                                render_chips()
-                            def has(self, label: str):
-                                return label in self.labels
-                            def values(self):
-                                return list(self.labels)
+                        def refresh_query_bar():
+                            query_display_row.clear()
+                            with query_display_row:
+                                for token in query_tokens:
+                                    ui.chip(token).classes('text-xs bg-blue-100 text-blue-800').props('outline').on_click(lambda t=token: query_tokens.remove(t) or refresh_query_bar())
+                            try:
+                                _ = parse_query_expression(query_tokens)
+                                ui.notify("✅ Valid syntax")
+                            except Exception:
+                                ui.notify("⚠️ Invalid label query", color='negative')
 
-                        selected_labels = ReactiveLabelSet()
-                        def render_chips():
-                            label_chip_container.clear()
-                            with label_chip_container:
-                                for label in all_labels:
-                                    chip = ui.chip(label)
-                                    if selected_labels.has(label):
-                                        chip.props('color=primary outline')
-                                    else:
-                                        chip.props('color=grey-4 text-black')
-                                    chip.on_click(partial(selected_labels.toggle, label))
-                        render_chips()
+                        def add_operator(op):
+                            if not query_tokens:
+                                if op == 'NOT':
+                                    query_tokens.append(op)
+                            else:
+                                last = query_tokens[-1]
+                                if op == 'NOT':
+                                    # Allow NOT after AND/OR/label, but not after NOT
+                                    if last not in ('NOT',):
+                                        query_tokens.append(op)
+                                elif last not in ('AND', 'OR', 'NOT'):
+                                    query_tokens.append(op)
+                            refresh_query_bar()
 
-                        partner_filter = ui.select(
-                            options=all_partners,
-                            value=[],
-                            label='Partners',
-                            multiple=True,
-                        ).classes('w-full').props('use-chips')
+                        def on_label_click(label):
+                            if query_tokens:
+                                last = query_tokens[-1]
+                                if last not in ('AND', 'OR', 'NOT'):
+                                    # If last is a label, force operator OR between labels)
+                                    query_tokens.append("OR")
+                            query_tokens.append(label)
+                            refresh_query_bar()
 
+                        label_chip_container = ui.row(wrap=True).classes(
+                            "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
+                        )
+
+                        with label_chip_container:
+                            # Sticky operator chips
+                            with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
+                                for op in ['AND', 'OR', 'NOT']:
+                                    ui.chip(op).on_click(partial(add_operator, op)).classes('text-xs bg-grey-4 text-primary')
+
+                            # Scrollable label chips
+                            for label in all_labels:
+                                chip = ui.chip(label).on_click(partial(on_label_click, label))
+                                chip.props('color=grey-3 text-black text-xs')
+
+                        ui.separator().classes('border-gray-300 w-full')
+                        # --- Partner Query Builder ---
+                        ui.label("Partners").classes("font-semibold text-gray-600")
+                        pquery_tokens = []
+                        pquery_display_row = ui.row(wrap=True).classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]").tooltip(
+                            "ex: 'partner1 AND partner2 OR NOT partner3'"
+                        )
+                        #TODO: label and partner query builders are very similar, consider refactoring to abstract out common functionality
+                        def refresh_pquery_bar():
+                            pquery_display_row.clear()
+                            with pquery_display_row:
+                                for token in pquery_tokens:
+                                    ui.chip(token).classes('text-xs bg-blue-100 text-blue-800').props('outline').on_click(lambda t=token: pquery_tokens.remove(t) or refresh_pquery_bar())
+                            try:
+                                _ = parse_query_expression(pquery_tokens)
+                                ui.notify("✅ Valid syntax")
+                            except Exception as exc:
+                                ui.notify(f"⚠️ Invalid partner query: {exc}", color='negative')
+
+                        def padd_operator(op):
+                            if not pquery_tokens:
+                                if op == 'NOT':
+                                    pquery_tokens.append(op)
+                            else:
+                                last = pquery_tokens[-1]
+                                if op == 'NOT':
+                                    # Allow NOT after AND/OR/label, but not after NOT
+                                    if last not in ('NOT',):
+                                        pquery_tokens.append(op)
+                                elif last not in ('AND', 'OR', 'NOT'):
+                                    pquery_tokens.append(op)
+                            refresh_pquery_bar()
+
+                        def on_partner_click(label):
+                            if pquery_tokens:
+                                last = pquery_tokens[-1]
+                                if last not in ('AND', 'OR', 'NOT'):
+                                    # If last is a partner, force operator OR between partners)
+                                    pquery_tokens.append("OR")
+                            pquery_tokens.append(label)
+                            refresh_pquery_bar()
+
+                        partner_chip_container = ui.row(wrap=True).classes(
+                            "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
+                        )
+
+                        with partner_chip_container:
+                            # Sticky operator chips
+                            with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
+                                for op in ['AND', 'OR', 'NOT']:
+                                    ui.chip(op).on_click(partial(padd_operator, op)).classes('text-xs bg-grey-4 text-primary')
+
+                            # Scrollable partner chips
+                            for partner in all_partners:
+                                chip = ui.chip(partner).on_click(partial(on_partner_click, partner))
+                                chip.props('color=grey-3 text-black text-xs')
+
+                        ui.separator().classes('border-gray-300 w-full')
                         # Collapsed date picker with selected date range display
                         with ui.input('Date Range', value=default_date_range).classes('w-full') as date_input:
                             with ui.menu().props('no-parent-event') as menu:
@@ -116,19 +236,22 @@ def clips_page():
                             except ValueError:
                                 start_date, end_date = min_date, max_date
 
+                            parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
+                            pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
+
                             # --- Filter videos based on playlist, date, and labels ---
                             filtered_clips = [
                                 v for v in all_videos
                                 if v['playlist_name'] in playlist_filter.value
                                 and start_date <= v['date'][:10] <= end_date
-                                and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
-                                and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
+                                and parsed_fn(v.get('labels', []))
+                                and pparsed_fn(v.get('partners', []))
                             ]
                             filtered_clip_ids = [v['video_id'] for v in filtered_clips]
                             filters_state = {
                                 "playlists": playlist_filter.value,
-                                "labels": selected_labels.values(),
-                                "partners": partner_filter.value,
+                                "labels": query_tokens,
+                                "partners": pquery_tokens,
                                 "date_range": [start_date, end_date],
                             }
                             # Ask for cliplist name via dialog
@@ -152,12 +275,11 @@ def clips_page():
                             ui.button('💾 Save', on_click=save_filtered_clips).classes('mt-4')
 
         with splitter.after:
-            # Enhanced grid container
             video_grid = ui.grid().classes(
                 'grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full p-4 bg-white rounded-lg shadow-lg'
             )
 
-            def render_videos(cliplist_filter_override=None):
+            def render_videos():
                 # Parse the date range from the input value
                 date_range = date_input.value or default_date_range
                 try:
@@ -168,38 +290,17 @@ def clips_page():
                     # Fallback to default date range if parsing fails
                     start_date, end_date = min_date, max_date
 
-                # --- Filter videos based on playlist, date, and labels ---
-                # Determine filters to apply
-                filters_to_use = {
-                    "playlists": playlist_filter.value,
-                    "labels": selected_labels.values(),
-                    "partners": partner_filter.value,
-                    "date_range": [start_date, end_date],
-                }
-                if cliplist_filter_override and 'filters' in cliplist_filter_override:
-                    filters_to_use.update({
-                        "playlists": cliplist_filter_override['filters'].get('playlists', all_playlists),
-                        "labels": cliplist_filter_override['filters'].get('labels', []),
-                        "partners": cliplist_filter_override['filters'].get('partners', []),
-                        "date_range": cliplist_filter_override['filters'].get('date_range', [min_date, max_date]),
-                    })
+                parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
+                pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
 
-                # Apply date range override
-                date_range_override = filters_to_use["date_range"]
-                if date_range_override and len(date_range_override) == 2:
-                    start_date, end_date = date_range_override
-                else:
-                    start_date, end_date = min_date, max_date
-
-                # Apply all filters
                 filtered_videos = [
                     v for v in all_videos
-                    if v['playlist_name'] in filters_to_use['playlists']
+                    if v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
-                    and (not filters_to_use['labels'] or any(label in v.get('labels', []) for label in filters_to_use['labels']))
-                    and (not filters_to_use['partners'] or any(partner in v.get('partners', []) for partner in filters_to_use['partners']))
+                    and parsed_fn(v.get('labels', []))
+                    and pparsed_fn(v.get('partners', []))
                 ]
-
+                ui.notify("🔍 Filtered videos: " + str(len(filtered_videos)), color='green')
                 # --- Group ALL filtered videos by date for correct counts ---
                 all_grouped_counts = {}
                 for v in filtered_videos:
@@ -270,14 +371,15 @@ def clips_page():
                     end_date = datetime.strptime(end_date, '%B %d, %Y').strftime('%Y-%m-%d')
                 except ValueError:
                     start_date, end_date = min_date, max_date
+                parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
+                pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
 
                 filtered_videos = [
                     v for v in all_videos
-                    if (not cliplist_filter_override or v['clip_id'] in cliplist_filter_override['clip_ids'])
-                    and v['playlist_name'] in playlist_filter.value
+                    if v['playlist_name'] in playlist_filter.value
                     and start_date <= v['date'][:10] <= end_date
-                    and (not selected_labels.values() or any(label in v.get('labels', []) for label in selected_labels.values()))
-                    and (not partner_filter.value or any(partner in v.get('partners', []) for partner in partner_filter.value))
+                    and parsed_fn(v.get('labels', []))
+                    and pparsed_fn(v.get('partners', []))
                 ]
 
                 total_pages = max(1, (len(filtered_videos) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)

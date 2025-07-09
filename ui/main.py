@@ -7,7 +7,7 @@ from nicegui import ui, app
 from about import about_page
 from home_page import home_page
 from films import films_page
-from playcliplist import playcliplist_page
+from playlist import playlist_page
 from clips import clips_page
 from film import film_page
 from cliplists import cliplists_page
@@ -219,10 +219,10 @@ def about():
     ecological_layout()
     about_page()
 
-@ui.page('/cliplist/{cliplist_id}')
-def playcliplist(cliplist_id: str=None):
+@ui.page('/playlist/{cliplist_id}')
+def playlist(cliplist_id: str=None):
     ecological_layout()
-    playcliplist_page(cliplist_id)
+    playlist_page(cliplist_id)
 
 @ui.page('/film/{video_id}')
 def video_detail(video_id: str):
