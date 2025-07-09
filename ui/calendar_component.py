@@ -7,6 +7,14 @@ def calendar_container(grouped_videos_by_day):
     state = {'current_month': date.today().replace(day=1)}
     month_label = None  # Reference for the month label
 
+    # Dynamically create a mapping of playlist names to colors
+    playlist_colors = {
+        'Home Training Journal': 'bg-red-400',
+        'Grappling Journal': 'bg-green-400',
+        'Left like Right': 'bg-blue-400',
+        'Samurai sparring': 'bg-purple-400',
+    }
+
     def render_calendar():
         calendar_grid.clear()  # Clear stale data
         current = state['current_month']
@@ -34,12 +42,26 @@ def calendar_container(grouped_videos_by_day):
                 videos = grouped_videos_by_day.get(d_str, [])
 
                 with ui.card().classes('h-20 p-2 bg-gray-50 border border-gray-300 shadow-sm hover:shadow-md transition rounded-lg'):
-                    ui.label(str(day)).classes('text-sm font-bold text-gray-800')
+                    with ui.row().classes('w-full justify-between items-center'):
+                        ui.label(str(day)).classes('text-sm font-bold text-gray-800')
+                        if videos:
+                            # Playlist color indicators
+                            playlist_set = set(v['playlist_name'] for v in videos)
+                            with ui.row().classes('gap-1 items-center'):
+                                for playlist in playlist_set:
+                                    # Get all videos from this playlist on this day
+                                    playlist_videos = [v for v in videos if v['playlist_name'] == playlist]
+
+                                    # Check if any are unreviewed
+                                    any_unreviewed = any(not (v.get('labels') or v.get('partners') or v.get('clips')) for v in playlist_videos)
+
+                                    color_class = playlist_colors.get(playlist, 'bg-gray-300')
+                                    border_class = 'border border-gray-800' if any_unreviewed else ''
+
+                                    ui.element('div').classes(f'{color_class} {border_class} w-3 h-3 rounded-full').tooltip(playlist)
                     if videos:
                         ui.link(f'{len(videos)} film(s)', f'/film/{videos[0]["video_id"]}') \
                             .classes('text-xs no-underline')
-                        for video in videos:
-                            ui.label(video['title']).classes('text-xs text-gray-500 truncate')
 
     # --- Calendar Layout ---
     with ui.column().classes('w-full h-full items-center gap-4'):
