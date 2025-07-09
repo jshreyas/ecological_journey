@@ -1,5 +1,6 @@
 from nicegui import ui
 from utils_api import load_cliplist
+from datetime import datetime
 
 def cliplists_page():
     ui.label("🎬 Clips, Lists, and Cliplists!").classes('text-2xl font-bold mb-4 text-center')
@@ -42,6 +43,11 @@ def cliplists_page():
                         ]
                         ui.html(f'🎭🔎 {" ".join(html_parts)}').classes('text-xs')
                     ui.label(f"📂 {', '.join(cliplist['filters'].get('playlists', []))}").classes('text-xs text-primary')
+                    date_range = cliplist['filters'].get('date_range', [])
+                    if date_range:
+                        start = datetime.strptime(date_range[0], '%Y-%m-%d').strftime('%B %d, %Y')
+                        end = datetime.strptime(date_range[1], '%Y-%m-%d').strftime('%B %d, %Y')
+                        ui.label(f"📅 {start} to {end}").classes('text-xs text-primary')
         return video_grid
 
     render_media_grid_page(render_filters, render_grid)
