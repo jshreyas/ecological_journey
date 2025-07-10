@@ -4,14 +4,15 @@ import json
 from collections import defaultdict, Counter
 
 def partner_page():
-    with ui.column().classes("items-center"):
+    with ui.column().classes("items-center w-full"):
         all_clips = load_clips()
         all_videos = load_videos()
 
         all_playlists = sorted({c['playlist_name'] for c in all_clips if 'playlist_name' in c} |
                                {v['playlist_name'] for v in all_videos if 'playlist_name' in v})
         palette = [
-            "#4F8A8B", "#F9ED69", "#F08A5D", "#B83B5E", "#6A2C70", "#3B6978", "#204051", "#FF6F3C", "#A3A847"
+            "#4F8A8B", "#F9ED69", "#F08A5D", "#B83B5E", "#6A2C70",
+            "#3B6978", "#204051", "#FF6F3C", "#A3A847"
         ]
         playlist_colors = {pl: palette[i % len(palette)] for i, pl in enumerate(all_playlists)}
 
@@ -96,13 +97,16 @@ def partner_page():
         elements = nodes + edges
         elements_json = json.dumps(elements)
 
-        ui.add_body_html("""
-        <div id='cy' style='position: relative; margin-top:80px; height: 500px; width: 60%; border: 1px solid #ccc;'></div>
-        <div id='meta' style='margin-top:10px; min-height:60px; max-height:80px; overflow:auto; background:#fafafa; border-radius:6px; border:1px solid #eee; padding:8px;'></div>
-        """)
+        with ui.row().classes('w-full mt-10 gap-4').style('align-items: flex-start; flex-wrap: wrap;'):
+            ui.html('<div id="cy" style="height: 500px; flex: 1 1 60%; min-width: 700px; border: 1px solid #ccc;"></div>')
+            
+            global meta_panel
+            meta_panel = ui.column().classes('p-2 bg-gray-50 border border-gray-200 rounded') \
+                .style('min-height: 500px; flex: 1 1 35%; min-width: 200px; overflow:auto;') \
+                .props('id=meta_panel')
 
         ui.add_body_html(f"""
-        <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
+        <script src=\"https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js\"></script>
         <script>
         function renderCytoscape() {{
             if (typeof cytoscape === 'undefined' || !document.getElementById('cy')) {{
@@ -149,7 +153,10 @@ def partner_page():
             }});
 
             function showMeta(html) {{
-                document.getElementById('meta').innerHTML = html;
+                const panel = document.getElementById('meta_panel');
+                if (panel) {{
+                    panel.innerHTML = html;
+                }}
             }}
 
             function focusOnNode(node) {{
