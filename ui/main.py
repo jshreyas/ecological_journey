@@ -137,10 +137,10 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
             user = app.storage.user.get("user")
             if user:
                 ui.label(f"Hi, {user}").classes('text-sm text-white')
-                ui.button("Logout", on_click=logout).props("flat color=red").classes("text-sm")
+                ui.button(icon='logout', on_click=logout).props("flat round dense color=red").tooltip("Logout")
             else:
-                ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white").classes("text-sm")
-                ui.button("Register", on_click=lambda: caught_john_doe()).props("flat color=white").classes("text-sm")
+                ui.button(icon='login', on_click=lambda: login_or_signup("login")).props("flat round dense color=white").tooltip("Login")
+                ui.button(icon='person_add', on_click=lambda: caught_john_doe()).props("flat round dense color=white").tooltip("Register")
 
     # Scroll-triggered hide/show navbar behavior
     ui.run_javascript('''
