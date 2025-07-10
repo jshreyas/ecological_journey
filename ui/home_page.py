@@ -82,30 +82,29 @@ def home_page():
 
                 # === Section: Add Playlist by ID (Card) ===
                 with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3'):
-                    ui.label('➕ Add Playlist by ID').classes('text-lg font-bold')
+                    ui.label('➕ Playlist by ID').classes('text-sd font-bold')
 
                     playlist_verified = {'status': False}
 
                     def verify_playlist():
                         playlist_id = playlist_id_input.value.strip()
                         if not playlist_id:
-                            playlist_title_label.text = 'Please enter a Playlist ID.'
+                            ui.notify('❌ Please enter a Playlist ID.', type='warning')
                             fetch_button.disable()
                             playlist_verified['status'] = False
                             return
 
                         metadata = fetch_playlist_metadata(playlist_id)
                         if metadata and 'title' in metadata:
-                            playlist_title_label.text = f'Found YouTube Playlist: {metadata["title"]}'
+                            ui.notify(f'✅ Playlist verified: {metadata["title"]}', type='success')
                             fetch_button.enable()
                             playlist_verified['status'] = True
                         else:
-                            playlist_title_label.text = 'Invalid Playlist ID or playlist not found.'
+                            ui.notify('❌ Invalid Playlist ID or playlist not found.', type='error')
                             fetch_button.disable()
                             playlist_verified['status'] = False
 
                     def on_input_change():
-                        playlist_title_label.text = ''
                         fetch_button.disable()
                         playlist_verified['status'] = False
 
@@ -128,22 +127,23 @@ def home_page():
                             refresh_playlists()
                             render_dashboard()
                             playlist_id_input.value = ''
-                            playlist_title_label.text = ''
                             fetch_button.disable()
                             playlist_verified['status'] = False
 
                         ui.timer(0.2, task, once=True)
 
                     playlist_id_input = ui.input('YouTube Playlist ID', on_change=on_input_change).classes('w-full')
-                    playlist_title_label = ui.label('').classes('text-sm text-gray-600 mt-1')
+                    with ui.row().classes('w-full justify-start'):
+                        ui.button(on_click=caught_john_doe if not username else verify_playlist, icon='check_circle') \
+                            .props('flat round') \
+                            .tooltip('Verify Playlist')
 
-                    with ui.row().classes('justify-start gap-3 mt-2'):
-                        ui.button('Verify Playlist',
-                                  on_click=caught_john_doe if not username else verify_playlist)
-                        fetch_button = ui.button('Fetch Videos',
-                                                 on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token))
+                        fetch_button = ui.button(on_click=lambda: fetch_playlist_videos(playlist_id_input.value, user_token), icon='download') \
+                            .props('flat round') \
+                            .tooltip('Fetch Videos')
                         fetch_button.disable()
 
+                ui.separator().classes('w-full')
                 # === Section: My Teams ===
                 ui.label(f"👥 {user['name']}'s Teams").classes('text-lg font-bold mb-2')
 
@@ -164,42 +164,37 @@ def home_page():
                     # -- Create Team Card --
                     with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3'):
                         with ui.row().classes('w-full justify-between items-center'):
-                            ui.label('🛠 Create New Team').classes('text-lg font-bold')
+                            def create_new_team():
+                                name = team_name_input.value.strip()
+                                if not name:
+                                    ui.notify('Please enter a team name.', type='warning')
+                                    return
+                                #TODO: check if team name already exists and if create team is successful
+                                create_team(name, user_token, user_id)
+                                ui.notify(f'Team "{name}" created successfully!')
+                                refresh_teams()
+                                team_name_input.value = ''
+                            ui.label('➕ Team').classes('text-sd font-bold')
+                            ui.button(on_click=caught_john_doe if not username else create_new_team, icon='save') \
+                                .props('flat round') \
+                                .tooltip('Create Team')
 
-                        team_name_input = ui.input('Team Name').props('outlined dense').classes('w-full mt-2')
-
-                        def create_new_team():
-                            name = team_name_input.value.strip()
-                            if not name:
-                                ui.notify('Please enter a team name.', type='warning')
-                                return
-
-                            create_team(name, user_token, user_id)
-                            ui.notify(f'Team "{name}" created successfully!')
-                            refresh_teams()
-                            team_name_input.value = ''
-
-                        ui.button(
-                            'Create Team',
-                            on_click=caught_john_doe if not username else create_new_team
-                        ).props('color=primary').classes('mt-2 self-end')
+                        team_name_input = ui.input('Team Name').classes('w-full')
 
                     for team in all_teams:
                         with teams_column:
-                            with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2'):
+                            with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md'):
                                 with ui.row().classes('w-full justify-between items-center'):
-                                    ui.label(team['name']).tooltip(team['_id']).classes('text-lg font-bold')
+                                    ui.label(team['name']).classes('text-lg font-bold')
                                     if team['_id'] in owned_ids:
-                                        with ui.row().classes('gap-2'):
-                                            ui.button('Add User', on_click=lambda t=team: open_add_user_modal(t))
-                                            ui.button('Add Playlist', on_click=lambda t=team: open_add_playlist_modal(t))
-                                            ui.button('View Team', on_click=lambda t=team: open_team_modal(t))
-                                    else:
-                                        ui.label('👤 Member').classes('text-sm italic text-gray-500')
-
+                                        with ui.row().classes('w-full'):
+                                            ui.button(icon='person_add', on_click=lambda t=team: open_add_user_modal(t)).props('flat round').tooltip('Add User')
+                                            ui.button(icon='playlist_add', on_click=lambda t=team: open_add_playlist_modal(t)).props('flat round').tooltip('Add Playlist')
+                                            ui.button(icon='manage_accounts', on_click=lambda t=team: open_team_modal(t)).props('flat round').tooltip('Manage Team')
                                 # Stub counts
-                                ui.label(f"👥 Members: {len(team.get('member_ids', []))} | 🎵 Playlists: {team.get('playlist_count', 0)}").classes('text-sm text-gray-600')
-
+                                with ui.row().classes('w-full justify-between items-center'):
+                                    ui.label(f"👥 {len(team.get('member_ids', []))}").classes('text-sm text-gray-600')
+                                    ui.label(f"🎵 {team.get('playlist_count', 0)}").classes('text-sm text-gray-600')
                 refresh_teams()
 
         # --- Right Main Panel ---
