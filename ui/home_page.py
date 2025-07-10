@@ -208,7 +208,7 @@ def home_page():
         # --- Right Main Panel ---
         with splitter.after:
 
-            with ui.column().classes('w-full p-4 m-2 gap-4') as dashboard_column:
+            with ui.column().classes('w-full') as dashboard_column:
 
                 def render_dashboard():
                     # Clear the column but keep the label intact
