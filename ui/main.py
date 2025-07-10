@@ -167,14 +167,11 @@ def ecological_layout():
                     <div style="
                         display: flex; flex-direction: column; align-items: center; justify-content: center;
                         width: 100vw; height: 100vh; color: #fff; text-align: center;">
-                        <span style="font-size:3em; margin-bottom:0.5em;">🥋</span>
-                        <div style="font-size:2em; font-weight:bold; margin-bottom:0.5em;">
-                            Landscape Mode Recommended
-                        </div>
-                        <div style="font-size:1.2em; max-width: 90vw;">
-                            For the best Ecological Journey experience,<br>
-                            please rotate your device to <b>landscape</b>.<br>
-                            <span style="font-size:1.5em;">🔁</span>
+                        <div style="font-size:3em; margin-bottom:0.5em;">🌿</div>
+                        <div style="font-size:1.5em; font-weight:bold;">This jungle grows sideways 🌴</div>
+                        <div style="font-size:1em; max-width: 90vw; margin-top: 0.5em;">
+                            Please rotate your device to <b>landscape</b><br>
+                            to explore the Ecological Journey. ↩️
                         </div>
                     </div>
                 `;
@@ -205,6 +202,7 @@ def ecological_layout():
         window.addEventListener("load", checkOrientation);
         window.addEventListener("resize", checkOrientation);
         window.addEventListener("orientationchange", checkOrientation);
+        checkOrientation();
     ''')
 
 @ui.page('/')
