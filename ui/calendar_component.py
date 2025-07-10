@@ -73,7 +73,7 @@ def calendar_container(grouped_videos_by_day):
 
         # Calendar Grid
         with ui.row().classes('w-full h-full max-w-5xl flex-1 bg-white rounded-lg shadow-lg overflow-hidden'):
-            with ui.column().classes('w-full h-full p-4 gap-2'):
+            with ui.column().classes('w-full h-full gap-2'):
                 calendar_grid = ui.grid(columns=7).classes('gap-2 w-full h-full')
                 render_calendar()
 
