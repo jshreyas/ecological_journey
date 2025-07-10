@@ -24,9 +24,9 @@ def home_page():
     with ui.splitter(value=25).classes('w-full h-auto gap-4 mt-2') as splitter:
 
         with splitter.before:
-            with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-md shadow-md gap-4'):
+            with ui.column().classes('w-full h-full p-2 bg-gray-100 rounded-md shadow-md gap-4'):
                 # === Section: YouTube Playlists as Cards ===
-                ui.label(f"🎵 {user['name']}'s Playlists").classes('text-lg font-bold mb-2')
+                ui.label(f"🎵 {user['name']}'s Playlists").classes('text-lg font-bold')
 
                 playlists_column = ui.column().classes('w-full')
 
@@ -38,9 +38,9 @@ def home_page():
                         for playlist in playlists:
                             with playlists_column:
                                 with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md'):
-                                    ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
+                                    ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-sd font-semibold')
                                     with ui.row().classes('w-full justify-between items-center'):
-                                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
+                                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-xs text-gray-600')
                                         ui.button(icon='sync', on_click=lambda: caught_john_doe()).props('flat dense round color=primary').tooltip('Sync')
                     else:
                         both = load_playlists_for_user(user_id)
