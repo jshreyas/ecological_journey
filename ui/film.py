@@ -426,7 +426,7 @@ def film_page(video_id: str):
     prev_video, next_video = get_adjacent_videos()
 
     # Inline render_film_editor functionality
-    with ui.column().classes('w-full p-4 gap-6'):
+    with ui.column().classes('w-full'):
 
         # Navigation Arrows
         with ui.row().classes('w-full justify-between items-center mb-4'):
@@ -442,7 +442,7 @@ def film_page(video_id: str):
 
                 # Center label
                 with ui.row().classes('justify-center'):
-                    ui.label(f'🎬 Studying: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
+                    ui.label(f'🔍 🎬 {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
 
                 # Next
                 if next_video:
