@@ -257,7 +257,7 @@ def film_page(video_id: str):
 
     def add_clip_card(clip, highlight=False, autoplay=False):
         with ui.card().classes(
-            f"p-2 flex flex-col justify-between{' border-2 border-blue-500' if highlight else ''}"
+            f"p-2 flex flex-col justify-between max-w-full overflow-hidden{' border-2 border-blue-500' if highlight else ''}"
         ):
             with ui.column().classes('w-full gap-2'):
                 ui.label(clip["title"]).classes('font-medium text-sm truncate')
@@ -294,10 +294,13 @@ def film_page(video_id: str):
                 labels_html = "No labels"
             ui.html(f"🏷️ {labels_html}").classes('text-xs')
 
-            with ui.row().classes('justify-end gap-2 mt-2'):
-                ui.button(icon='play_arrow', on_click=lambda: play_clip(clip)).props('flat color=primary').tooltip('Play')
-                ui.button(icon='edit', on_click=lambda: on_edit_clip(clip)).props('flat color=secondary').tooltip('Edit')
-                ui.button(icon='share', on_click=lambda: share_clip(clip)).props('flat color=accent').tooltip('Share')
+            with ui.button_group().classes('w-full flex-wrap shadow-none border-none items-center max-w-full justify-center gap-2'):
+                for icon, color, tooltip, handler in [
+                    ('play_arrow', 'primary', 'Play', lambda: play_clip(clip)),
+                    ('edit', 'secondary', 'Edit', lambda: on_edit_clip(clip)),
+                    ('share', 'accent', 'Share', lambda: share_clip(clip)),
+                ]:
+                    ui.button(icon=icon, on_click=handler).props(f'flat dense color={color}').tooltip(tooltip).classes('flex-1 min-w-0')
             # Optionally, auto-play the clip if requested
             if autoplay:
                 play_clip(clip)
@@ -423,7 +426,7 @@ def film_page(video_id: str):
     prev_video, next_video = get_adjacent_videos()
 
     # Inline render_film_editor functionality
-    with ui.column().classes('w-full p-4 gap-6'):
+    with ui.column().classes('w-full'):
 
         # Navigation Arrows
         with ui.row().classes('w-full justify-between items-center mb-4'):
@@ -439,7 +442,7 @@ def film_page(video_id: str):
 
                 # Center label
                 with ui.row().classes('justify-center'):
-                    ui.label(f'🎬 Studying: {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
+                    ui.label(f'🔍 🎬 {video.get("title", "Untitled Video")}').classes('text-2xl font-bold')
 
                 # Next
                 if next_video:

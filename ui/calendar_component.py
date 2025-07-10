@@ -64,16 +64,16 @@ def calendar_container(grouped_videos_by_day):
                             .classes('text-xs no-underline')
 
     # --- Calendar Layout ---
-    with ui.column().classes('w-full h-full items-center gap-4'):
+    with ui.column().classes('w-full h-full items-center'):
         # Navigation Buttons with Month Label
-        with ui.row().classes('justify-between w-1/2 items-center mb-4'):
+        with ui.row().classes('w-full justify-between items-center'):
             ui.button('← Previous', on_click=lambda: change_month(-1)).props('flat').classes('hover:bg-blue-100')
             month_label = ui.label('').classes('text-xl font-bold')  # Dynamically updated label
             ui.button('Next →', on_click=lambda: change_month(1)).props('flat').classes('hover:bg-blue-100')
 
         # Calendar Grid
         with ui.row().classes('w-full h-full max-w-5xl flex-1 bg-white rounded-lg shadow-lg overflow-hidden'):
-            with ui.column().classes('w-full h-full p-4 gap-2'):
+            with ui.column().classes('w-full h-full gap-2'):
                 calendar_grid = ui.grid(columns=7).classes('gap-2 w-full h-full')
                 render_calendar()
 

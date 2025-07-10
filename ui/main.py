@@ -107,30 +107,33 @@ def logout():
     ui.navigate.to("/")
 
 def setup_navbar(title: str = '🥋 Ecological Journey'):
-    current_path = ui.context.client.page.path  # Correct way to get current path
+    current_path = ui.context.client.page.path
 
     def link(text, path):
         is_active = current_path == path
-        classes = 'text-base text-white no-underline'
+        classes = 'text-base text-white no-underline shrink-0'  # prevent wrap
         if is_active:
-            classes += ' font-bold border-b-2 border-white'
-        return ui.link(text, path).classes(classes).style('line-height: 1.5;')  # better vertical alignment
+            classes += ' font-bold border-white'
+        return ui.link(text, path).classes(classes).style('line-height: 1.5;')
 
-    with ui.header().classes('flex justify-between items-center text-white px-6 py-4'):
-        # Left: Title + Nav Links
-        with ui.row().classes('items-center gap-8'):
-            with ui.link('/', target='/').classes('no-underline flex items-center'):
-                ui.label(title).classes('text-2xl font-bold text-white leading-none')  # bigger font, no extra line height
+    with ui.header().classes(
+        'top-navbar flex justify-between items-center px-4 py-2 w-full bg-primary fixed top-0 z-50 transition-all duration-300 ease-in-out shadow-sm'
+    ).style('background-color: #111827;'):  # dark background
+        # Left: Title and Nav Links with horizontal scroll
+        with ui.row().classes(
+            'items-center gap-6 overflow-x-auto whitespace-nowrap no-scrollbar'
+        ).style('flex: 1;'):
+            with ui.link('/', target='/').classes('no-underline flex items-center shrink-0'):
+                ui.label(title).classes('text-2xl font-bold text-white leading-none')
             link('Home', '/')
             link('Films', '/films')
             link('Clips', '/clips')
             link('Cliplists', '/cliplists')
             link('Partners', '/partners')
             link('About', '/about')
-            
 
         # Right: Auth Actions
-        with ui.row().classes('items-center gap-4'):
+        with ui.row().classes('items-center gap-3 shrink-0'):
             user = app.storage.user.get("user")
             if user:
                 ui.label(f"Hi, {user}").classes('text-sm text-white')
@@ -138,6 +141,21 @@ def setup_navbar(title: str = '🥋 Ecological Journey'):
             else:
                 ui.button("Login", on_click=lambda: login_or_signup("login")).props("flat color=white").classes("text-sm")
                 ui.button("Register", on_click=lambda: caught_john_doe()).props("flat color=white").classes("text-sm")
+
+    # Scroll-triggered hide/show navbar behavior
+    ui.run_javascript('''
+        let lastScroll = 0;
+        const navbar = document.querySelector('.top-navbar');
+        window.addEventListener('scroll', () => {
+            const current = window.scrollY;
+            if (current > lastScroll && current > 60) {
+                navbar.classList.add('-translate-y-full', 'opacity-0');
+            } else {
+                navbar.classList.remove('-translate-y-full', 'opacity-0');
+            }
+            lastScroll = current;
+        });
+    ''')
 
 def ecological_layout():
     setup_navbar()
