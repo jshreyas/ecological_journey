@@ -23,13 +23,12 @@ def home_page():
 
     with ui.splitter(value=25).classes('w-full h-auto gap-4 mt-2') as splitter:
 
-        # --- Left Side Panel ---
         with splitter.before:
             with ui.column().classes('w-full h-full p-4 bg-gray-100 rounded-md shadow-md gap-4'):
                 # === Section: YouTube Playlists as Cards ===
-                ui.label(f"🎵 {user['name']}'s YouTube Playlists").classes('text-lg font-bold mb-2')
+                ui.label(f"🎵 {user['name']}'s Playlists").classes('text-lg font-bold mb-2')
 
-                playlists_column = ui.column().classes('w-full gap-4')
+                playlists_column = ui.column().classes('w-full')
 
                 def refresh_playlists():
                     playlists_column.clear()
@@ -38,11 +37,11 @@ def home_page():
                         playlists = load_playlists()
                         for playlist in playlists:
                             with playlists_column:
-                                with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-4'):
+                                with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md'):
+                                    ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
                                     with ui.row().classes('w-full justify-between items-center'):
-                                        ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
-                                        ui.button('Sync', on_click=lambda: caught_john_doe()).classes('ml-auto')  # Align to the right
-                                    ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
+                                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
+                                        ui.button(icon='sync', on_click=lambda: caught_john_doe()).props('flat dense round color=primary').tooltip('Sync')
                     else:
                         both = load_playlists_for_user(user_id)
                         owned, member = both["owned"], both["member"]
@@ -71,16 +70,14 @@ def home_page():
                         for playlist in all_playlists:
                             with playlists_column:
                                 with ui.column().classes('w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2'):
+                                    ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
                                     with ui.row().classes('w-full justify-between items-center'):
-                                        ui.label(playlist['name']).tooltip(playlist['_id']).classes('text-md font-semibold')
-
+                                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
                                         if playlist['_id'] in owned_ids:
                                             ui.button(
-                                                'Sync',
+                                                icon='sync',
                                                 on_click=lambda pid=playlist['_id'], name=playlist['name'], play_id=playlist['playlist_id']: on_sync_click(pid, user_token, name, play_id)
-                                            )
-                                    ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes('text-sm text-gray-600')
-
+                                            ).props('flat dense round color=primary').tooltip('Sync')
                 refresh_playlists()
 
                 # === Section: Add Playlist by ID (Card) ===
