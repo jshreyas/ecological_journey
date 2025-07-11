@@ -9,6 +9,7 @@ from home_page import home_page
 from films import films_page
 from playlist import playlist_page
 from clips import clips_page
+from notion import notion_page
 from film import film_page
 from cliplists import cliplists_page
 from partner import partner_page
@@ -204,6 +205,11 @@ def ecological_layout():
         window.addEventListener("orientationchange", checkOrientation);
         checkOrientation();
     ''')
+
+@ui.page('/notion')
+def notion():
+    ecological_layout()
+    notion_page()
 
 @ui.page('/')
 def home():

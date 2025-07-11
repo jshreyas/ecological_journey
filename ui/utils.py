@@ -1,8 +1,24 @@
 # utils.py
 from nicegui import ui
 import requests
+from utils_notion import generate_tree
 from datetime import date, datetime, timedelta
+from cache import cache_get, cache_set
 
+
+#TODO: Persist the notion tree in the mongodb
+def get_notion_tree(recache: bool = False):
+    """Fetch the Notion tree structure from the cache or generate it if not cached."""
+    cached_tree = cache_get('notion_tree')
+    if not recache and cached_tree:
+        return cached_tree
+
+    # Generate the tree structure
+    tree = generate_tree()
+
+    # Cache the result for 24 hours
+    cache_set('notion_tree', tree, timedelta(days=7))
+    return tree
 
 def format_time(seconds):
     minutes = seconds // 60
