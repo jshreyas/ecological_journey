@@ -60,6 +60,7 @@ services:
       - API_KEY=${API_KEY}
       - BACKEND_URL=${BACKEND_URL}
       - BASE_URL_SHARE=${BASE_URL_SHARE}
+      - NOTION_TOKEN=${NOTION_TOKEN}
       # - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL} # only if testing Upstash Redis locally`
       # - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN} # only if testing Upstash Redis locally`
       - REDIS_HOST=redis
