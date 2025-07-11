@@ -206,6 +206,7 @@ def ecological_layout():
         checkOrientation();
     ''')
 
+#TODO: add to the navbar, make the navbar scrollable or drowdown for overflow for mobile
 @ui.page('/notion')
 def notion():
     ecological_layout()
