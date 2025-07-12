@@ -4,7 +4,7 @@ import json
 from dotenv import load_dotenv
 load_dotenv()
 
-CACHE_TTL = int(os.getenv("CACHE_TTL", 300))  # Cache TTL in seconds
+CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
 
 class CacheBackend:
     def get(self, key: str):
@@ -36,6 +36,7 @@ class RedisClientBackend(CacheBackend):
         for key in keys:
             self.client.delete(key)
 
+#TODO: check if these Upstash APIs are successful
 class UpstashRestBackend(CacheBackend):
     def __init__(self):
         self.url = os.getenv("UPSTASH_REDIS_REST_URL")
