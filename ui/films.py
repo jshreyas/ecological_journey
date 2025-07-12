@@ -239,7 +239,7 @@ def films_page():
                         for day, day_videos in grouped_videos.items():
                             human_readable_day = datetime.strptime(day, '%Y-%m-%d').strftime('%B %d, %Y')
                             total_for_day = all_grouped_counts.get(day, len(day_videos))
-                            ui.label(f"📅 {human_readable_day} ({total_for_day})").classes('text-xl font-semibold text-primary col-span-full mb-2')
+                            ui.label(f"🗓️ {human_readable_day} ({total_for_day})").classes('text-xl font-semibold text-primary col-span-full mb-2')
                             for v in day_videos:
                                 partners = v.get("partners", [])
                                 labels = v.get("labels", [])

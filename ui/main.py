@@ -107,43 +107,47 @@ def logout():
     app.storage.user.clear()
     ui.navigate.to("/")
 
-def setup_navbar(title: str = '🥋 Ecological Journey'):
-    current_path = ui.context.client.page.path
-
-    def link(text, path):
-        is_active = current_path == path
-        classes = 'text-base text-white no-underline shrink-0'  # prevent wrap
-        if is_active:
-            classes += ' font-bold border-white'
-        return ui.link(text, path).classes(classes).style('line-height: 1.5;')
-
+def setup_navbar(title: str = 'Ecological Journey'):
     with ui.header().classes(
-        'top-navbar flex justify-between items-center px-4 py-2 w-full bg-primary fixed top-0 z-50 transition-all duration-300 ease-in-out shadow-sm'
-    ).style('background-color: #111827;'):  # dark background
-        # Left: Title and Nav Links with horizontal scroll
-        with ui.row().classes(
-            'items-center gap-6 overflow-x-auto whitespace-nowrap no-scrollbar'
-        ).style('flex: 1;'):
-            with ui.link('/', target='/').classes('no-underline flex items-center shrink-0'):
-                ui.label(title).classes('text-2xl font-bold text-white leading-none')
-            link('Home', '/')
-            link('Films', '/films')
-            link('Clips', '/clips')
-            link('Cliplists', '/cliplists')
-            link('Partners', '/partners')
-            link('About', '/about')
+        'top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm'
+    ).style('background-color: #111827;'):
 
-        # Right: Auth Actions
-        with ui.row().classes('items-center gap-3 shrink-0'):
+        # LEFT: Title (fixed width)
+        with ui.row().classes('items-center shrink-0 gap-2 w-auto'):
+            with ui.link('/', target='/').classes('no-underline flex items-center'):
+                ui.icon('home').classes('text-white text-2xl font-bold')
+                ui.label(title).classes('text-white text-2xl font-bold ml-2')
+
+        def nav_button(label: str, path: str):
+            is_active = ui.context.client.page.path == path
+            props = 'flat dense'
+            active = '' if not is_active else ' text-black font-bold'
+            return ui.button(label, on_click=lambda: ui.navigate.to(path)).props(f'{props} color=white').classes(f'normal-case px-4 py-1 text-base text-center{active}')
+
+        # CENTER: Scrollable nav links
+        with ui.element('div').classes(
+            'flex-1 overflow-x-auto no-scrollbar flex justify-center'
+        ):
+            with ui.button_group().classes('gap-1 items-center justify-center border-none shadow-none'):
+                ui.element('div').classes('w-[40px] shrink-0')
+                nav_button('Films', '/films')
+                nav_button('Clips', '/clips')
+                nav_button('Cliplists', '/cliplists')
+                nav_button('Partners', '/partners')
+                nav_button('About', '/about')
+                nav_button('Notion', '/notion')
+
+        # RIGHT: Auth buttons (fixed width, right aligned)
+        with ui.row().classes('items-center shrink-0 gap-2 w-auto justify-end'):
             user = app.storage.user.get("user")
             if user:
                 ui.label(f"Hi, {user}").classes('text-sm text-white')
                 ui.button(icon='logout', on_click=logout).props("flat round dense color=red").tooltip("Logout")
             else:
-                ui.button(icon='login', on_click=lambda: login_or_signup("login")).props("flat round dense color=white").tooltip("Login")
                 ui.button(icon='person_add', on_click=lambda: caught_john_doe()).props("flat round dense color=white").tooltip("Register")
+                ui.button(icon='login', on_click=lambda: login_or_signup("login")).props("flat round dense color=white").tooltip("Login")
 
-    # Scroll-triggered hide/show navbar behavior
+    # Scroll-triggered navbar hide/show
     ui.run_javascript('''
         let lastScroll = 0;
         const navbar = document.querySelector('.top-navbar');
