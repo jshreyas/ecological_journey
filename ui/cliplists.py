@@ -47,7 +47,7 @@ def cliplists_page():
                     if date_range:
                         start = datetime.strptime(date_range[0], '%Y-%m-%d').strftime('%B %d, %Y')
                         end = datetime.strptime(date_range[1], '%Y-%m-%d').strftime('%B %d, %Y')
-                        ui.label(f"📅 {start} to {end}").classes('text-xs text-primary')
+                        ui.label(f"🗓️ {start} to {end}").classes('text-xs text-primary')
                     filtered_videos = get_filtered_clips(cliplist["_id"])
                     total_duration = sum(
                         (v['end'] - v['start']) for v in filtered_videos if 'start' in v and 'end' in v
