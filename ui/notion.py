@@ -1,5 +1,6 @@
-from nicegui import ui
+from nicegui import ui, app
 
+from dialog_puns import caught_john_doe
 from utils import get_notion_tree
 
 
@@ -23,7 +24,7 @@ def reset_tree_to_first_level(tree, expanded_ids):
 
 # TODO: Make this whole section scrollable
 # TODO: Add a small sync button to update the tree: recache=True
-def render_tree(pages, level=0):
+def render_tree(pages, user_token):
     with ui.scroll_area().classes('w-full').style('height: 100vw; max-height: 100vh;'):
         expanded = False
         tree = None  # Placeholder so we can assign it later
@@ -43,6 +44,10 @@ def render_tree(pages, level=0):
         with ui.row().classes('w-full justify-between items-center'):
             ui.label('📚 Notion Pages').classes('font-bold text-lg text-primary')
             with ui.row().classes('gap-2'):
+                if user_token:
+                    ui.button(icon='sync', on_click=lambda: get_notion_tree(True)).props('flat dense round color=primary').tooltip('Sync')
+                else:
+                    ui.button(icon='sync', on_click=lambda: caught_john_doe()).props('flat dense round color=primary').tooltip('Sync')
                 toggle_button = ui.button(icon='unfold_more', on_click=toggle_tree).props('dense flat')
 
         # Create the tree AFTER buttons, so it's below
@@ -58,10 +63,11 @@ def render_tree(pages, level=0):
 def notion_page():
     global notion_iframe
     notion_pages = get_notion_tree()
+    user_token = app.storage.user.get("token", None)
 
     with ui.splitter(horizontal=False, value=25).classes('w-full h-full rounded shadow') as splitter:
         with splitter.before:
-            render_tree(notion_pages)
+            render_tree(notion_pages, user_token)
         with splitter.after:
             notion_iframe = ui.html('').classes('w-full h-full rounded shadow bg-white')
             update_iframe(notion_pages[0]['id'])
