@@ -8,6 +8,7 @@ from utils import format_time
 from films import navigate_to_film
 from datetime import datetime
 import os
+import re
 import uuid
 from dotenv import load_dotenv
 load_dotenv()
@@ -469,10 +470,185 @@ def film_page(video_id: str):
                 player_container['ref'] = player_container_ref
 
             with splitter.after:
-                with ui.tabs().classes('w-full mb-2') as tabs:
+                video = load_video(video_id)
+                with ui.tabs().classes('w-full') as tabs:
                     tab_videom = ui.tab('Filmdata', icon='edit_note')
                     tab_clipmaker = ui.tab('Clipper', icon='movie_creation')
-                with ui.tab_panels(tabs, value=tab_videom).classes('w-full h-full'):
+                    tab_bulk = ui.tab('metaforge', icon='code')
+                with ui.tab_panels(tabs, value=tab_bulk).classes('w-full h-full'):
+
+                    def parse_timestamp(ts: str) -> int:
+                        if isinstance(ts, int):  # already parsed
+                            return ts
+                        if isinstance(ts, float):
+                            return int(ts)
+                        parts = [int(p) for p in ts.strip().split(":")]
+                        if len(parts) == 1:
+                            return parts[0]
+                        elif len(parts) == 2:
+                            minutes, seconds = parts
+                            return minutes * 60 + seconds
+                        elif len(parts) == 3:
+                            hours, minutes, seconds = parts
+                            return hours * 3600 + minutes * 60 + seconds
+                        else:
+                            raise ValueError(f"Invalid timestamp format: {ts}")
+
+                    def validate_film_data(data: dict, video_duration: int) -> dict:
+                        video = data.get('video', {})
+                        if not isinstance(video.get('labels', []), list):
+                            raise ValueError("Video.labels must be a list of strings")
+                        if not isinstance(video.get('partners', []), list):
+                            raise ValueError("Video.partners must be a list of strings")
+
+                        for clip in data.get('clips', []):
+                            try:
+                                clip['start'] = parse_timestamp(clip['start'])
+                                clip['end'] = parse_timestamp(clip['end'])
+                            except Exception:
+                                raise ValueError(f"Clip timestamps must be in mm:ss or hh:mm:ss format: {clip.get('start')} - {clip.get('end')}")
+
+                            if clip['start'] < 0 or clip['end'] < 0:
+                                raise ValueError("Start and end times must be non-negative")
+                            if clip['end'] <= clip['start']:
+                                raise ValueError(f"Clip end ({clip['end']}) must be after start ({clip['start']})")
+                            if clip['end'] > video_duration:
+                                raise ValueError(f"Clip end ({clip['end']}) exceeds video duration ({video_duration} seconds)")
+
+                            # Validate speed
+                            clip['speed'] = float(clip.get('speed', 2.0))
+                            if not (0.25 <= clip['speed'] <= 2.0):
+                                raise ValueError(f"Invalid speed: {clip['speed']} (must be 0.25–2.0)")
+
+                            # Ensure labels/partners are lists
+                            if not isinstance(clip.get('labels', []), list):
+                                raise ValueError("Clip.labels must be a list of strings")
+                            if not isinstance(clip.get('partners', []), list):
+                                raise ValueError("Clip.partners must be a list of strings")
+                        return data
+
+                    def timestamp_to_seconds(ts: str) -> int:
+                        if isinstance(ts, int) or isinstance(ts, float):
+                            return int(ts)
+                        match = re.match(r'(?:(\d+):)?(\d+)', ts)
+                        if not match:
+                            raise ValueError(f"Invalid timestamp format: {ts}")
+                        minutes = int(match.group(1)) if match.group(1) else 0
+                        seconds = int(match.group(2))
+                        return minutes * 60 + seconds
+
+                    async def get_data() -> None:
+                        data = await editor.run_editor_method('get')
+                        try:
+                            cleaned = validate_film_data(data, video.get('duration_seconds'))
+                            ui.notify(f"Cleaned data: {cleaned}")
+                        except Exception as ex:
+                            ui.notify(f"❌ Validation error: {ex}", type="negative")
+                            return
+                        for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
+                            cleaned[key] = video.get(key)
+                        print("Saving film and clips with data:", cleaned)
+                        success = save_video_metadata(cleaned, app.storage.user.get("token"))
+                        if success:
+                            ui.notify("✅ Filmdata published", type="positive")
+                        else:
+                            ui.notify("❌ Failed to publish filmdata", type="negative")
+
+                    json_schema = {
+                        "type": "object",
+                        "properties": {
+                            "video": {
+                                "type": "object",
+                                "properties": {
+                                    "description": {"type": "string"},
+                                    "labels": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "default": []
+                                    },
+                                    "partners": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "default": []
+                                    }
+                                },
+                                "required": ["description", "labels", "partners"]
+                            },
+                            "clips": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "start": {
+                                            "type": "string",
+                                            "pattern": r"^(\d+:)?[0-5]?\d:[0-5]\d$",
+                                            "description": "Format: mm:ss or hh:mm:ss"
+                                        },
+                                        "end": {
+                                            "type": "string",
+                                            "pattern": r"^(\d+:)?[0-5]?\d:[0-5]\d$",
+                                            "description": "Format: mm:ss or hh:mm:ss"
+                                        },
+                                        "speed": {
+                                            "type": "number",
+                                            "minimum": 0.25,
+                                            "maximum": 4,
+                                            "default": 2
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "default": ""
+                                        },
+                                        "labels": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "default": []
+                                        },
+                                        "partners": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "default": []
+                                        }
+                                    },
+                                    "required": ["start", "end", "title", "labels", "partners", "speed"]
+                                }
+                            }
+                        },
+                        "required": ["video", "clips"]
+                    }
+                    def seconds_to_timestamp(seconds: int | float) -> str:
+                        seconds = int(seconds)
+                        minutes, sec = divmod(seconds, 60)
+                        return f"{minutes}:{sec:02d}"
+
+                    def extract_editable_video_data(full_video: dict) -> dict:
+                        return {
+                            'video': {
+                                'description': full_video.get('notes', ''),
+                                'labels': full_video.get('labels', []),
+                                'partners': full_video.get('partners', []),
+                            },
+                            'clips': [
+                                {
+                                    'start': seconds_to_timestamp(clip['start']),
+                                    'end': seconds_to_timestamp(clip['end']),
+                                    'speed': clip.get('speed', 1.0),
+                                    'title': clip['title'],
+                                    'description': clip.get('description', ''),
+                                    'labels': clip.get('labels', []),
+                                    'partners': clip.get('partners', []),
+                                }
+                                for clip in full_video.get('clips', [])
+                            ]
+                        }
+                    # video = load_video(video_id)
+                    with ui.tab_panel(tab_bulk).classes('w-full h-full'):
+                        editor = ui.json_editor(
+                            {'content': {'json': extract_editable_video_data(video)}},
+                            schema=json_schema
+                        ).classes('w-full h-full')
+                        ui.button('Save', on_click=get_data)
+
                     with ui.tab_panel(tab_videom):
                         with ui.column().classes('w-full gap-4 p-2'):
                             chips_input_ref, chips_list, chips_error, chips_container = chips_input_combined(
