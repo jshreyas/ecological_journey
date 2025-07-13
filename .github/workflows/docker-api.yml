@@ -34,4 +34,4 @@ jobs:
           context: .
           file: Dockerfile.api
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/fastapi-api:latest
+          tags: ghcr.io/${{ github.repository_owner }}/api:latest
