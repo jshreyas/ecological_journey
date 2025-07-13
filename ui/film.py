@@ -591,19 +591,136 @@ def film_page(video_id: str):
                                 diffs.append((current_path, v1, v2))
                         return diffs
 
+                    def try_make_set(lst):
+                        try:
+                            return set(lst)
+                        except TypeError:
+                            return None  # fallback if elements are unhashable (e.g., dicts)
+
                     def summarize_dict_diff(d1, d2):
                         diffs = dict_diff(d1, d2)
                         if not diffs:
-                            return ['✅ No changes detected.']
+                            return "✅ No changes detected."
+
                         summary = []
-                        for path, v1, v2 in diffs:
-                            if v1 == "__MISSING__":
-                                summary.append(f"➕ `{path}`: {v2}")
-                            elif v2 == "__MISSING__":
-                                summary.append(f"❌ `{path}`: {v1}")
+                        clip_changes = {}
+                        unordered_keys = {'labels', 'partners'}
+
+                        # Extract clip titles from the new data (d2)
+                        clip_titles = {
+                            i: clip.get('title', f'Clip {i}')
+                            for i, clip in enumerate(d2.get('clips', []))
+                        }
+
+                        # Detect new/deleted clips by clip_id or clipid
+                        old_clips = {clip.get('clip_id', clip.get('clipid', f'Clip{i}')): clip for i, clip in enumerate(d1.get('clips', []))}
+                        new_clips = {clip.get('clip_id', clip.get('clipid', f'Clip{i}')): clip for i, clip in enumerate(d2.get('clips', []))}
+
+                        added_clip_ids = set(new_clips) - set(old_clips)
+                        removed_clip_ids = set(old_clips) - set(new_clips)
+
+                        if added_clip_ids:
+                            summary.append("➕ **Added Clips:**")
+                            for cid in added_clip_ids:
+                                title = new_clips[cid].get('title', cid)
+                                summary.append(f"    • {title}")
+
+                        if removed_clip_ids:
+                            summary.append("❌ Removed Clips:")
+                            for cid in removed_clip_ids:
+                                title = old_clips[cid].get('title', cid)
+                                summary.append(f"    • {title}")
+
+                        # NEW: Process clip-level diffs to populate clip_changes
+                        for path, old, new in diffs:
+                            if path.startswith('clips['):
+                                clip_index = int(path.split('[')[1].split(']')[0])
+                                field = path.split('].', 1)[-1]
+
+                                if field == 'title':
+                                    clip_titles[clip_index] = new
+
+                                clip_changes.setdefault(clip_index, []).append((field, old, new))
+
+                        # Filter out all clip-level diffs to avoid full clips list printing
+                        filtered_diffs = [diff for diff in diffs if not diff[0].startswith('clips[') and diff[0] != 'clips']
+
+                        video_changes = []
+
+                        for path, old, new in filtered_diffs:
+                            field = path.split('.')[-1]
+
+                            if old == "__MISSING__":
+                                video_changes.append(f"➕ `{path}`: {format_value(new)}")
+                            elif new == "__MISSING__":
+                                video_changes.append(f"❌ `{path}`: {format_value(old)}")
+
+                            elif isinstance(old, list) and isinstance(new, list) and field in unordered_keys:
+                                old_set = try_make_set(old)
+                                new_set = try_make_set(new)
+
+                                if old_set is not None and new_set is not None:
+                                    added = new_set - old_set
+                                    removed = old_set - new_set
+
+                                    if added:
+                                        added_str = ", ".join(f'“{x}”' for x in sorted(added))
+                                        video_changes.append(f"➕ `{path}`: added {added_str}")
+                                    if removed:
+                                        removed_str = ", ".join(f'“{x}”' for x in sorted(removed))
+                                        video_changes.append(f"❌ `{path}`: removed {removed_str}")
+                                else:
+                                    if old != new:
+                                        video_changes.append(f"🔄 `{path}`: {format_value(old)} → {format_value(new)}")
                             else:
-                                summary.append(f"🔄 `{path}`: {v1} → {v2}")
+                                video_changes.append(f"🔄 `{path}`: {format_value(old)} → {format_value(new)}")
+
+                        if video_changes:
+                            summary.append("🎞️ **Video Changes:**")
+                            summary.extend(video_changes)
+
+                        # Process clip changes grouped by clip index
+                        for idx, changes in sorted(clip_changes.items()):
+                            title = clip_titles.get(idx, f"Clip {idx}")
+                            summary.append(f"\n🎬 **Changes in Clip '{title}':**")
+                            for field, old, new in changes:
+                                if old == "__MISSING__":
+                                    summary.append(f"➕ `{field}`: {format_value(new)}")
+                                elif new == "__MISSING__":
+                                    summary.append(f"❌ `{field}`: {format_value(old)}")
+                                elif isinstance(old, list) and isinstance(new, list) and field in unordered_keys:
+                                    old_set = try_make_set(old)
+                                    new_set = try_make_set(new)
+
+                                    if old_set is not None and new_set is not None:
+                                        added = new_set - old_set
+                                        removed = old_set - new_set
+
+                                        if added:
+                                            added_str = ", ".join(f'“{x}”' for x in sorted(added))
+                                            summary.append(f"➕ `{field}`: added {added_str}")
+                                        if removed:
+                                            removed_str = ", ".join(f'“{x}”' for x in sorted(removed))
+                                            summary.append(f"❌ `{field}`: removed {removed_str}")
+                                    else:
+                                        if old != new:
+                                            summary.append(f"🔄 `{field}`: {format_value(old)} → {format_value(new)}")
+                                else:
+                                    summary.append(f"🔄 `{field}`: {format_value(old)} → {format_value(new)}")
+
                         return summary
+
+
+###
+                    def format_value(v):
+                        """Format values for display: quote strings, flatten lists."""
+                        if isinstance(v, list):
+                            return ", ".join(f'“{str(x)}”' for x in v)
+                        elif isinstance(v, str):
+                            return f'“{v}”'
+                        else:
+                            return str(v)
+
 
                     def extract_editable_fields(video: dict) -> dict:
                         return {
