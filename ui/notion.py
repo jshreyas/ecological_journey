@@ -22,8 +22,6 @@ def reset_tree_to_first_level(tree, expanded_ids):
     tree._props['expanded'] = expanded_ids.copy()  # overwrite, don't add
     tree.update()  # trigger UI refresh
 
-# TODO: Make this whole section scrollable
-# TODO: Add a small sync button to update the tree: recache=True
 def render_tree(pages, user_token):
     with ui.scroll_area().classes('w-full').style('height: 100vw; max-height: 100vh;'):
         expanded = False

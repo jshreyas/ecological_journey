@@ -8,6 +8,8 @@ from utils import format_time
 from films import navigate_to_film
 from datetime import datetime
 import os
+import re
+import json
 import uuid
 from dotenv import load_dotenv
 load_dotenv()
@@ -15,8 +17,12 @@ load_dotenv()
 
 BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 
-
+#TODO: Make this page mobile friendly for logged in user for write access
 def film_page(video_id: str):
+    state = {'latest_cleaned': None}  # Will store cleaned copy for confirm step
+    diff_area = None       # Will be bound to markdown component
+    confirm_dialog = None  # Will be bound to dialog
+
     query_params = ui.context.client.request.query_params
     clip_id = query_params.get("clip")
     play_clips_playlist = query_params.get("clips", "false").lower() == "true"
@@ -43,6 +49,24 @@ def film_page(video_id: str):
     # State to track which clip is being edited (or None for new)
     clip_form_state = {'clip': None, 'is_new': True}
     clip_form_container = {}
+
+    def finalize_save():
+        confirm_dialog.close()
+        print(f"Finalizing save...: {state['latest_cleaned']}")
+        success = save_video_metadata(state['latest_cleaned'], app.storage.user.get("token"))
+        if success:
+            ui.notify("✅ Filmdata published", type="positive")
+        else:
+            ui.notify("❌ Failed to publish filmdata", type="negative")
+
+    confirm_dialog = ui.dialog()
+    with confirm_dialog:
+        with ui.card().classes('max-w-xl'):
+            ui.label('📝 Review Changes').classes('text-lg font-bold')
+            diff_area = ui.markdown('').classes('text-sm text-left whitespace-pre-wrap max-h-80 overflow-auto')
+            with ui.row().classes('justify-end w-full'):
+                ui.button('Cancel', on_click=confirm_dialog.close)
+                ui.button('Confirm Save', color='primary', on_click=lambda: finalize_save())
 
     def show_clip_form(clip, is_new=False):
         clip_form_container['container'].clear()
@@ -181,7 +205,7 @@ def film_page(video_id: str):
                         clip_form_state['is_new'] = True
                         show_clip_form(clip_form_state['clip'], is_new=True)
 
-                    ui.button('Save', on_click=save_clip).props('color=primary')
+                    ui.button('💾 Save', on_click=save_clip).props('color=primary')
                     ui.button('Cancel', on_click=reset_to_add_mode).props('color=secondary')
 
     def on_edit_clip(clip):
@@ -469,10 +493,293 @@ def film_page(video_id: str):
                 player_container['ref'] = player_container_ref
 
             with splitter.after:
-                with ui.tabs().classes('w-full mb-2') as tabs:
-                    tab_videom = ui.tab('Filmdata', icon='edit_note')
-                    tab_clipmaker = ui.tab('Clipper', icon='movie_creation')
-                with ui.tab_panels(tabs, value=tab_videom).classes('w-full h-full'):
+                video = load_video(video_id)
+                with ui.tabs().classes('w-full') as tabs:
+                    tab_videom = ui.tab('Filmdata', icon='edit_note').tooltip('Edit film metadata like title, date, partners, labels')
+                    tab_clipmaker = ui.tab('Clipper', icon='movie_creation').tooltip('Create and edit clips from the film')
+                    tab_bulk = ui.tab('metaforge', icon='code').tooltip('Bulk edit film and clip metadata in JSON format')
+                with ui.tab_panels(tabs, value=tab_bulk).classes('w-full h-full'):
+
+                    def parse_timestamp(ts: str | int | float) -> int:
+                        if isinstance(ts, (int, float)):
+                            return int(ts)
+                        parts = [int(p) for p in ts.strip().split(":")]
+                        if len(parts) == 1:
+                            return parts[0]
+                        elif len(parts) == 2:
+                            minutes, seconds = parts
+                            return minutes * 60 + seconds
+                        elif len(parts) == 3:
+                            hours, minutes, seconds = parts
+                            return hours * 3600 + minutes * 60 + seconds
+                        raise ValueError(f"Invalid timestamp format: {ts}")
+
+                    def validate_film_data(video: dict, video_duration: int) -> dict:
+                        # import pdb; pdb.set_trace()
+                        # video = data.get('json', {})
+                        if not isinstance(video.get('labels', []), list):
+                            raise ValueError("Video.labels must be a list of strings")
+                        if not isinstance(video.get('partners', []), list):
+                            raise ValueError("Video.partners must be a list of strings")
+
+                        cleaned_clips = []
+
+                        for clip in video.get('clips', []):
+                            try:
+                                start = parse_timestamp(clip['start'])
+                                end = parse_timestamp(clip['end'])
+                            except Exception:
+                                raise ValueError(f"Clip timestamps must be in mm:ss or hh:mm:ss format: {clip.get('start')} - {clip.get('end')}")
+
+                            if start < 0 or end < 0:
+                                raise ValueError("Start and end times must be non-negative")
+                            if end <= start:
+                                raise ValueError(f"Clip end ({end}) must be after start ({start})")
+                            if end > video_duration:
+                                raise ValueError(f"Clip end ({end}) exceeds video duration ({video_duration} seconds)")
+
+                            speed = float(clip.get('speed', 2.0))
+                            if not (0.25 <= speed <= 2.0):
+                                raise ValueError(f"Invalid speed: {speed} (must be 0.25–2.0)")
+
+                            if not isinstance(clip.get('labels', []), list):
+                                raise ValueError("Clip.labels must be a list of strings")
+                            if not isinstance(clip.get('partners', []), list):
+                                raise ValueError("Clip.partners must be a list of strings")
+
+                            # Build cleaned clip
+                            clip_id = clip.get('clip_id', str(uuid.uuid4()))
+                            cleaned_clip = {
+                                'clip_id': clip_id,
+                                'start': start,
+                                'end': end,
+                                'speed': speed,
+                                'title': clip.get('title', ''),
+                                'description': clip.get('description', ''),
+                                'labels': clip.get('labels', []),
+                                'partners': clip.get('partners', []),
+                            }
+                            cleaned_clips.append(cleaned_clip)
+                        return {
+                            'description': video.get('description', ''),
+                            'labels': video.get('labels', []),
+                            'partners': video.get('partners', []),
+                            'clips': cleaned_clips,
+                        }
+
+                    def dict_diff(d1, d2, path=""):
+                        diffs = []
+                        keys = set(d1.keys()) | set(d2.keys())
+
+                        for key in keys:
+                            v1 = d1.get(key, "__MISSING__")
+                            v2 = d2.get(key, "__MISSING__")
+                            current_path = f"{path}.{key}" if path else key
+
+                            if isinstance(v1, dict) and isinstance(v2, dict):
+                                diffs.extend(dict_diff(v1, v2, current_path))
+                            elif isinstance(v1, list) and isinstance(v2, list):
+                                min_len = min(len(v1), len(v2))
+                                for i in range(min_len):
+                                    if isinstance(v1[i], dict) and isinstance(v2[i], dict):
+                                        diffs.extend(dict_diff(v1[i], v2[i], f"{current_path}[{i}]"))
+                                    elif v1[i] != v2[i]:
+                                        diffs.append((f"{current_path}[{i}]", v1[i], v2[i]))
+                                if len(v1) != len(v2):
+                                    diffs.append((current_path, v1, v2))
+                            elif v1 != v2:
+                                diffs.append((current_path, v1, v2))
+                        return diffs
+
+                    def summarize_dict_diff(d1, d2):
+                        diffs = dict_diff(d1, d2)
+                        if not diffs:
+                            return ['✅ No changes detected.']
+                        summary = []
+                        for path, v1, v2 in diffs:
+                            if v1 == "__MISSING__":
+                                summary.append(f"➕ `{path}`: {v2}")
+                            elif v2 == "__MISSING__":
+                                summary.append(f"❌ `{path}`: {v1}")
+                            else:
+                                summary.append(f"🔄 `{path}`: {v1} → {v2}")
+                        return summary
+
+                    def extract_editable_fields(video: dict) -> dict:
+                        return {
+                            'description': video.get('notes', ''),
+                            'labels': video.get('labels', []),
+                            'partners': video.get('partners', []),
+                            'clips': [
+                                {
+                                    'clip_id': clip['clip_id'],
+                                    'start': clip['start'],
+                                    'end': clip['end'],
+                                    'speed': clip['speed'],
+                                    'title': clip['title'],
+                                    'description': clip.get('description', ''),
+                                    'labels': clip.get('labels', []),
+                                    'partners': clip.get('partners', []),
+                                }
+                                for clip in video.get('clips', [])
+                            ]
+                        }
+
+                    async def get_data() -> None:
+                        raw_data = await editor.run_editor_method('get')
+
+                        # Normalize input
+                        if 'json' in raw_data:
+                            data = raw_data['json']
+                        elif 'text' in raw_data:
+                            try:
+                                data = json.loads(raw_data['text'])
+                            except json.JSONDecodeError as ex:
+                                ui.notify(f"❌ Invalid JSON format: {ex}", type='negative')
+                                return
+                        else:
+                            ui.notify("❌ Unexpected editor return format", type='negative')
+                            return
+
+                        try:
+                            cleaned = validate_film_data(data, video.get('duration_seconds'))
+                        except Exception as ex:
+                            ui.notify(f"❌ Validation error: {ex}", type="negative")
+                            return
+
+                        for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
+                            cleaned[key] = video.get(key)
+
+                        # Extract and compare editable fields only
+                        delta = dict_diff(extract_editable_fields(cleaned), extract_editable_fields(video))
+                        summary = '\n'.join(summarize_dict_diff(extract_editable_fields(video), extract_editable_fields(cleaned)))
+
+                        if not delta:
+                            ui.notify("✅ No changes detected.", type="info")
+                            return
+
+                        # Save cleaned data for confirm step
+                        state['latest_cleaned'] = cleaned
+
+
+                        diff_area.set_content(summary)
+                        confirm_dialog.open()
+
+                    json_schema = {
+                        "type": "object",
+                        "properties": {
+                            "description": {"type": "string"},
+                            "labels": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "default": []
+                            },
+                            "partners": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "default": []
+                            },
+                            "clips": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "clip_id": {
+                                            "type": "string",
+                                            "default": ""
+                                        },
+                                        "start": {
+                                            "type": "string",
+                                            "pattern": r"^(\d+:)?[0-5]?\d:[0-5]\d$",
+                                            "description": "Format: mm:ss or hh:mm:ss"
+                                        },
+                                        "end": {
+                                            "type": "string",
+                                            "pattern": r"^(\d+:)?[0-5]?\d:[0-5]\d$",
+                                            "description": "Format: mm:ss or hh:mm:ss"
+                                        },
+                                        "speed": {
+                                            "type": "number",
+                                            "minimum": 0.25,
+                                            "maximum": 2.0,
+                                            "default": 2.0,
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "default": ""
+                                        },
+                                        "labels": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "default": []
+                                        },
+                                        "partners": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "default": []
+                                        }
+                                    },
+                                    "required": ["start", "end", "title", "labels", "partners", "speed"]
+                                }
+                            }
+                        },
+                        "required": ["description", "labels", "partners", "clips"]
+                    }
+                    def seconds_to_timestamp(seconds: int | float) -> str:
+                        seconds = int(seconds)
+                        minutes, sec = divmod(seconds, 60)
+                        return f"{minutes}:{sec:02d}"
+
+                    def extract_editable_video_data(full_video: dict) -> dict:
+                        return {
+                            'description': full_video.get('notes', ''),
+                            'labels': full_video.get('labels', []),
+                            'partners': full_video.get('partners', []),
+                            'clips': [
+                                {
+                                    'clip_id': clip['clip_id'],
+                                    'start': seconds_to_timestamp(clip['start']),
+                                    'end': seconds_to_timestamp(clip['end']),
+                                    'speed': clip.get('speed', 1.0),
+                                    'title': clip['title'],
+                                    'description': clip.get('description', ''),
+                                    'labels': clip.get('labels', []),
+                                    'partners': clip.get('partners', []),
+                                }
+                                for clip in full_video.get('clips', [])
+                            ]
+                        }
+                    def add_clip():
+                        new_clip = {
+                            'clip_id': str(uuid.uuid4()),
+                            'start': '00:00',
+                            'end': '00:00',
+                            'title': generate_funny_title(),
+                            'description': '',
+                            'labels': [],
+                            'partners': [],
+                            'speed': 1.0
+                        }
+                        async def inject():
+                            current = await editor.run_editor_method('get')
+                            content = json.loads(current.get('text')) if isinstance(current.get('text'), str) else current.get('json')
+                            content.setdefault('clips', []).append(new_clip)
+                            await editor.run_editor_method('set', {'json': content})
+                            ui.notify("➕ New clip added. Scroll down to see it.", type='positive')
+
+                        ui.timer(0.1, inject, once=True)
+
+                    #TODO: Refactor util methods added above for this tab, simplify, cleanup, etc
+                    with ui.tab_panel(tab_bulk).classes('w-full h-full'):
+                        #TODO: Add error handling for JSON editor
+                        editor = ui.json_editor(
+                            {'content': {'json': extract_editable_video_data(video)}},
+                            schema=json_schema
+                        ).classes('w-full h-full').props('modes=["tree"]')
+                        with ui.row().classes('w-full justify-between items-center mt-2'):
+                            ui.button('💾 Save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
+                            ui.button('➕ Clip', on_click=add_clip).props('color=primary')
+
                     with ui.tab_panel(tab_videom):
                         with ui.column().classes('w-full gap-4 p-2'):
                             chips_input_ref, chips_list, chips_error, chips_container = chips_input_combined(
