@@ -183,7 +183,7 @@ def film_page(video_id: str):
                         clip_form_state['is_new'] = True
                         show_clip_form(clip_form_state['clip'], is_new=True)
 
-                    ui.button('Save', on_click=save_clip).props('color=primary')
+                    ui.button('💾 Save', on_click=save_clip).props('color=primary')
                     ui.button('Cancel', on_click=reset_to_add_mode).props('color=secondary')
 
     def on_edit_clip(clip):
@@ -538,7 +538,6 @@ def film_page(video_id: str):
                                 'partners': clip.get('partners', []),
                             }
                             cleaned_clips.append(cleaned_clip)
-                        # import pdb; pdb.set_trace()
                         return {
                             'description': video.get('description', ''),
                             'labels': video.get('labels', []),
@@ -546,7 +545,6 @@ def film_page(video_id: str):
                             'clips': cleaned_clips,
                         }
 
-                    ##
                     def dict_diff(d1, d2, path=""):
                         diffs = []
                         keys = set(d1.keys()) | set(d2.keys())
@@ -612,8 +610,9 @@ def film_page(video_id: str):
                             ui.notify(f"❌ Validation error: {ex}", type="negative")
                             return
                         print("Saving film and clips with data:", cleaned)
-                        ddd = dict_diff(extract_editable_fields(cleaned), extract_editable_fields(video))
-                        # import pdb; pdb.set_trace()
+                        #TODO: Use dict_diff to show changes and potentially handle negative updates
+                        delta = dict_diff(extract_editable_fields(cleaned), extract_editable_fields(video))
+                        print("Differences found:", delta)
                         for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
                             cleaned[key] = video.get(key)
 
@@ -707,11 +706,9 @@ def film_page(video_id: str):
                                 for clip in full_video.get('clips', [])
                             ]
                         }
-                    from uuid import uuid4
-                    import asyncio
                     def add_clip():
                         new_clip = {
-                            'clip_id': str(uuid4()),
+                            'clip_id': str(uuid.uuid4()),
                             'start': '00:00',
                             'end': '00:00',
                             'title': generate_funny_title(),
@@ -728,7 +725,8 @@ def film_page(video_id: str):
                             ui.notify("➕ New clip added. Scroll down to see it.", type='positive')
 
                         ui.timer(0.1, inject, once=True)
-                    # video = load_video(video_id)
+
+                    #TODO: Refactor util methods added above for this tab, simplify, cleanup, etc
                     with ui.tab_panel(tab_bulk).classes('w-full h-full'):
                         #TODO: Add error handling for JSON editor
                         editor = ui.json_editor(
@@ -736,7 +734,7 @@ def film_page(video_id: str):
                             schema=json_schema
                         ).classes('w-full h-full').props('modes=["tree"]')
                         with ui.row().classes('w-full justify-between items-center mt-2'):
-                            ui.button('Save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
+                            ui.button('💾 Save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
                             ui.button('➕ Clip', on_click=add_clip).props('color=primary')
 
                     with ui.tab_panel(tab_videom):
