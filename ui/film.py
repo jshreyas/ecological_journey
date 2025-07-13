@@ -620,7 +620,7 @@ def film_page(video_id: str):
                         removed_clip_ids = set(old_clips) - set(new_clips)
 
                         if added_clip_ids:
-                            summary.append("➕ Added Clips:")
+                            summary.append("➕ **Added Clips:**")
                             for cid in added_clip_ids:
                                 title = new_clips[cid].get('title', cid)
                                 summary.append(f"    • {title}")
