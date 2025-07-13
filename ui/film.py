@@ -19,6 +19,10 @@ BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 
 #TODO: Make this page mobile friendly for logged in user for write access
 def film_page(video_id: str):
+    state = {'latest_cleaned': None}  # Will store cleaned copy for confirm step
+    diff_area = None       # Will be bound to markdown component
+    confirm_dialog = None  # Will be bound to dialog
+
     query_params = ui.context.client.request.query_params
     clip_id = query_params.get("clip")
     play_clips_playlist = query_params.get("clips", "false").lower() == "true"
@@ -45,6 +49,24 @@ def film_page(video_id: str):
     # State to track which clip is being edited (or None for new)
     clip_form_state = {'clip': None, 'is_new': True}
     clip_form_container = {}
+
+    def finalize_save():
+        confirm_dialog.close()
+        print(f"Finalizing save...: {state['latest_cleaned']}")
+        success = save_video_metadata(state['latest_cleaned'], app.storage.user.get("token"))
+        if success:
+            ui.notify("✅ Filmdata published", type="positive")
+        else:
+            ui.notify("❌ Failed to publish filmdata", type="negative")
+
+    confirm_dialog = ui.dialog()
+    with confirm_dialog:
+        with ui.card().classes('max-w-xl'):
+            ui.label('📝 Review Changes').classes('text-lg font-bold')
+            diff_area = ui.markdown('').classes('text-sm text-left whitespace-pre-wrap max-h-80 overflow-auto')
+            with ui.row().classes('justify-end w-full'):
+                ui.button('Cancel', on_click=confirm_dialog.close)
+                ui.button('Confirm Save', color='primary', on_click=lambda: finalize_save())
 
     def show_clip_form(clip, is_new=False):
         clip_form_container['container'].clear()
@@ -569,6 +591,20 @@ def film_page(video_id: str):
                                 diffs.append((current_path, v1, v2))
                         return diffs
 
+                    def summarize_dict_diff(d1, d2):
+                        diffs = dict_diff(d1, d2)
+                        if not diffs:
+                            return ['✅ No changes detected.']
+                        summary = []
+                        for path, v1, v2 in diffs:
+                            if v1 == "__MISSING__":
+                                summary.append(f"➕ `{path}`: {v2}")
+                            elif v2 == "__MISSING__":
+                                summary.append(f"❌ `{path}`: {v1}")
+                            else:
+                                summary.append(f"🔄 `{path}`: {v1} → {v2}")
+                        return summary
+
                     def extract_editable_fields(video: dict) -> dict:
                         return {
                             'description': video.get('notes', ''),
@@ -591,7 +627,8 @@ def film_page(video_id: str):
 
                     async def get_data() -> None:
                         raw_data = await editor.run_editor_method('get')
-                        # Normalize whether it's a dict (no change) or raw JSON text (edited)
+
+                        # Normalize input
                         if 'json' in raw_data:
                             data = raw_data['json']
                         elif 'text' in raw_data:
@@ -603,24 +640,30 @@ def film_page(video_id: str):
                         else:
                             ui.notify("❌ Unexpected editor return format", type='negative')
                             return
+
                         try:
                             cleaned = validate_film_data(data, video.get('duration_seconds'))
-                            ui.notify(f"Cleaned data: {cleaned}")
                         except Exception as ex:
                             ui.notify(f"❌ Validation error: {ex}", type="negative")
                             return
-                        print("Saving film and clips with data:", cleaned)
-                        #TODO: Use dict_diff to show changes and potentially handle negative updates
-                        delta = dict_diff(extract_editable_fields(cleaned), extract_editable_fields(video))
-                        print("Differences found:", delta)
+
                         for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
                             cleaned[key] = video.get(key)
 
-                        success = save_video_metadata(cleaned, app.storage.user.get("token"))
-                        if success:
-                            ui.notify("✅ Filmdata published", type="positive")
-                        else:
-                            ui.notify("❌ Failed to publish filmdata", type="negative")
+                        # Extract and compare editable fields only
+                        delta = dict_diff(extract_editable_fields(cleaned), extract_editable_fields(video))
+                        summary = '\n'.join(summarize_dict_diff(extract_editable_fields(video), extract_editable_fields(cleaned)))
+
+                        if not delta:
+                            ui.notify("✅ No changes detected.", type="info")
+                            return
+
+                        # Save cleaned data for confirm step
+                        state['latest_cleaned'] = cleaned
+
+
+                        diff_area.set_content(summary)
+                        confirm_dialog.open()
 
                     json_schema = {
                         "type": "object",
