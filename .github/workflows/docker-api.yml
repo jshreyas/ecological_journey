@@ -1,6 +1,7 @@
 name: Build and Push API Docker Image
 
 on:
+  workflow_dispatch:  # allows manual triggering from GitHub UI
   push:
     branches: [main]
     paths:
