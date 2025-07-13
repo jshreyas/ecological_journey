@@ -394,6 +394,27 @@ async def update_video(
     videos = playlist.get("videos", [])
     for i, video in enumerate(videos):
         if video["video_id"] == updated_video.video_id:
+            # Preserve clip_id for existing clips
+            existing_clips = {clip["clip_id"]: clip for clip in video.get("clips", [])}
+            incoming_clips = []
+
+            for clip in updated_video.clips:
+                clip_dict = clip.dict()
+                clip_id = clip_dict.get("clip_id")
+
+                if clip_id in existing_clips:
+                    # Merge old and new to preserve extra fields (if any)
+                    merged_clip = {**existing_clips[clip_id], **clip_dict}
+                else:
+                    # New clip → generate new ID if not already present
+                    if not clip_id:
+                        from uuid import uuid4
+                        clip_dict["clip_id"] = str(uuid4())
+                    merged_clip = clip_dict
+
+                incoming_clips.append(merged_clip)
+
+            # Build the updated video object
             updated_data = updated_video.dict()
             updated_data["video_id"] = video.get("video_id")
             updated_data["youtube_url"] = video.get("youtube_url")
@@ -401,6 +422,7 @@ async def update_video(
             updated_data["title"] = video.get("title")
             updated_data["duration_seconds"] = video.get("duration_seconds")
             updated_data["added_date"] = video.get("added_date")
+            updated_data["clips"] = incoming_clips
             videos[i] = updated_data
 
             await db.playlists.update_one(
