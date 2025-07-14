@@ -323,13 +323,13 @@ function setupEventHandlers() {
     
     // Node events
     window.cy.on('tap', 'node', function(evt) {
-        window.cy.nodes().forEach(n => n.removeStyle());
-        focusOnNode(evt.target);
+        const d = evt.target.data();
+        showDetails(d);
     });
     
     window.cy.on('mouseover', 'node', function(evt) {
         const d = evt.target.data();
-        showMeta(`<b>Partner:</b> ${d.label}<br><b>Playlist:</b> ${d.playlist}<br><b>Usage:</b> ${d.count}`);
+        showMeta(`<b>Parddtner:</b> ${d.label}<br><b>Playlist:</b> ${d.playlist}<br><b>Usage:</b> ${d.count}`);
     });
     
     window.cy.on('mouseout', 'node', function(evt) {
@@ -348,7 +348,7 @@ function setupEventHandlers() {
     
     window.cy.on('tap', 'edge', function(evt) {
         const d = evt.target.data();
-        showMeta(`<b>Edge:</b> ${d.source} - ${d.target}<br><b>Shared clips:</b> ${d.clips}<br><b>Shared films:</b> ${d.films}`);
+        showDetails(d);
     });
     
     // Layout events
