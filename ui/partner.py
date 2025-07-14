@@ -4,16 +4,27 @@ import json
 from collections import defaultdict, Counter
 
 def partner_page():
-    with ui.column().classes("items-center"):
+    with ui.column().classes("items-center w-full"):
         all_clips = load_clips()
         all_videos = load_videos()
 
         all_playlists = sorted({c['playlist_name'] for c in all_clips if 'playlist_name' in c} |
                                {v['playlist_name'] for v in all_videos if 'playlist_name' in v})
+        # Color palette inspired by fcose demo - more subtle and cohesive
         palette = [
-            "#4F8A8B", "#F9ED69", "#F08A5D", "#B83B5E", "#6A2C70", "#3B6978", "#204051", "#FF6F3C", "#A3A847"
+            "#E8F4FD", "#F0F8FF", "#F5F5DC", "#F0FFF0", "#FFF8DC",
+            "#FDF5E6", "#F0F8FF", "#F5F5F5", "#FAF0E6", "#F8F8FF"
         ]
         playlist_colors = {pl: palette[i % len(palette)] for i, pl in enumerate(all_playlists)}
+
+        # More subtle edge colors
+        edge_colors = [
+            "#4682B4", "#5F9EA0", "#708090", "#778899", "#B0C4DE",
+            "#87CEEB", "#98FB98", "#F0E68C", "#DDA0DD", "#FFB6C1"
+        ]
+        edge_color_map = {
+            pl: edge_colors[i % len(edge_colors)] for i, pl in enumerate(all_playlists)
+        }
 
         partner_playlist_counter = defaultdict(Counter)
         for clip in all_clips:
@@ -36,17 +47,28 @@ def partner_page():
             for partner in partners
         }
 
-        HIGH_USAGE_THRESHOLD = 10
+        HIGH_USAGE_THRESHOLD = 100
+
+        compound_nodes = []
+        for playlist in all_playlists:
+            compound_nodes.append({
+                "data": {
+                    "id": f"playlist_{playlist}",
+                    "label": playlist,
+                    "color": playlist_colors.get(playlist, "#FFFFFF"),
+                }
+            })
+
         nodes = []
         for partner in partners:
             playlist, _ = partner_playlist_counter[partner].most_common(1)[0] if partner_playlist_counter[partner] else ('Unknown', 0)
-            color = playlist_colors.get(playlist, "#888")
             node_data = {
                 "id": partner,
                 "label": partner,
                 "count": usage_counts[partner],
                 "playlist": playlist,
-                "color": color,
+                "color": playlist_colors.get(playlist, "#888"),  # Use playlist color for node
+                "parent": f"playlist_{playlist}",
             }
             classes = "high-usage" if usage_counts[partner] >= HIGH_USAGE_THRESHOLD else ""
             node = {"data": node_data}
@@ -81,7 +103,7 @@ def partner_page():
                 if p1 in video.get('partners', []) and p2 in video.get('partners', []):
                     playlist_counter[video.get('playlist_name', 'Unknown')] += 1
             playlist, _ = playlist_counter.most_common(1)[0] if playlist_counter else ('Unknown', 0)
-            color = playlist_colors.get(playlist, "#888")
+            color = edge_color_map.get(playlist, "#888")
             edge_data = {
                 "id": f"{p1}_{p2}",
                 "source": p1,
@@ -93,132 +115,42 @@ def partner_page():
             }
             edges.append({"data": edge_data})
 
-        elements = nodes + edges
+        elements = compound_nodes + nodes + edges
         elements_json = json.dumps(elements)
 
-        ui.add_body_html("""
-        <div id='cy' style='position: relative; margin-top:80px; height: 500px; width: 60%; border: 1px solid #ccc;'></div>
-        <div id='meta' style='margin-top:10px; min-height:60px; max-height:80px; overflow:auto; background:#fafafa; border-radius:6px; border:1px solid #eee; padding:8px;'></div>
-        """)
+        with ui.row().classes('w-full mt-10 gap-4').style('align-items: flex-start; flex-wrap: wrap;'):
+            ui.html('<div id="cy" style="height: 600px; flex: 1 1 60%; min-width: 700px; border: 1px solid #ccc; background: #f7f7fa;"></div>')
+            global meta_panel
+            meta_panel = ui.column().classes('p-2 bg-gray-50 border border-gray-200 rounded') \
+                .style('min-height: 600px; flex: 1 1 35%; min-width: 200px; overflow:auto;') \
+                .props('id=meta_panel')
+
+        # Load dependencies in the correct order according to cytoscape-fcose documentation
+        ui.add_head_html('<script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>')
+        ui.add_head_html('<script src="https://unpkg.com/layout-base/layout-base.js"></script>')
+        ui.add_head_html('<script src="https://unpkg.com/cose-base/cose-base.js"></script>')
+        ui.add_head_html('<script src="https://unpkg.com/cytoscape-fcose/cytoscape-fcose.js"></script>')
+
+        # Load our custom graph implementation
+        ui.add_head_html('<script src="/static/partner_graph.js"></script>')
 
         ui.add_body_html(f"""
-        <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
         <script>
-        function renderCytoscape() {{
-            if (typeof cytoscape === 'undefined' || !document.getElementById('cy')) {{
-                setTimeout(renderCytoscape, 100);
-                return;
-            }}
-            if (window.cy && window.cy.destroy) {{
-                window.cy.destroy();
-            }}
-            const elements = {elements_json};
-            window.cy = cytoscape({{
-                container: document.getElementById('cy'),
-                elements: elements,
-                style: [
-                    {{ selector: 'node', style: {{
-                        'label': 'data(label)',
-                        'background-color': 'data(color)',
-                        'width': 'mapData(count, 1, 100, 20, 50)',
-                        'height': 'mapData(count, 1, 100, 20, 50)',
-                        'text-valign': 'center',
-                        'text-halign': 'center',
-                        'color': '#fff',
-                        'font-size': 16,
-                        'text-outline-width': 2,
-                        'text-outline-color': '#222'
-                    }} }},
-                    {{ selector: 'node.high-usage', style: {{
-                        'shadow-blur': 30,
-                        'shadow-color': '#FFD700',
-                        'shadow-opacity': 0.7
-                    }} }},
-                    {{ selector: 'edge', style: {{
-                        'width': 'mapData(weight, 1, 100, 1, 10)',
-                        'line-color': 'data(color)',
-                        'curve-style': 'bezier',
-                        'opacity': 0.8
-                    }} }},
-                    {{ selector: '.faded', style: {{
-                        'opacity': 0.15,
-                        'text-opacity': 0.1
-                    }} }}
-                ],
-                layout: {{ name: 'circle', padding: 20 }}
+        // Initialize the graph when the page is ready
+        document.addEventListener('DOMContentLoaded', function() {{
+            console.log('DOM loaded, initializing partner graph...');
+            initializePartnerGraph('{elements_json}');
+        }});
+
+        // Fallback initialization if DOMContentLoaded already fired
+        if (document.readyState === 'loading') {{
+            document.addEventListener('DOMContentLoaded', function() {{
+                console.log('DOM loaded (fallback), initializing partner graph...');
+                initializePartnerGraph('{elements_json}');
             }});
-
-            function showMeta(html) {{
-                document.getElementById('meta').innerHTML = html;
-            }}
-
-            function focusOnNode(node) {{
-                const neighborhood = node.closedNeighborhood();
-                const connectedNodes = node.connectedEdges().connectedNodes();
-
-                node.style({{
-                    'width': 120,
-                    'height': 120,
-                    'font-size': 22
-                }});
-
-                connectedNodes.forEach(n => {{
-                    n.style({{
-                        'width': 60,
-                        'height': 60,
-                        'font-size': 18
-                    }});
-                }});
-
-                window.cy.animate({{
-                    fit: {{ eles: neighborhood, padding: 60 }},
-                    duration: 500
-                }});
-
-                window.cy.nodes().not(neighborhood).style({{
-                    'width': 20,
-                    'height': 20,
-                    'font-size': 12
-                }});
-
-                window.cy.elements().removeClass('faded');
-                window.cy.elements().not(neighborhood).addClass('faded');
-
-                const d = node.data();
-                showMeta(`<b>Partner:</b> ${{d.label}}<br><b>Playlist:</b> ${{d.playlist}}<br><b>Usage:</b> ${{d.count}}`);
-            }}
-
-            window.cy.on('tap', 'node', function(evt) {{
-                window.cy.nodes().forEach(n => n.removeStyle());
-                focusOnNode(evt.target);
-            }});
-
-            window.cy.on('mouseover', 'node', function(evt) {{
-                const d = evt.target.data();
-                showMeta(`<b>Partner:</b> ${{d.label}}<br><b>Playlist:</b> ${{d.playlist}}<br><b>Usage:</b> ${{d.count}}`);
-            }});
-
-            window.cy.on('mouseout', 'node', function(evt) {{
-                showMeta('');
-            }});
-
-            window.cy.on('mouseover', 'edge', function(evt) {{
-                const d = evt.target.data();
-                showMeta(`<b>Edge:</b> ${{d.source}} - ${{d.target}}<br><b>Shared clips:</b> ${{d.clips}}<br><b>Shared films:</b> ${{d.films}}`);
-            }});
-
-            window.cy.on('mouseout', 'edge', function(evt) {{
-                showMeta('');
-            }});
-
-            window.cy.on('tap', 'edge', function(evt) {{
-                const d = evt.target.data();
-                showMeta(`<b>Edge:</b> ${{d.source}} - ${{d.target}}<br><b>Shared clips:</b> ${{d.clips}}<br><b>Shared films:</b> ${{d.films}}`);
-            }});
-
-            const defaultNode = window.cy.nodes().sort((a, b) => b.data('count') - a.data('count'))[0];
-            if (defaultNode) focusOnNode(defaultNode);
+        }} else {{
+            console.log('DOM already loaded, initializing partner graph immediately...');
+            initializePartnerGraph('{elements_json}');
         }}
-        renderCytoscape();
         </script>
         """)
