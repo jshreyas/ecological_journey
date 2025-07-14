@@ -2,6 +2,7 @@
 import os
 import requests
 from fastapi.responses import PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from nicegui import ui, app
 from about import about_page
@@ -259,5 +260,8 @@ def video_detail(video_id: str):
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
 def root():
     return "Ecological Journey UI is alive"
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 ui.run(title='Ecological Journey', reload=True, storage_secret='45d3fba306d5a694f61d0ccd684c75fa')
