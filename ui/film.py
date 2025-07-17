@@ -65,8 +65,8 @@ def film_page(video_id: str):
             ui.label('📝 Review Changes').classes('text-lg font-bold')
             diff_area = ui.markdown('').classes('text-sm text-left whitespace-pre-wrap max-h-80 overflow-auto')
             with ui.row().classes('justify-end w-full'):
-                ui.button('Cancel', on_click=confirm_dialog.close)
-                ui.button('Confirm Save', color='primary', on_click=lambda: finalize_save())
+                ui.button(icon='close', on_click=confirm_dialog.close)
+                ui.button(icon='save', color='primary', on_click=lambda: finalize_save())
 
     def show_clip_form(clip, is_new=False):
         clip_form_container['container'].clear()
@@ -205,8 +205,8 @@ def film_page(video_id: str):
                         clip_form_state['is_new'] = True
                         show_clip_form(clip_form_state['clip'], is_new=True)
 
-                    ui.button('💾 Save', on_click=save_clip).props('color=primary')
-                    ui.button('Cancel', on_click=reset_to_add_mode).props('color=secondary')
+                    ui.button(icon='save', on_click=save_clip).props('color=primary')
+                    ui.button(icon='close', on_click=reset_to_add_mode).props('color=secondary')
 
     def on_edit_clip(clip):
         clip_form_state['clip'] = clip
@@ -453,7 +453,7 @@ def film_page(video_id: str):
     with ui.column().classes('w-full'):
 
         # Navigation Arrows
-        with ui.row().classes('w-full justify-between items-center mb-4'):
+        with ui.row().classes('w-full justify-between items-center'):
             # Use a 3-column grid for consistent centering
             with ui.grid(columns=3).classes('w-full items-center'):
                 # Previous
@@ -495,9 +495,9 @@ def film_page(video_id: str):
             with splitter.after:
                 video = load_video(video_id)
                 with ui.tabs().classes('w-full') as tabs:
-                    tab_videom = ui.tab('Filmdata', icon='edit_note').tooltip('Edit film metadata like title, date, partners, labels')
-                    tab_clipmaker = ui.tab('Clipper', icon='movie_creation').tooltip('Create and edit clips from the film')
-                    tab_bulk = ui.tab('metaforge', icon='code').tooltip('Bulk edit film and clip metadata in JSON format')
+                    tab_videom = ui.tab('Filmdata').tooltip('Edit film metadata like title, date, partners, labels')
+                    tab_clipmaker = ui.tab('Clipper').tooltip('Create and edit clips from the film')
+                    tab_bulk = ui.tab('metaforge').tooltip('Bulk edit film and clip metadata in JSON format')
                 with ui.tab_panels(tabs, value=tab_bulk).classes('w-full h-full'):
 
                     def parse_timestamp(ts: str | int | float) -> int:
@@ -887,15 +887,17 @@ def film_page(video_id: str):
                         ui.timer(0.1, inject, once=True)
 
                     #TODO: Refactor util methods added above for this tab, simplify, cleanup, etc
-                    with ui.tab_panel(tab_bulk).classes('w-full h-full'):
-                        #TODO: Add error handling for JSON editor
-                        editor = ui.json_editor(
-                            {'content': {'json': extract_editable_video_data(video)}},
-                            schema=json_schema
-                        ).classes('w-full h-full').props('modes=["tree"]')
-                        with ui.row().classes('w-full justify-between items-center mt-2'):
-                            ui.button('💾 Save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
-                            ui.button('➕ Clip', on_click=add_clip).props('color=primary')
+                    with ui.tab_panel(tab_bulk).classes('w-full h-full mt-0'):
+                        with ui.column().classes('w-full h-full mt-0'):
+                            #TODO: Add error handling for JSON editor
+                            editor = ui.json_editor(
+                                {'content': {'json': extract_editable_video_data(video)}},
+                                schema=json_schema
+                            ).classes('w-full h-full mt-0 mb-0')
+                            #Remove the default space between the editor and the top of the tab
+                            with ui.row().classes('w-full h-full justify-between items-center'):
+                                ui.button(icon='save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
+                                ui.button(icon='add', on_click=add_clip)
 
                     with ui.tab_panel(tab_videom):
                         with ui.column().classes('w-full gap-4 p-2'):
@@ -923,7 +925,7 @@ def film_page(video_id: str):
 
                             with ui.row().classes('justify-start gap-2 mt-2'):
                                 ui.button(
-                                    "💾 Save",
+                                    icon='save',
                                     on_click=lambda: handle_publish(
                                         video_metadata={
                                             "partners": [c[1:] for c in chips_list if c.startswith('@')],
@@ -932,7 +934,7 @@ def film_page(video_id: str):
                                         }
                                     )
                                 ).props('color=primary')
-                                ui.button("Cancel", on_click=reset_metadata_fields).props('color=secondary')
+                                ui.button(icon='close', on_click=reset_metadata_fields).props('color=secondary')
                     with ui.tab_panel(tab_clipmaker):
                         with ui.column().classes('w-full gap-4 p-2'):
                             clip_form_container['container'] = ui.column().classes('w-full gap-2')
@@ -953,21 +955,26 @@ def film_page(video_id: str):
             with splitter.separator:
                 ui.icon('drag_indicator').classes('text-gray-400')
 
-        # Clipboard heading with count
-        video = load_video(video_id)
-        clips = video.get("clips", [])
-        ui.label(f'📋 Clipboard ({len(clips)})').classes('text-xl font-semibold mt-4')
-        with ui.grid(columns=5).classes('w-full gap-4 mb-8') as clipboard_container:
-            refresh_clipboard()
-
         ui.separator()
-        # Filmboard heading with count
-        all_videos = load_videos()
-        current_video_date = video.get('date', '').split('T')[0]
-        same_day_videos = [v for v in all_videos if v.get('date', '').startswith(current_video_date) and v['video_id'] != video_id]
-        ui.label(f'🎥 More films from 🗓️ {datetime.strptime(current_video_date, "%Y-%m-%d").strftime("%B %d, %Y")} ({len(same_day_videos) + 1})').classes('text-xl font-semibold mt-8')
-        with ui.grid(columns=5).classes('w-full gap-4 mb-8') as filmboard_container:
-            refresh_filmboard()
+        with ui.splitter(value=50).classes('w-full h-[600px]') as splitter:
+            with splitter.before:
+                # Clipboard heading with count
+                video = load_video(video_id)
+                clips = video.get("clips", [])
+                with ui.column().classes('w-full h-full rounded-lg'):
+                    ui.label(f'📋 Clipboard ({len(clips)})').classes('text-xl font-semibold')
+                    with ui.grid().classes('grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg') as clipboard_container:
+                        refresh_clipboard()
+            with splitter.after:
+                # Filmboard heading with count
+                all_videos = load_videos()
+                current_video_date = video.get('date', '').split('T')[0]
+                same_day_videos = [v for v in all_videos if v.get('date', '').startswith(current_video_date) and v['video_id'] != video_id]
+                with ui.column().classes('w-full h-full rounded-lg'):
+                    ui.label(f'🎥 More films from 🗓️ {datetime.strptime(current_video_date, "%Y-%m-%d").strftime("%B %d, %Y")} ({len(same_day_videos) + 1})').classes('text-xl ml-2 font-semibold')
+                    with ui.grid().classes('grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg') as filmboard_container:
+                    # with ui.grid(columns=5).classes('w-full gap-4 mb-8') as :
+                        refresh_filmboard()
 
     player_container['ref'] = player_container_ref
     player_container['textarea'] = None
