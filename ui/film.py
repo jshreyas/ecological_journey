@@ -710,8 +710,6 @@ def film_page(video_id: str):
 
                         return summary
 
-
-###
                     def format_value(v):
                         """Format values for display: quote strings, flatten lists."""
                         if isinstance(v, list):
