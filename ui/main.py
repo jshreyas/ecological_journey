@@ -15,6 +15,7 @@ from film import film_page
 from cliplists import cliplists_page
 from partner import partner_page
 from dialog_puns import caught_john_doe, handle_backend_error
+from utils_api import api_post as api_post_utils
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -107,6 +108,19 @@ def login_or_signup(mode='login'):
 def logout():
     app.storage.user.clear()
     ui.navigate.to("/")
+
+def open_feedback_dialog():
+    def submit_feedback(feedback_text: str):
+        response = api_post_utils("/feedback", {"text": feedback_text}, token=app.storage.user.get("token"))
+        ui.notify("Thank you for your feedback!", type="positive")
+        dialog.close()
+
+    with ui.dialog() as dialog, ui.card().classes('w-full max-w-lg'):
+        ui.label("We'd love your feedback!").classes('text-lg font-bold mb-2')
+        feedback_text = ui.textarea(label='be it an idea or appreciation or a bug, please describe your experience!').classes('w-full')
+        with ui.row().classes('justify-end gap-4 mt-4'):
+            ui.button(icon='send', on_click=lambda: submit_feedback(feedback_text.value)).props('color=primary')
+    dialog.open()
 
 def setup_navbar(title: str = 'Ecological Journey'):
     with ui.header().classes(
@@ -211,51 +225,63 @@ def ecological_layout():
         checkOrientation();
     ''')
 
-#TODO: add to the navbar, make the navbar scrollable or drowdown for overflow for mobile
+def setup_footer():
+    with ui.page_sticky(x_offset=18, y_offset=18):
+        ui.button(icon='feedback', on_click=open_feedback_dialog).tooltip("Send Feedback").props('round fab fixed color=secondary')
+
 @ui.page('/notion')
-def notion():
+def _():
     ecological_layout()
     notion_page()
+    setup_footer()
 
 @ui.page('/')
-def home():
+def _():
     ecological_layout()
     home_page()
+    setup_footer()
 
 @ui.page('/films')
-def films():
+def _():
     ecological_layout()
     films_page()
+    setup_footer()
 
 @ui.page('/clips')
-def clips():
+def _():
     ecological_layout()
     clips_page()
+    setup_footer()
 
 @ui.page('/cliplists')
-def cliplists():
+def _():
     ecological_layout()
     cliplists_page()
+    setup_footer()
 
 @ui.page('/partners')
-def show_partner_page():
+def _():
     ecological_layout()
     partner_page()
+    setup_footer()
 
 @ui.page('/about')
-def about():
+def _():
     ecological_layout()
     about_page()
+    setup_footer()
 
 @ui.page('/playlist/{cliplist_id}')
-def playlist(cliplist_id: str=None):
+def _(cliplist_id: str=None):
     ecological_layout()
     playlist_page(cliplist_id)
+    setup_footer()
 
 @ui.page('/film/{video_id}')
-def video_detail(video_id: str):
+def _(video_id: str):
     ecological_layout()
     film_page(video_id)
+    setup_footer()
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
 def root():
