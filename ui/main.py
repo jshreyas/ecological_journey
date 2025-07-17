@@ -117,7 +117,7 @@ def open_feedback_dialog():
 
     with ui.dialog() as dialog, ui.card().classes('w-full max-w-lg'):
         ui.label("We'd love your feedback!").classes('text-lg font-bold mb-2')
-        feedback_text = ui.textarea(label='be it an idea or a bug or appreciation, please describe your experience!').classes('w-full')
+        feedback_text = ui.textarea(label='be it an idea or appreciation or a bug, please describe your experience!').classes('w-full')
         with ui.row().classes('justify-end gap-4 mt-4'):
             ui.button(icon='send', on_click=lambda: submit_feedback(feedback_text.value)).props('color=primary')
     dialog.open()

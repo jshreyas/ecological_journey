@@ -502,7 +502,7 @@ async def update_clip(
     return {"msg": "Clip updated successfully!"}
 
 @router.post("/feedback")
-async def receive_feedback(feedback: Feedback, token: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
-    feedback.user_id = token
+async def receive_feedback(feedback: Feedback,
+                           _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
     await db.feedback.insert_one(feedback.dict(by_alias=True))
     return {"status": "received"}
