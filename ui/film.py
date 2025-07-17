@@ -56,6 +56,7 @@ def film_page(video_id: str):
         success = save_video_metadata(state['latest_cleaned'], app.storage.user.get("token"))
         if success:
             ui.notify("✅ Filmdata published", type="positive")
+            #TODO: rerender the filmbioard, clipboard and metaforge
         else:
             ui.notify("❌ Failed to publish filmdata", type="negative")
 

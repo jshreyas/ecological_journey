@@ -9,18 +9,104 @@ from fastapi.responses import HTMLResponse
 
 @app.get('/api/partner_details')
 async def partner_details(request: Request):
-    # Get query params (e.g., id, type, etc.)
     params = dict(request.query_params)
-    # You can also use POST and JSON if you want more complex data
-    # Build the HTML using your Python logic
-    if params.get('type') == 'edge':
-        html = f"<b>Edge:</b> {params['source']} - {params['target']}<br><b>Shared clips:</b> {params.get('clips', 0)}<br><b>Shared films:</b> {params.get('films', 0)}"
-    # check for playlist nodes and partner nodes
-    if params.get('type') == 'playlist':
-        html = f"<b>Playlist:</b> {params['label']}<br><b>Usage:</b> {int(params['clips']) + int(params['films'])}<br><b>Partners:</b> {params['partners']}"
-    elif params.get('type') == 'node':
-        html = f"<b>Partner:</b> {params['label']}<br><b>Usage:</b> {params['count']}"
-    return HTMLResponse(html)
+    t = params.get('type')
+
+    if t == 'node':
+        label = params.get('label', 'Unknown Partner')
+        count = params.get('count', '??')
+        playlist = params.get('playlist', 'Unknown Playlist')
+        top_collabs = ['Nehya', 'Varun', 'Asha']  # stub
+        growth_tags = ['💡 Emerging: Solo', '🔄 Consistent: Capoeira']
+
+        html = f"""
+        <div>
+            <h3>⚔️ {label} — The Journey</h3>
+            <p>🪐 Most active in <b>{playlist}</b></p>
+            <p>🔥 Total Appearances: <b>{count}</b></p>
+            <p>🎯 Top Collabs: {', '.join(top_collabs)}</p>
+            <hr>
+            <h4>📅 Milestones</h4>
+            <ul>
+                <li>📅 Jan 2024: Joined <i>Flow & Form</i> sessions</li>
+                <li>📅 Mar 2024: 12 clips with Nehya 🔥</li>
+                <li>📅 Jul 2024: First weapon sparring video</li>
+            </ul>
+            <p>🏷️ Tags:<br> {"<br>".join(growth_tags)}</p>
+            <div class="mt-2">
+                <button>🕰️ View Timeline Journal</button>
+                <button>🌌 Zoom to Network</button>
+            </div>
+        </div>
+        """
+        return HTMLResponse(html)
+
+    elif t == 'edge':
+        source = params.get('source', 'Unknown')
+        target = params.get('target', 'Unknown')
+        clips = params.get('clips', 0)
+        films = params.get('films', 0)
+        playlist = params.get('playlist', 'Mixed')
+        timeline = [
+            "📅 Jan 2024: First spar in 'Basics'",
+            "📅 Mar 2024: Flow drill in 'Improvised Play'",
+            "📅 Jun 2024: Back-to-back uploads in 'Weapons'"
+        ]
+
+        html = f"""
+        <div>
+            <h3>🤝 {source} x {target} — Shared History</h3>
+            <p>🎥 <b>{clips}</b> Clips | 📽️ <b>{films}</b> Films</p>
+            <p>🏷️ Mostly in <b>{playlist}</b></p>
+            <p>🔍 Relationship Type: <b>Rivalry / Team-up</b></p>
+            <hr>
+            <h4>📅 Joint Timeline</h4>
+            <ul>
+                {''.join(f'<li>{e}</li>' for e in timeline)}
+            </ul>
+            <div class="mt-2">
+                <button>🎞 Show Shared Clips</button>
+                <button>📍 Highlight on Graph</button>
+            </div>
+        </div>
+        """
+        return HTMLResponse(html)
+
+    elif t == 'playlist':
+        label = params.get('label', 'Unknown Playlist')
+        count = int(params.get('clips', 0)) + int(params.get('films', 0))
+        partners = params.get('partners', 'X, Y, Z')
+        top_labels = [
+            "💥 Striking (40%)", "🎶 Capoeira (20%)", "📏 Precision (15%)"
+        ]
+        top_partners = ['Shreyas', 'Riya', 'Mira']
+        timeline = "⏳ Jan 2023 → Jul 2025"
+
+        html = f"""
+        <div>
+            <h3>🎞️ {label}</h3>
+            <p>🧲 Partners Active: <b>{partners}</b></p>
+            <p>🔥 Usage Count: <b>{count}</b></p>
+            <p>⏳ Timeline: <b>{timeline}</b></p>
+            <hr>
+            <h4>🏆 Top Contributors</h4>
+            <ul>
+                {''.join(f'<li>{p}</li>' for p in top_partners)}
+            </ul>
+            <h4>📊 Label Distribution</h4>
+            <ul>
+                {''.join(f'<li>{label}</li>' for label in top_labels)}
+            </ul>
+            <div class="mt-2">
+                <button>🎬 Watch Playlist Reel</button>
+                <button>🔍 Filter Clips</button>
+            </div>
+        </div>
+        """
+        return HTMLResponse(html)
+
+    else:
+        return HTMLResponse("<div><p>⚠️ Unknown type</p></div>")
 
 def partner_page():
     with ui.splitter(value=70).classes('w-full h-[600px] mt-10') as splitter:
@@ -29,7 +115,7 @@ def partner_page():
             ui.html('<div id="cy" style="height: 600px; flex: 1 1 60%; min-width: 900px; border: 1px solid #ccc; background: #f7f7fa;"></div>').classes('w-full')
         with splitter.after:
             # Details panel (will be updated)
-            details = ui.html('<div id="details_panel" class="p-4 text-primary" style="width: 100%"></div>')
+            details = ui.html('<div id="details_panel" class="p-4 text-base" style="width: 100%"></div>')
 
     with ui.column().classes("items-center w-full"):
         playlists = load_playlists()
