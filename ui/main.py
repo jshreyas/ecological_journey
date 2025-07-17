@@ -15,6 +15,7 @@ from film import film_page
 from cliplists import cliplists_page
 from partner import partner_page
 from dialog_puns import caught_john_doe, handle_backend_error
+from utils_api import api_post as api_post_utils
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -109,17 +110,16 @@ def logout():
     ui.navigate.to("/")
 
 def open_feedback_dialog():
-    def submit_feedback(feedback_text: str, feedback_type: str):
-        #TODO: send feedback to backend
+    def submit_feedback(feedback_text: str):
+        response = api_post_utils("/feedback", {"text": feedback_text}, token=app.storage.user.get("token"))
         ui.notify("Thank you for your feedback!", type="positive")
         dialog.close()
 
     with ui.dialog() as dialog, ui.card().classes('w-full max-w-lg'):
-        ui.label("We’d love your feedback!").classes('text-lg font-bold mb-2')
-        feedback_text = ui.textarea(label='Describe your experience').classes('w-full')
-        feedback_type = ui.select(['Idea', 'Appreciation', 'Confusion', 'Bug'], label='Type (optional)').classes('w-full')
+        ui.label("We'd love your feedback!").classes('text-lg font-bold mb-2')
+        feedback_text = ui.textarea(label='be it an idea or a bug or appreciation, please describe your experience!').classes('w-full')
         with ui.row().classes('justify-end gap-4 mt-4'):
-            ui.button(icon='send', on_click=lambda: submit_feedback(feedback_text.value, feedback_type.value)).props('color=primary')
+            ui.button(icon='send', on_click=lambda: submit_feedback(feedback_text.value)).props('color=primary')
     dialog.open()
 
 def setup_navbar(title: str = 'Ecological Journey'):

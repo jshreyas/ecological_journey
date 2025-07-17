@@ -515,8 +515,6 @@ def film_page(video_id: str):
                         raise ValueError(f"Invalid timestamp format: {ts}")
 
                     def validate_film_data(video: dict, video_duration: int) -> dict:
-                        # import pdb; pdb.set_trace()
-                        # video = data.get('json', {})
                         if not isinstance(video.get('labels', []), list):
                             raise ValueError("Video.labels must be a list of strings")
                         if not isinstance(video.get('partners', []), list):

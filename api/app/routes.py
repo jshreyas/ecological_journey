@@ -11,7 +11,7 @@ from fastapi.security import (
 from bson import ObjectId
 from uuid import uuid4
 
-from .models import Playlist, Video, Clip, Cliplist
+from .models import Playlist, Video, Clip, Cliplist, Feedback
 from .auth_models import Team, User, RegisterUser
 from .auth import (
     auth_scheme_optional,
@@ -500,3 +500,9 @@ async def update_clip(
         {"$set": {"videos": playlist["videos"]}}
     )
     return {"msg": "Clip updated successfully!"}
+
+@router.post("/feedback")
+async def receive_feedback(feedback: Feedback, token: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
+    feedback.user_id = token
+    await db.feedback.insert_one(feedback.dict(by_alias=True))
+    return {"status": "received"}

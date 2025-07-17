@@ -4,6 +4,12 @@ from typing import List, Optional, Literal, Dict
 from bson import ObjectId
 from .auth_models import PyObjectId
 from uuid import uuid4
+from datetime import datetime
+
+
+class Feedback(BaseModel):
+    text: str
+    submitted_at: datetime = datetime.utcnow()
 
 
 class Clip(BaseModel):
