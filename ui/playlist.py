@@ -1,7 +1,7 @@
 from nicegui import ui
-from utils import format_time
+from utils.utils import format_time
 from dialog_puns import in_progress
-from utils_api import get_filtered_clips
+from utils.utils_api import get_filtered_clips
 from video_player import VideoPlayer
 
 current_index = 0

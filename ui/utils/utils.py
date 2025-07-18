@@ -1,7 +1,7 @@
 # utils.py
 from nicegui import ui
 import requests
-from utils_notion import generate_tree
+from utils.utils_notion import generate_tree
 from datetime import datetime
 from cache import cache_get, cache_set
 

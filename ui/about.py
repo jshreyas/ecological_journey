@@ -1,5 +1,5 @@
 from nicegui import ui
-from utils_api import clear_cache
+from utils.utils_api import clear_cache
 
 def about_page():
     #TODO: make it available to other pages, can this be added as decorator?

@@ -1,7 +1,7 @@
 from nicegui import ui, app
 
 from dialog_puns import caught_john_doe
-from utils import get_notion_tree
+from utils.utils import get_notion_tree
 
 
 notion_iframe = ''

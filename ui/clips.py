@@ -1,7 +1,7 @@
 from nicegui import ui, app
-from utils_api import load_clips, save_cliplist
+from utils.utils_api import load_clips, save_cliplist
 from functools import partial
-from utils import parse_query_expression
+from utils.utils import parse_query_expression
 from datetime import datetime
 
 VIDEOS_PER_PAGE = 30
