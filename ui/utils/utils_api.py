@@ -5,8 +5,8 @@ import requests
 from typing import Optional, Union, List, Dict, Any
 from dotenv import load_dotenv
 from cache import cache_del, cache_get, cache_set
-from utils import format_time
-from utils import parse_query_expression
+from utils.utils import format_time
+from utils.utils import parse_query_expression
 load_dotenv()
 
 BASE_URL = os.getenv("BACKEND_URL")

@@ -15,7 +15,7 @@ from film import film_page
 from cliplists import cliplists_page
 from partner import partner_page
 from dialog_puns import caught_john_doe, handle_backend_error
-from utils_api import api_post as api_post_utils
+from utils.utils_api import api_post as api_post_utils
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 

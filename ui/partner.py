@@ -1,5 +1,5 @@
 from nicegui import ui, app
-from utils_api import load_clips, load_videos, load_playlists
+from utils.utils_api import load_clips, load_videos, load_playlists
 import json
 from collections import defaultdict, Counter
 

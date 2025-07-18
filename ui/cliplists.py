@@ -1,5 +1,5 @@
 from nicegui import ui
-from utils_api import load_cliplist, get_filtered_clips
+from utils.utils_api import load_cliplist, get_filtered_clips
 from datetime import datetime
 
 def cliplists_page():
