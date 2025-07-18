@@ -506,6 +506,6 @@ async def update_clip(
 async def receive_feedback(feedback: Feedback,
                            background_tasks: BackgroundTasks,
                            _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
-    # await db.feedback.insert_one(feedback.dict(by_alias=True))
+    await db.feedback.insert_one(feedback.dict(by_alias=True))
     background_tasks.add_task(send_feedback_email, feedback.dict())
     return {"status": "received"}
