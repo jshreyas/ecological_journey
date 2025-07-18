@@ -2,7 +2,7 @@
 import os
 from typing import Literal, Optional
 import jwt
-from fastapi import APIRouter, HTTPException, Depends, Query, Body
+from fastapi import APIRouter, HTTPException, Depends, Query, Body, BackgroundTasks
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     OAuth2PasswordRequestForm,
@@ -21,6 +21,7 @@ from .auth import (
 )
 from .db import db
 from dotenv import load_dotenv
+from .emailer import send_feedback_email
 
 load_dotenv()
 
@@ -503,6 +504,8 @@ async def update_clip(
 
 @router.post("/feedback")
 async def receive_feedback(feedback: Feedback,
+                           background_tasks: BackgroundTasks,
                            _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
     await db.feedback.insert_one(feedback.dict(by_alias=True))
+    background_tasks.add_task(send_feedback_email, feedback.dict())
     return {"status": "received"}
