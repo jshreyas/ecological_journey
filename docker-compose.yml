@@ -32,6 +32,7 @@ services:
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
     tty: true
     stdin_open: true
     develop:
