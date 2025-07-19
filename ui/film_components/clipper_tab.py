@@ -47,20 +47,21 @@ class ClipperTab:
         video = self.video_state.get_video()
         duration = video.get('duration_seconds', 0)
         if is_new or not clip:
-            clip_id = str(uuid.uuid4())
-            funny_title = generate_funny_title()
             clip = {
-                'clip_id': clip_id,
-                'title': funny_title,
+                'clip_id': str(uuid.uuid4()),
+                'title': generate_funny_title(),
                 'start': 0,
-                'end': min(10, duration),
-                'speed': 1.0,
+                'end': 0,
+                'speed': 2.0,
                 'description': '',
                 'labels': [],
                 'partners': [],
             }
         start_val = int(clip.get('start', 0))
-        end_val = int(clip.get('end', min(10, duration)))
+        end_val = clip.get('end')
+        if not end_val:
+            end_val = duration if duration > 0 else start_val + 10
+        end_val = int(min(end_val, duration))
         with ui.card().classes('w-full p-4 mt-2'):
             with ui.splitter(horizontal=False, value=70).classes('w-full') as splitter:
                 with splitter.before:
@@ -68,16 +69,11 @@ class ClipperTab:
                 with splitter.after:
                     with ui.column().classes('w-full h-full justify-center items-center'):
                         speed_knob = ui.knob(
-                            min=0.25, max=2.0, step=0.25, value=clip.get('speed', 1.0),
+                            min=0.25, max=2.0, step=0.25, value=clip.get('speed', 2.0),
                             track_color='grey-2', show_value=True
                         ).props('size=60')
                         ui.label('Speed').classes('text-center text-xs w-full')
-            # Double-ended range slider
-            range_slider = ui.range(
-                min=0,
-                max=duration,
-                value={'min': start_val, 'max': end_val},
-            ).classes('w-full')
+
             # Editable timestamp fields under the slider
             def seconds_to_hms(seconds):
                 seconds = int(seconds)
@@ -100,26 +96,7 @@ class ClipperTab:
                 end_input = ui.input(
                     value=seconds_to_hms(end_val)
                 ).props('type=text').props('dense').classes('w-12 text-xs text-right')
-            # Two-way binding logic
-            def update_inputs_from_slider():
-                v = range_slider.value
-                start_input.value = seconds_to_hms(int(v['min']))
-                end_input.value = seconds_to_hms(int(v['max']))
-            def update_slider_from_inputs():
-                try:
-                    s = max(0, min(duration, hms_to_seconds(start_input.value)))
-                    e = max(0, min(duration, hms_to_seconds(end_input.value)))
-                    if s > e:
-                        s, e = e, s
-                    range_slider.value = {'min': s, 'max': e}
-                except Exception:
-                    pass
-            range_slider.on('update:model-value', lambda e: update_inputs_from_slider())
-            start_input.on('blur', lambda e: update_slider_from_inputs())
-            end_input.on('blur', lambda e: update_slider_from_inputs())
-            start_input.on('keydown.enter', lambda e: update_slider_from_inputs())
-            end_input.on('keydown.enter', lambda e: update_slider_from_inputs())
-            update_inputs_from_slider()
+
             # Chips input for @partners and #labels
             chips_input_ref, chips_list, chips_error, chips_container = self._create_chips_input(
                 [f'@{p}' for p in clip.get('partners', [])] + [f'#{l}' for l in clip.get('labels', [])]

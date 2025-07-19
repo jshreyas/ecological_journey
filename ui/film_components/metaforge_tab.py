@@ -6,6 +6,7 @@ from nicegui import ui, app
 from utils.utils_api import save_video_metadata
 from .video_state import VideoState
 from typing import Callable, Optional
+from dialog_puns import generate_funny_title
 import json
 import uuid
 
@@ -469,11 +470,11 @@ class MetaforgeTab:
             'clip_id': str(uuid.uuid4()),
             'start': '00:00',
             'end': '00:00',
-            'title': 'New Clip',
+            'title': generate_funny_title(),
             'description': '',
             'labels': [],
             'partners': [],
-            'speed': 1.0
+            'speed': 2.0
         }
         
         async def inject():
