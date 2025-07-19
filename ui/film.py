@@ -6,6 +6,7 @@ from utils.utils_api import add_clip_to_video, update_clip_in_video, get_playlis
 from utils.utils import format_time
 from films import navigate_to_film
 from datetime import datetime
+from video_state import VideoState
 import os
 import json
 import uuid
@@ -17,6 +18,9 @@ BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 
 #TODO: Make this page mobile friendly for logged in user for write access
 def film_page(video_id: str):
+    # Initialize VideoState for centralized state management
+    video_state = VideoState(video_id)
+
     state = {'latest_cleaned': None}  # Will store cleaned copy for confirm step
     diff_area = None       # Will be bound to markdown component
     confirm_dialog = None  # Will be bound to dialog
@@ -26,7 +30,7 @@ def film_page(video_id: str):
     play_clips_playlist = query_params.get("clips", "false").lower() == "true"
     autoplay_clip = None
     if clip_id:
-        video = load_video(video_id)
+        video = video_state.get_video()
         if not video:
             ui.label(f"⚠️ Video: {video_id} not found!")
             return
@@ -36,10 +40,14 @@ def film_page(video_id: str):
             ui.label(f"⚠️ Clip: {clip_id} not found in video {video_id}!")
             return
         video_id = autoplay_clip.get('video_id', video_id)
+        # Reinitialize video_state if video_id changed
+        if video_id != video_state.video_id:
+            video_state = VideoState(video_id)
+
     player_container = {'ref': None}
     player_speed = {'value': 1.0}
 
-    video = load_video(video_id)
+    video = video_state.get_video()
     if not video:
         ui.label(f"⚠️ Video: {video_id} not found!")
         return
@@ -56,9 +64,8 @@ def film_page(video_id: str):
             ui.notify("✅ Filmdata published", type="positive")
             # Clear the state to prevent cumulative delta tracking
             state['latest_cleaned'] = None
-            # Update the global video variable with fresh data
-            global video
-            video = load_video(video_id)
+            # Refresh video state and notify all components
+            video_state.refresh()
             refresh_clipboard()
             refresh_metaforge()
         else:
@@ -189,6 +196,7 @@ def film_page(video_id: str):
                             else:
                                 update_clip_in_video(playlist_name, video_id, updated_clip, token)
                                 ui.notify("✅ Clip updated successfully", type="positive")
+                            video_state.refresh()
                             refresh_clipboard()
                             reset_to_add_mode()
                         except Exception as e:
@@ -359,7 +367,7 @@ def film_page(video_id: str):
     def refresh_clipboard():
         clipboard_container.clear()
         with clipboard_container:
-            fresh_video = load_video(video_id)
+            fresh_video = video_state.get_video()
             clips = fresh_video.get("clips", [])
             if not clips:
                 ui.label("📭 No clips for this film yet.").classes('text-sm text-gray-500')
@@ -906,7 +914,7 @@ def film_page(video_id: str):
                         # Clear the existing content first
                         metaforge_container.clear()
                         # Load fresh data from backend
-                        fresh_video = load_video(video_id)
+                        fresh_video = video_state.get_video()
                         with metaforge_container:
                             with ui.column().classes('w-full h-full mt-0'):
                                 #TODO: Add error handling for JSON editor
