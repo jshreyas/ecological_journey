@@ -279,7 +279,11 @@ def film_page(video_id: str):
 
         play_next_clip()
 
-    def add_clip_card(clip, highlight=False, autoplay=False):
+    def add_clip_card(clip, highlight=False, autoplay=False, video_data=None):
+        # Use provided video_data or fall back to global video
+        if video_data is None:
+            video_data = video
+
         with ui.card().classes(
             f"p-2 flex flex-col justify-between max-w-full overflow-hidden{' border-2 border-blue-500' if highlight else ''}"
         ):
@@ -292,7 +296,7 @@ def film_page(video_id: str):
                     ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes('text-xs')
             # --- Partners (clip in black, video in primary blue) ---
             partners = clip.get('partners', [])
-            video_partners = video.get('partners', [])
+            video_partners = video_data.get('partners', [])
             partners_html = ""
             if partners:
                 partners_html = ", ".join(f"<span style='color:black'>{p}</span>" for p in partners)
@@ -306,7 +310,7 @@ def film_page(video_id: str):
 
             # --- Labels (clip in black, video in primary blue) ---
             labels = clip.get('labels', [])
-            video_labels = video.get('labels', [])
+            video_labels = video_data.get('labels', [])
             labels_html = ""
             if labels:
                 labels_html = ", ".join(f"<span style='color:black'>{l}</span>" for l in labels)
@@ -350,17 +354,17 @@ def film_page(video_id: str):
     def refresh_clipboard():
         clipboard_container.clear()
         with clipboard_container:
-            video = load_video(video_id)
-            clips = video.get("clips", [])
+            fresh_video = load_video(video_id)
+            clips = fresh_video.get("clips", [])
             if not clips:
                 ui.label("📭 No clips for this film yet.").classes('text-sm text-gray-500')
                 return
             for clip in clips:
                 clip['video_id'] = video_id  # <-- Ensure video_id is present
                 if clip_id and clip['clip_id'] == clip_id:
-                    add_clip_card(clip, highlight=True, autoplay=True)
+                    add_clip_card(clip, highlight=True, autoplay=True, video_data=fresh_video)
                 else:
-                    add_clip_card(clip)
+                    add_clip_card(clip, video_data=fresh_video)
 
     def handle_publish(video_metadata=None):
         token = app.storage.user.get("token")
