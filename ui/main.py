@@ -64,6 +64,7 @@ def login_or_signup(mode='login'):
             interval = 15 # TODO: make this configurable
             retries = 10 # TODO: make this configurable
 
+            #TODO: remove complex retry logic as the backend is now always awake
             def attempt_login(retries_left=retries):
                 print(f"Attempting login... Retries left: {retries_left}")  # Debug print
                 try:

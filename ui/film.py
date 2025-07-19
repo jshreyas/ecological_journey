@@ -54,7 +54,8 @@ def film_page(video_id: str):
         success = save_video_metadata(state['latest_cleaned'], app.storage.user.get("token"))
         if success:
             ui.notify("✅ Filmdata published", type="positive")
-            #TODO: rerender the filmbioard, clipboard and metaforge
+            refresh_clipboard()
+            refresh_metaforge()
         else:
             ui.notify("❌ Failed to publish filmdata", type="negative")
 
@@ -738,6 +739,10 @@ def film_page(video_id: str):
                         }
 
                     async def get_data() -> None:
+                        editor = editor_container['ref']
+                        if not editor:
+                            ui.notify("❌ Editor not initialized", type='negative')
+                            return
                         raw_data = await editor.run_editor_method('get')
 
                         # Normalize input
@@ -873,6 +878,10 @@ def film_page(video_id: str):
                             'speed': 1.0
                         }
                         async def inject():
+                            editor = editor_container['ref']
+                            if not editor:
+                                ui.notify("❌ Editor not initialized", type='negative')
+                                return
                             current = await editor.run_editor_method('get')
                             content = json.loads(current.get('text')) if isinstance(current.get('text'), str) else current.get('json')
                             content.setdefault('clips', []).append(new_clip)
@@ -881,18 +890,31 @@ def film_page(video_id: str):
 
                         ui.timer(0.1, inject, once=True)
 
+                    # Create a container for the editor reference
+                    editor_container = {'ref': None}
+                    
+                    def refresh_metaforge():
+                        # Clear the existing content first
+                        metaforge_container.clear()
+                        # Load fresh data from backend
+                        fresh_video = load_video(video_id)
+                        with metaforge_container:
+                            with ui.column().classes('w-full h-full mt-0'):
+                                #TODO: Add error handling for JSON editor
+                                editor = ui.json_editor(
+                                    {'content': {'json': extract_editable_video_data(fresh_video)}},
+                                    schema=json_schema
+                                ).classes('w-full h-full mt-0 mb-0')
+                                # Store editor reference for use in other functions
+                                editor_container['ref'] = editor
+                                #Remove the default space between the editor and the top of the tab
+                                with ui.row().classes('w-full h-full justify-between items-center'):
+                                    ui.button(icon='save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
+                                    ui.button(icon='add', on_click=add_clip)
+
                     #TODO: Refactor util methods added above for this tab, simplify, cleanup, etc
-                    with ui.tab_panel(tab_bulk).classes('w-full h-full mt-0'):
-                        with ui.column().classes('w-full h-full mt-0'):
-                            #TODO: Add error handling for JSON editor
-                            editor = ui.json_editor(
-                                {'content': {'json': extract_editable_video_data(video)}},
-                                schema=json_schema
-                            ).classes('w-full h-full mt-0 mb-0')
-                            #Remove the default space between the editor and the top of the tab
-                            with ui.row().classes('w-full h-full justify-between items-center'):
-                                ui.button(icon='save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
-                                ui.button(icon='add', on_click=add_clip)
+                    with ui.tab_panel(tab_bulk).classes('w-full h-full mt-0') as metaforge_container:
+                        refresh_metaforge()
 
                     with ui.tab_panel(tab_videom):
                         with ui.column().classes('w-full gap-4 p-2'):
