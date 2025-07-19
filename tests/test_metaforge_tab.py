@@ -19,7 +19,18 @@ class TestMetaforgeTab:
             "partners": ["Alice", "Bob"],
             "labels": ["action", "drama"],
             "notes": "Test notes",
-            "clips": []
+            "clips": [
+                {
+                    "clip_id": "clip1",
+                    "title": "Test Clip 1",
+                    "start": 0,
+                    "end": 60,
+                    "speed": 1.0,
+                    "description": "Test description",
+                    "partners": ["Alice"],
+                    "labels": ["action"]
+                }
+            ]
         }
         self.video_state = VideoState(self.video_id)
         self.metaforge_tab = MetaforgeTab(self.video_state)
@@ -31,7 +42,7 @@ class TestMetaforgeTab:
         
         assert self.metaforge_tab.video_state == self.video_state
         assert self.metaforge_tab.container is None
-        assert self.metaforge_tab.json_editor is None
+        assert self.metaforge_tab.editor_container['ref'] is None
         assert self.metaforge_tab.on_publish is None
     
     @patch('ui.film_components.video_state.load_video')
@@ -80,47 +91,52 @@ class TestMetaforgeTab:
         
         assert video_data == self.mock_video_data
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.metaforge_tab.ui')
-    def test_validate_json_valid(self, mock_ui, mock_load_video):
-        """Test JSON validation with valid JSON"""
-        mock_load_video.return_value = self.mock_video_data
+    def test_seconds_to_timestamp(self):
+        """Test seconds to timestamp conversion"""
+        # Test seconds
+        assert self.metaforge_tab._seconds_to_timestamp(30) == "0:30"
         
-        # Mock the json_editor
-        self.metaforge_tab.json_editor = Mock()
-        self.metaforge_tab.json_editor.value = '{"test": "value"}'
+        # Test minutes and seconds
+        assert self.metaforge_tab._seconds_to_timestamp(90) == "1:30"
         
-        self.metaforge_tab._validate_json()
-        
-        # Should not raise any exceptions
-        assert True
+        # Test zero
+        assert self.metaforge_tab._seconds_to_timestamp(0) == "0:00"
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.metaforge_tab.ui')
-    def test_validate_json_invalid(self, mock_ui, mock_load_video):
-        """Test JSON validation with invalid JSON"""
-        mock_load_video.return_value = self.mock_video_data
+    def test_parse_timestamp(self):
+        """Test timestamp parsing"""
+        # Test mm:ss format
+        assert self.metaforge_tab._parse_timestamp("1:30") == 90
         
-        # Mock the json_editor
-        self.metaforge_tab.json_editor = Mock()
-        self.metaforge_tab.json_editor.value = '{"test": "value"'  # Invalid JSON
+        # Test hh:mm:ss format
+        assert self.metaforge_tab._parse_timestamp("1:01:01") == 3661
         
-        self.metaforge_tab._validate_json()
+        # Test seconds only
+        assert self.metaforge_tab._parse_timestamp("30") == 30
         
-        # Should not raise any exceptions
-        assert True
+        # Test numeric input
+        assert self.metaforge_tab._parse_timestamp(90) == 90
     
-    def test_generate_diff(self):
-        """Test diff generation"""
+    def test_dict_diff(self):
+        """Test dictionary diff generation"""
         original_data = {"key1": "value1", "key2": "value2"}
         edited_data = {"key1": "value1_modified", "key2": "value2", "key3": "value3"}
         
-        diff = self.metaforge_tab._generate_diff(original_data, edited_data)
+        diff = self.metaforge_tab._dict_diff(original_data, edited_data)
+        
+        # Should return a list of differences
+        assert isinstance(diff, list)
+        assert len(diff) > 0
+    
+    def test_summarize_dict_diff(self):
+        """Test diff summarization"""
+        original_data = {"key1": "value1", "key2": "value2"}
+        edited_data = {"key1": "value1_modified", "key2": "value2", "key3": "value3"}
+        
+        summary = self.metaforge_tab._summarize_dict_diff(original_data, edited_data)
         
         # Should return a string with diff information
-        assert isinstance(diff, str)
-        assert "Modified" in diff
-        assert "Added" in diff
+        assert isinstance(summary, str)
+        assert "🔄" in summary or "➕" in summary  # Using emoji indicators
     
     @patch('ui.film_components.video_state.load_video')
     @patch('ui.film_components.metaforge_tab.ui')
@@ -130,15 +146,13 @@ class TestMetaforgeTab:
         mock_load_video.return_value = self.mock_video_data
         mock_app.storage.user.get.return_value = "test_token"
         
-        # Mock the json_editor
-        self.metaforge_tab.json_editor = Mock()
-        self.metaforge_tab.json_editor.value = '{"title": "Test"}'
+        test_metadata = {"title": "Test", "partners": ["Alice"]}
         
         # Mock the save_video_metadata function
         with patch('ui.film_components.metaforge_tab.save_video_metadata') as mock_save:
             mock_save.return_value = True
             
-            self.metaforge_tab._handle_publish()
+            self.metaforge_tab.handle_publish(test_metadata)
             
             # Should call save_video_metadata
             mock_save.assert_called_once()
@@ -158,53 +172,46 @@ class TestMetaforgeTab:
         # Should call the callback instead of default behavior
         mock_callback.assert_called_once_with(test_metadata)
     
-    @patch('ui.film_components.video_state.load_video')
-    def test_add_clip(self, mock_load_video):
+    @patch('ui.film_components.metaforge_tab.ui')
+    def test_add_clip(self, mock_ui):
         """Test adding a clip to the video"""
-        mock_load_video.return_value = self.mock_video_data
+        # Mock UI timer
+        mock_timer = Mock()
+        mock_ui.timer = mock_timer
         
-        new_clip = {
-            "clip_id": "new_clip",
-            "title": "New Clip",
-            "start": 0,
-            "end": 30,
-            "speed": 1.0,
-            "description": "New clip description",
-            "labels": ["comedy"],
-            "partners": ["Charlie"]
-        }
+        # Mock the editor container
+        self.metaforge_tab.editor_container['ref'] = Mock()
+        self.metaforge_tab.editor_container['ref'].run_editor_method = Mock()
         
-        # Mock UI components
-        with patch('ui.film_components.metaforge_tab.ui') as mock_ui:
-            mock_notify = Mock()
-            mock_ui.notify = mock_notify
-            
-            self.metaforge_tab._add_clip(new_clip)
-            
-            # Should show notification
-            mock_notify.assert_called_once()
+        # The _add_clip method doesn't take parameters in the new implementation
+        # It generates a new clip internally
+        self.metaforge_tab._add_clip()
+        
+        # Should call timer to inject the clip
+        mock_timer.assert_called_once()
     
-    @patch('ui.film_components.video_state.load_video')
-    def test_remove_clip(self, mock_load_video):
+    @patch('ui.film_components.metaforge_tab.ui')
+    def test_remove_clip(self, mock_ui):
         """Test removing a clip from the video"""
-        mock_load_video.return_value = self.mock_video_data
+        mock_notify = Mock()
+        mock_ui.notify = mock_notify
         
-        clip_id = "clip1"
+        # Mock the video data to have clips
+        self.metaforge_tab.video_state._video_data = self.mock_video_data
         
-        # Mock UI components
-        with patch('ui.film_components.metaforge_tab.ui') as mock_ui:
-            mock_notify = Mock()
-            mock_ui.notify = mock_notify
-            
-            self.metaforge_tab._remove_clip(clip_id)
-            
-            # Should show notification
-            mock_notify.assert_called_once()
+        self.metaforge_tab._remove_clip("clip1")
+        
+        # Should show notification
+        mock_notify.assert_called_once()
     
-    @patch('ui.film_components.video_state.load_video')
-    def test_update_clip(self, mock_load_video):
+    @patch('ui.film_components.metaforge_tab.ui')
+    def test_update_clip(self, mock_ui):
         """Test updating a clip in the video"""
-        mock_load_video.return_value = self.mock_video_data
+        mock_notify = Mock()
+        mock_ui.notify = mock_notify
+        
+        # Mock the video data to have clips
+        self.metaforge_tab.video_state._video_data = self.mock_video_data
         
         updated_clip = {
             "clip_id": "clip1",
@@ -217,12 +224,7 @@ class TestMetaforgeTab:
             "partners": ["Alice", "David"]
         }
         
-        # Mock UI components
-        with patch('ui.film_components.metaforge_tab.ui') as mock_ui:
-            mock_notify = Mock()
-            mock_ui.notify = mock_notify
-            
-            self.metaforge_tab._update_clip(updated_clip)
-            
-            # Should show notification
-            mock_notify.assert_called_once() 
+        self.metaforge_tab._update_clip(updated_clip)
+        
+        # Should show notification
+        mock_notify.assert_called_once() 

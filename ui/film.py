@@ -248,7 +248,7 @@ def film_page(video_id: str):
     clipper_tab = ClipperTab(video_state)
     clipboard_tab = ClipboardTab(
         video_state,
-        on_edit_clip=clipper_tab.on_edit_clip,
+        on_edit_clip=on_edit_clip,
         on_play_clip=player_controls_tab.play_clip,
         on_share_clip=share_dialog_tab.share_clip
     )
@@ -280,6 +280,22 @@ def film_page(video_id: str):
                     
                     with ui.tab_panel(tab_clipmaker) as clipper_container:
                         clipper_tab.create_tab(clipper_container)
+                        # Add clip form container for the clipper tab
+                        clip_form_container['container'] = ui.column().classes('w-full gap-2')
+                        clip_id = str(uuid.uuid4())[:8]
+                        funny_title = generate_funny_title()
+                        show_clip_form(
+                            clip_form_state.get('clip') or {
+                                'clip_id': clip_id,
+                                'title': funny_title,
+                                'start': 0,
+                                'end': 0,
+                                'description': '',
+                                'labels': [],
+                                'partners': [],
+                            },
+                            is_new=clip_form_state.get('is_new', True)
+                        )
                     
                     with ui.tab_panel(tab_bulk).classes('w-full h-full mt-0') as metaforge_container:
                         metaforge_tab.create_tab(metaforge_container)

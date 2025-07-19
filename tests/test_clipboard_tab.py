@@ -137,18 +137,4 @@ class TestClipboardTab:
         
         self.clipboard_tab._handle_share_clip(mock_clip)
         
-        mock_callback.assert_called_once_with(mock_clip)
-    
-    def test_format_time(self):
-        """Test time formatting"""
-        # Test seconds
-        assert self.clipboard_tab._format_time(30) == "00:30"
-        
-        # Test minutes and seconds
-        assert self.clipboard_tab._format_time(90) == "01:30"
-        
-        # Test hours, minutes and seconds
-        assert self.clipboard_tab._format_time(3661) == "01:01:01"
-        
-        # Test zero
-        assert self.clipboard_tab._format_time(0) == "00:00" 
+        mock_callback.assert_called_once_with(mock_clip) 

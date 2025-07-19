@@ -3,6 +3,7 @@ ClipboardTab - Component for displaying and managing clips
 Handles the clipboard functionality for viewing and managing clips
 """
 from nicegui import ui
+from utils.utils import format_time
 from .video_state import VideoState
 from typing import Callable, Optional
 
@@ -43,55 +44,73 @@ class ClipboardTab:
         
         clips = video.get("clips", [])
         if not clips:
-            ui.label("No clips available").classes('text-gray-500 text-center p-4')
+            ui.label("📭 No clips for this film yet.").classes('text-sm text-gray-500')
             return
         
-        # Display clips in a grid
+        # Display clips using the original layout
         for clip in clips:
-            self._add_clip_card(clip, highlight=(clip.get('clip_id') == clip_id))
+            clip['video_id'] = self.video_state.video_id  # Ensure video_id is present
+            if clip_id and clip['clip_id'] == clip_id:
+                self._add_clip_card(clip, highlight=True, autoplay=True, video_data=video)
+            else:
+                self._add_clip_card(clip, video_data=video)
     
-    def _add_clip_card(self, clip, highlight=False):
-        """Add a clip card to the clipboard"""
-        card_classes = 'w-full p-4 mb-2 cursor-pointer'
-        if highlight:
-            card_classes += ' bg-blue-50 border-2 border-blue-300'
-        
-        with ui.card().classes(card_classes):
-            # Header with title and actions
-            with ui.row().classes('justify-between items-center'):
-                ui.label(clip.get('title', 'Untitled')).classes('font-semibold text-lg')
-                with ui.row().classes('gap-1'):
-                    if self.on_edit_clip:
-                        ui.button(icon='edit', on_click=lambda e, c=clip: self._handle_edit_clip(c)).props('round dense')
-                    if self.on_play_clip:
-                        ui.button(icon='play', on_click=lambda e, c=clip: self._handle_play_clip(c)).props('round dense')
-                    if self.on_share_clip:
-                        ui.button(icon='share', on_click=lambda e, c=clip: self._handle_share_clip(c)).props('round dense')
+    def _add_clip_card(self, clip, highlight=False, autoplay=False, video_data=None):
+        """Add a clip card to the clipboard using the original layout"""
+        # Use provided video_data or fall back to global video
+        if video_data is None:
+            video_data = self.video_state.get_video()
+
+        with ui.card().classes(
+            f"p-2 flex flex-col justify-between max-w-full overflow-hidden{' border-2 border-blue-500' if highlight else ''}"
+        ):
+            with ui.column().classes('w-full gap-2'):
+                ui.label(clip["title"]).classes('font-medium text-sm truncate')
+                with ui.row().classes('w-full gap-2 justify-between'):
+                    start_time = format_time(clip.get('start', 0))
+                    end_time = format_time(clip.get('end', 0))
+                    ui.label(f"⏱ {start_time} - {end_time}").classes('text-xs')
+                    ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes('text-xs')
             
-            # Clip details
-            start_time = clip.get('start', 0)
-            end_time = clip.get('end', 0)
-            duration = end_time - start_time
-            
-            with ui.row().classes('text-sm text-gray-600 mb-2'):
-                ui.label(f"⏱️ {self._format_time(start_time)} - {self._format_time(end_time)}")
-                ui.label(f"({self._format_time(duration)})")
-                ui.label(f"🎬 {clip.get('speed', 1.0)}x")
-            
-            # Description
-            description = clip.get('description', '')
-            if description:
-                ui.label(description).classes('text-sm text-gray-700 mb-2')
-            
-            # Partners and labels
+            # --- Partners (clip in black, video in primary blue) ---
             partners = clip.get('partners', [])
+            video_partners = video_data.get('partners', [])
+            partners_html = ""
+            if partners:
+                partners_html = ", ".join(f"<span style='color:black'>{p}</span>" for p in partners)
+            if video_partners:
+                if partners_html:
+                    partners_html += ", "
+                partners_html += ", ".join(f"<span style='color:var(--q-primary)'>{p}</span>" for p in video_partners)
+            if not partners_html:
+                partners_html = "No partners"
+            ui.html(f"🎭 {partners_html}").classes('text-xs')
+
+            # --- Labels (clip in black, video in primary blue) ---
             labels = clip.get('labels', [])
-            if partners or labels:
-                with ui.row().classes('gap-1 flex-wrap'):
-                    for partner in partners:
-                        ui.chip(f"@{partner}", icon='person', color='secondary', )
-                    for label in labels:
-                        ui.chip(f"#{label}", icon='label', color='primary', )
+            video_labels = video_data.get('labels', [])
+            labels_html = ""
+            if labels:
+                labels_html = ", ".join(f"<span style='color:black'>{l}</span>" for l in labels)
+            if video_labels:
+                if labels_html:
+                    labels_html += ", "
+                labels_html += ", ".join(f"<span style='color:var(--q-primary)'>{l}</span>" for l in video_labels)
+            if not labels_html:
+                labels_html = "No labels"
+            ui.html(f"🏷️ {labels_html}").classes('text-xs')
+
+            with ui.button_group().classes('w-full flex-wrap shadow-none border-none items-center max-w-full justify-center gap-2'):
+                for icon, color, tooltip, handler in [
+                    ('play_arrow', 'primary', 'Play', lambda: self._handle_play_clip(clip)),
+                    ('edit', 'secondary', 'Edit', lambda: self._handle_edit_clip(clip)),
+                    ('share', 'accent', 'Share', lambda: self._handle_share_clip(clip)),
+                ]:
+                    ui.button(icon=icon, on_click=handler).props(f'flat dense color={color}').tooltip(tooltip).classes('flex-1 min-w-0')
+            
+            # Optionally, auto-play the clip if requested
+            if autoplay:
+                self._handle_play_clip(clip)
     
     def _handle_edit_clip(self, clip):
         """Handle edit clip action"""
@@ -107,14 +126,6 @@ class ClipboardTab:
         """Handle share clip action"""
         if self.on_share_clip:
             self.on_share_clip(clip)
-    
-    def _format_time(self, seconds):
-        """Format time in seconds to HH:MM:SS"""
-        seconds = int(seconds)
-        h = seconds // 3600
-        m = (seconds % 3600) // 60
-        s = seconds % 60
-        return f"{h:02}:{m:02}:{s:02}" if h else f"{m:02}:{s:02}"
     
     def get_video_data(self):
         """Get the current video data"""
