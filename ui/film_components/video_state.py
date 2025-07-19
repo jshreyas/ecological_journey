@@ -1,37 +1,37 @@
 """
-VideoState - Centralized state management for video data
-Handles loading, caching, and notifying components of data changes
+VideoState class for centralized state management of video data
 """
-from typing import Callable, Optional, Dict, Any
+from typing import Dict, Any, Optional, List, Callable
 from utils.utils_api import load_video
 
 
 class VideoState:
-    """Centralized state management for video data"""
+    """Centralized state management for video data and refresh callbacks"""
     
     def __init__(self, video_id: str):
         self.video_id = video_id
         self._video_data: Optional[Dict[str, Any]] = None
-        self._refresh_callbacks: list[Callable] = []
+        self._refresh_callbacks: List[Callable] = []
     
-    def get_video(self) -> Dict[str, Any]:
-        """Get current video data, loading if necessary"""
+    def get_video(self) -> Optional[Dict[str, Any]]:
+        """Get video data, loading from API if not cached"""
         if self._video_data is None:
             self._video_data = load_video(self.video_id)
         return self._video_data
     
-    def refresh(self) -> None:
-        """Refresh video data and notify all callbacks"""
+    def refresh(self):
+        """Clear cache and notify all registered callbacks"""
         self._video_data = load_video(self.video_id)
         for callback in self._refresh_callbacks:
             callback()
     
-    def add_refresh_callback(self, callback: Callable) -> None:
+    def add_refresh_callback(self, callback: Callable):
         """Register a callback to be called when video data is refreshed"""
-        self._refresh_callbacks.append(callback)
+        if callback not in self._refresh_callbacks:
+            self._refresh_callbacks.append(callback)
     
-    def remove_refresh_callback(self, callback: Callable) -> None:
-        """Remove a registered callback"""
+    def remove_refresh_callback(self, callback: Callable):
+        """Remove a registered refresh callback"""
         if callback in self._refresh_callbacks:
             self._refresh_callbacks.remove(callback)
     
