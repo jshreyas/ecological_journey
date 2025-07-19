@@ -54,7 +54,13 @@ def film_page(video_id: str):
         success = save_video_metadata(state['latest_cleaned'], app.storage.user.get("token"))
         if success:
             ui.notify("✅ Filmdata published", type="positive")
-            #TODO: rerender the filmbioard, clipboard and metaforge
+            # Clear the state to prevent cumulative delta tracking
+            state['latest_cleaned'] = None
+            # Update the global video variable with fresh data
+            global video
+            video = load_video(video_id)
+            refresh_clipboard()
+            refresh_metaforge()
         else:
             ui.notify("❌ Failed to publish filmdata", type="negative")
 
@@ -278,7 +284,11 @@ def film_page(video_id: str):
 
         play_next_clip()
 
-    def add_clip_card(clip, highlight=False, autoplay=False):
+    def add_clip_card(clip, highlight=False, autoplay=False, video_data=None):
+        # Use provided video_data or fall back to global video
+        if video_data is None:
+            video_data = video
+
         with ui.card().classes(
             f"p-2 flex flex-col justify-between max-w-full overflow-hidden{' border-2 border-blue-500' if highlight else ''}"
         ):
@@ -291,7 +301,7 @@ def film_page(video_id: str):
                     ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes('text-xs')
             # --- Partners (clip in black, video in primary blue) ---
             partners = clip.get('partners', [])
-            video_partners = video.get('partners', [])
+            video_partners = video_data.get('partners', [])
             partners_html = ""
             if partners:
                 partners_html = ", ".join(f"<span style='color:black'>{p}</span>" for p in partners)
@@ -305,7 +315,7 @@ def film_page(video_id: str):
 
             # --- Labels (clip in black, video in primary blue) ---
             labels = clip.get('labels', [])
-            video_labels = video.get('labels', [])
+            video_labels = video_data.get('labels', [])
             labels_html = ""
             if labels:
                 labels_html = ", ".join(f"<span style='color:black'>{l}</span>" for l in labels)
@@ -349,17 +359,17 @@ def film_page(video_id: str):
     def refresh_clipboard():
         clipboard_container.clear()
         with clipboard_container:
-            video = load_video(video_id)
-            clips = video.get("clips", [])
+            fresh_video = load_video(video_id)
+            clips = fresh_video.get("clips", [])
             if not clips:
                 ui.label("📭 No clips for this film yet.").classes('text-sm text-gray-500')
                 return
             for clip in clips:
                 clip['video_id'] = video_id  # <-- Ensure video_id is present
                 if clip_id and clip['clip_id'] == clip_id:
-                    add_clip_card(clip, highlight=True, autoplay=True)
+                    add_clip_card(clip, highlight=True, autoplay=True, video_data=fresh_video)
                 else:
-                    add_clip_card(clip)
+                    add_clip_card(clip, video_data=fresh_video)
 
     def handle_publish(video_metadata=None):
         token = app.storage.user.get("token")
@@ -738,6 +748,10 @@ def film_page(video_id: str):
                         }
 
                     async def get_data() -> None:
+                        editor = editor_container['ref']
+                        if not editor:
+                            ui.notify("❌ Editor not initialized", type='negative')
+                            return
                         raw_data = await editor.run_editor_method('get')
 
                         # Normalize input
@@ -873,6 +887,10 @@ def film_page(video_id: str):
                             'speed': 1.0
                         }
                         async def inject():
+                            editor = editor_container['ref']
+                            if not editor:
+                                ui.notify("❌ Editor not initialized", type='negative')
+                                return
                             current = await editor.run_editor_method('get')
                             content = json.loads(current.get('text')) if isinstance(current.get('text'), str) else current.get('json')
                             content.setdefault('clips', []).append(new_clip)
@@ -881,18 +899,31 @@ def film_page(video_id: str):
 
                         ui.timer(0.1, inject, once=True)
 
+                    # Create a container for the editor reference
+                    editor_container = {'ref': None}
+                    
+                    def refresh_metaforge():
+                        # Clear the existing content first
+                        metaforge_container.clear()
+                        # Load fresh data from backend
+                        fresh_video = load_video(video_id)
+                        with metaforge_container:
+                            with ui.column().classes('w-full h-full mt-0'):
+                                #TODO: Add error handling for JSON editor
+                                editor = ui.json_editor(
+                                    {'content': {'json': extract_editable_video_data(fresh_video)}},
+                                    schema=json_schema
+                                ).classes('w-full h-full mt-0 mb-0')
+                                # Store editor reference for use in other functions
+                                editor_container['ref'] = editor
+                                #Remove the default space between the editor and the top of the tab
+                                with ui.row().classes('w-full h-full justify-between items-center'):
+                                    ui.button(icon='save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
+                                    ui.button(icon='add', on_click=add_clip)
+
                     #TODO: Refactor util methods added above for this tab, simplify, cleanup, etc
-                    with ui.tab_panel(tab_bulk).classes('w-full h-full mt-0'):
-                        with ui.column().classes('w-full h-full mt-0'):
-                            #TODO: Add error handling for JSON editor
-                            editor = ui.json_editor(
-                                {'content': {'json': extract_editable_video_data(video)}},
-                                schema=json_schema
-                            ).classes('w-full h-full mt-0 mb-0')
-                            #Remove the default space between the editor and the top of the tab
-                            with ui.row().classes('w-full h-full justify-between items-center'):
-                                ui.button(icon='save', on_click=get_data) #TODO: Render the clipboard and jsoneditor after saving
-                                ui.button(icon='add', on_click=add_clip)
+                    with ui.tab_panel(tab_bulk).classes('w-full h-full mt-0') as metaforge_container:
+                        refresh_metaforge()
 
                     with ui.tab_panel(tab_videom):
                         with ui.column().classes('w-full gap-4 p-2'):
