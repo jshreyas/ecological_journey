@@ -214,46 +214,26 @@ def film_page(video_id: str):
                     ui.button(icon='save', on_click=save_clip).props('color=primary')
                     ui.button(icon='close', on_click=reset_to_add_mode).props('color=secondary')
 
-    def on_edit_clip(clip):
-        clip_form_state['clip'] = clip
-        clip_form_state['is_new'] = False
-        tabs.value = tab_clipmaker  # Switch to Clip Maker tab
-        show_clip_form(clip, is_new=False)
-
-    def handle_publish(video_metadata=None):
-        token = app.storage.user.get("token")
-        if not token:
-            caught_john_doe()
-            return
-        try:
-            video = video_state.get_video()
-            # Merge with required fields from the loaded video
-            for key in ["video_id", "youtube_url", "title", "date", "duration_seconds"]:
-                video_metadata[key] = video.get(key)
-            # 🛑 Preserve existing clips!
-            video_metadata["clips"] = video.get("clips", [])
-            success = save_video_metadata(video_metadata, token)
-            if success:
-                ui.notify("✅ Filmdata published", type="positive")
-            else:
-                ui.notify("❌ Failed to publish filmdata", type="negative")
-        except Exception as e:
-            ui.notify(f"❌ Error: {e}", type="negative")
-
     # Initialize components
     navigation_tab = NavigationTab(video_state)
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
     filmdata_tab = FilmdataTab(video_state)
     clipper_tab = ClipperTab(video_state)
+    metaforge_tab = MetaforgeTab(video_state)
+    filmboard_tab = FilmboardTab(video_state)
+
+    def on_edit_clip(clip):
+        tabs.value = tab_clipmaker  # Switch to Clip Maker tab
+        # Use a short timer to ensure the tab is visible before loading the clip
+        ui.timer(0.05, lambda: clipper_tab.edit_clip(clip), once=True)
+
     clipboard_tab = ClipboardTab(
         video_state,
         on_edit_clip=on_edit_clip,
         on_play_clip=player_controls_tab.play_clip,
         on_share_clip=share_dialog_tab.share_clip
     )
-    metaforge_tab = MetaforgeTab(video_state)
-    filmboard_tab = FilmboardTab(video_state)
 
     # Inline render_film_editor functionality
     with ui.column().classes('w-full'):
@@ -280,22 +260,6 @@ def film_page(video_id: str):
                     
                     with ui.tab_panel(tab_clipmaker) as clipper_container:
                         clipper_tab.create_tab(clipper_container)
-                        # Add clip form container for the clipper tab
-                        clip_form_container['container'] = ui.column().classes('w-full gap-2')
-                        clip_id = str(uuid.uuid4())[:8]
-                        funny_title = generate_funny_title()
-                        show_clip_form(
-                            clip_form_state.get('clip') or {
-                                'clip_id': clip_id,
-                                'title': funny_title,
-                                'start': 0,
-                                'end': 0,
-                                'description': '',
-                                'labels': [],
-                                'partners': [],
-                            },
-                            is_new=clip_form_state.get('is_new', True)
-                        )
                     
                     with ui.tab_panel(tab_bulk).classes('w-full h-full mt-0') as metaforge_container:
                         metaforge_tab.create_tab(metaforge_container)
