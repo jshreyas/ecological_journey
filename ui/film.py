@@ -54,6 +54,11 @@ def film_page(video_id: str):
         success = save_video_metadata(state['latest_cleaned'], app.storage.user.get("token"))
         if success:
             ui.notify("✅ Filmdata published", type="positive")
+            # Clear the state to prevent cumulative delta tracking
+            state['latest_cleaned'] = None
+            # Update the global video variable with fresh data
+            global video
+            video = load_video(video_id)
             refresh_clipboard()
             refresh_metaforge()
         else:
