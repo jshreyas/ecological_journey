@@ -64,7 +64,7 @@ class FilmboardTab:
             
             with ui.card().classes(
                 'cursor-pointer flex flex-row flex-col p-2 hover:shadow-xl transition-shadow duration-200 border-gray-600'
-            ).on('click', lambda e, vid=v['video_id']: self._handle_video_click(vid, e)):
+            ).on('click', lambda e, vid=v['video_id']: self._handle_video_click(vid)):
                 with ui.row().classes('w-full gap-2 justify-between'):
                     ui.label(v["title"]).tooltip(v["title"]).classes('truncate font-bold text-sm sm:text-base')
                     ui.label(f"⏱ {v['duration_human']}").classes('text-xs')
@@ -74,12 +74,12 @@ class FilmboardTab:
                     ui.label(f"📂 {v['playlist_name']}").classes('text-xs text-primary')
                     ui.label(f"🎬 {len(v.get('clips', 0))}").classes('text-xs')
     
-    def _handle_video_click(self, video_id, event):
+    def _handle_video_click(self, video_id):
         """Handle video click"""
         if self.on_video_select:
-            self.on_video_select(video_id, event)
+            self.on_video_select(video_id)
         else:
-            navigate_to_film(video_id, event)
+            navigate_to_film(video_id)
     
     def get_same_day_videos_count(self):
         """Get count of videos from the same day"""

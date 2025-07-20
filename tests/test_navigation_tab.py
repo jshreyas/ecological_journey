@@ -160,10 +160,18 @@ class TestNavigationTab:
     def test_handle_video_click(self):
         """Test handling video click"""
         mock_video_id = "test_video_456"
-        mock_event = Mock()
         mock_callback = Mock()
         self.navigation_tab.on_video_select = mock_callback
         
-        self.navigation_tab._handle_video_click(mock_video_id, mock_event)
+        self.navigation_tab._handle_video_click(mock_video_id)
         
-        mock_callback.assert_called_once_with(mock_video_id, mock_event) 
+        mock_callback.assert_called_once_with(mock_video_id)
+    
+    @patch('ui.pages.film_components.navigation_tab.navigate_to_film')
+    def test_handle_video_click_without_callback(self, mock_navigate):
+        """Test handling video click without callback (should navigate)"""
+        mock_video_id = "test_video_456"
+        
+        self.navigation_tab._handle_video_click(mock_video_id)
+        
+        mock_navigate.assert_called_once_with(mock_video_id) 
