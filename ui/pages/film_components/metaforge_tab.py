@@ -6,7 +6,7 @@ from nicegui import ui, app
 from utils.utils_api import save_video_metadata
 from .video_state import VideoState
 from typing import Callable, Optional
-from dialog_puns import generate_funny_title
+from utils.dialog_puns import generate_funny_title
 import json
 import uuid
 

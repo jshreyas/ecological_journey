@@ -3,7 +3,7 @@ Unit tests for VideoState component
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from ui.film_components.video_state import VideoState
+from ui.pages.film_components.video_state import VideoState
 
 
 class TestVideoState:
@@ -20,7 +20,7 @@ class TestVideoState:
             "clips": []
         }
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_init(self, mock_load_video):
         """Test VideoState initialization"""
         mock_load_video.return_value = self.mock_video_data
@@ -31,7 +31,7 @@ class TestVideoState:
         assert video_state._refresh_callbacks == []
         assert video_state._video_data is None  # Should start as None
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_video(self, mock_load_video):
         """Test getting video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -42,7 +42,7 @@ class TestVideoState:
         assert video_data == self.mock_video_data
         mock_load_video.assert_called_once_with(self.video_id)
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_video_cached(self, mock_load_video):
         """Test getting video data from cache"""
         mock_load_video.return_value = self.mock_video_data
@@ -58,7 +58,7 @@ class TestVideoState:
         # Should only call load_video once due to caching
         mock_load_video.assert_called_once_with(self.video_id)
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_refresh(self, mock_load_video):
         """Test refreshing video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -77,7 +77,7 @@ class TestVideoState:
         # Should call the callback
         mock_callback.assert_called_once()
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_add_refresh_callback(self, mock_load_video):
         """Test adding refresh callbacks"""
         mock_load_video.return_value = self.mock_video_data
@@ -94,7 +94,7 @@ class TestVideoState:
         assert mock_callback1 in video_state._refresh_callbacks
         assert mock_callback2 in video_state._refresh_callbacks
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_remove_refresh_callback(self, mock_load_video):
         """Test removing refresh callbacks"""
         mock_load_video.return_value = self.mock_video_data
@@ -111,7 +111,7 @@ class TestVideoState:
         assert len(video_state._refresh_callbacks) == 0
         assert mock_callback not in video_state._refresh_callbacks
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_refresh_with_multiple_callbacks(self, mock_load_video):
         """Test refresh with multiple callbacks"""
         mock_load_video.return_value = self.mock_video_data
@@ -133,7 +133,7 @@ class TestVideoState:
         mock_callback2.assert_called_once()
         mock_callback3.assert_called_once()
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_video_no_data(self, mock_load_video):
         """Test getting video when no data is available"""
         mock_load_video.return_value = None
@@ -143,7 +143,7 @@ class TestVideoState:
         
         assert video_data is None
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_refresh_clears_cache(self, mock_load_video):
         """Test that refresh clears the cache"""
         mock_load_video.return_value = self.mock_video_data

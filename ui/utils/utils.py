@@ -3,8 +3,14 @@ from nicegui import ui
 import requests
 from utils.utils_notion import generate_tree
 from datetime import datetime
-from cache import cache_get, cache_set
+from utils.cache import cache_get, cache_set
 
+
+def navigate_to_film(video_id, clip_id=None):
+    url = f'/film/{video_id}'
+    if clip_id:
+        url += f'?clip={clip_id}'
+    ui.navigate.to(url)
 
 #TODO: Persist the notion tree in the mongodb
 def get_notion_tree(recache: bool = False):

@@ -4,10 +4,9 @@ Handles the filmboard functionality for showing related videos
 """
 from nicegui import ui
 from utils.utils_api import load_videos
-from films import navigate_to_film
+from pages.films import navigate_to_film
 from .video_state import VideoState
-from typing import Callable, Optional
-from datetime import datetime
+from typing import Callable
 
 
 class FilmboardTab:

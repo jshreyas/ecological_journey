@@ -1,6 +1,6 @@
 import os
 import requests
-from ui.fetch_videos import fetch_playlist_items
+from ui.utils.fetch_videos import fetch_playlist_items
 from dotenv import load_dotenv
 
 

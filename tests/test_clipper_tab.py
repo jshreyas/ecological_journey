@@ -3,8 +3,8 @@ Unit tests for ClipperTab component
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from ui.film_components.clipper_tab import ClipperTab
-from ui.film_components.video_state import VideoState
+from ui.pages.film_components.clipper_tab import ClipperTab
+from ui.pages.film_components.video_state import VideoState
 
 
 class TestClipperTab:
@@ -35,7 +35,7 @@ class TestClipperTab:
         self.video_state = VideoState(self.video_id)
         self.clipper_tab = ClipperTab(self.video_state)
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_init(self, mock_load_video):
         """Test ClipperTab initialization"""
         mock_load_video.return_value = self.mock_video_data
@@ -44,8 +44,8 @@ class TestClipperTab:
         assert self.clipper_tab.container is None
         assert self.clipper_tab.on_edit_clip is None
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.clipper_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.clipper_tab.ui')
     def test_create_tab(self, mock_ui, mock_load_video):
         """Test creating the clipper tab"""
         mock_load_video.return_value = self.mock_video_data
@@ -57,8 +57,8 @@ class TestClipperTab:
         
         assert self.clipper_tab.container == mock_container
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.clipper_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.clipper_tab.ui')
     def test_refresh_with_container(self, mock_ui, mock_load_video):
         """Test refreshing the clipper tab with container"""
         mock_load_video.return_value = self.mock_video_data
@@ -72,8 +72,8 @@ class TestClipperTab:
         # Should clear and recreate the UI
         mock_container.clear.assert_called_once()
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.clipper_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.clipper_tab.ui')
     def test_refresh_without_container(self, mock_ui, mock_load_video):
         """Test refreshing the clipper tab without container"""
         mock_load_video.return_value = self.mock_video_data
@@ -81,7 +81,7 @@ class TestClipperTab:
         # Should not raise any exceptions
         self.clipper_tab.refresh()
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_video_data(self, mock_load_video):
         """Test getting video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -90,7 +90,7 @@ class TestClipperTab:
         
         assert video_data == self.mock_video_data
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_clips(self, mock_load_video):
         """Test getting clips from video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -99,7 +99,7 @@ class TestClipperTab:
         
         assert clips == self.mock_video_data["clips"]
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_clips_no_video(self, mock_load_video):
         """Test getting clips when no video data is available"""
         mock_load_video.return_value = None
@@ -115,7 +115,7 @@ class TestClipperTab:
         # Should not raise any exceptions
         self.clipper_tab._play_clip(mock_clip)
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_format_time(self, mock_load_video):
         """Test time formatting"""
         mock_load_video.return_value = self.mock_video_data
@@ -127,7 +127,7 @@ class TestClipperTab:
         assert self.clipper_tab._format_time(90) == "01:30"
         assert self.clipper_tab._format_time(3600) == "01:00:00"
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_create_chips_input(self, mock_load_video):
         """Test creating chips input"""
         mock_load_video.return_value = self.mock_video_data

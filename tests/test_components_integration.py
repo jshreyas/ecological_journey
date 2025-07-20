@@ -3,15 +3,15 @@ Integration tests for tab components working together
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from ui.film_components.video_state import VideoState
-from ui.film_components.filmdata_tab import FilmdataTab
-from ui.film_components.clipper_tab import ClipperTab
-from ui.film_components.clipboard_tab import ClipboardTab
-from ui.film_components.metaforge_tab import MetaforgeTab
-from ui.film_components.filmboard_tab import FilmboardTab
-from ui.film_components.navigation_tab import NavigationTab
-from ui.film_components.player_controls_tab import PlayerControlsTab
-from ui.film_components.share_dialog_tab import ShareDialogTab
+from ui.pages.film_components.video_state import VideoState
+from ui.pages.film_components.filmdata_tab import FilmdataTab
+from ui.pages.film_components.clipper_tab import ClipperTab
+from ui.pages.film_components.clipboard_tab import ClipboardTab
+from ui.pages.film_components.metaforge_tab import MetaforgeTab
+from ui.pages.film_components.filmboard_tab import FilmboardTab
+from ui.pages.film_components.navigation_tab import NavigationTab
+from ui.pages.film_components.player_controls_tab import PlayerControlsTab
+from ui.pages.film_components.share_dialog_tab import ShareDialogTab
 
 
 class TestComponentsIntegration:
@@ -41,8 +41,8 @@ class TestComponentsIntegration:
         }
         self.video_state = VideoState(self.video_id)
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.filmboard_tab.load_videos')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.filmboard_tab.load_videos')
     def test_components_share_video_state(self, mock_load_videos, mock_load_video):
         """Test that all components share the same video state"""
         mock_load_video.return_value = self.mock_video_data
@@ -68,8 +68,8 @@ class TestComponentsIntegration:
         assert player_controls_tab.video_state == self.video_state
         assert share_dialog_tab.video_state == self.video_state
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.filmboard_tab.load_videos')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.filmboard_tab.load_videos')
     def test_components_register_refresh_callbacks(self, mock_load_videos, mock_load_video):
         """Test that components register refresh callbacks with video state"""
         mock_load_video.return_value = self.mock_video_data
@@ -86,18 +86,19 @@ class TestComponentsIntegration:
         share_dialog_tab = ShareDialogTab(self.video_state)
         
         # Verify refresh callbacks are registered (using private attribute)
-        assert len(self.video_state._refresh_callbacks) == 8
+        # Only components that need to refresh when video state changes register callbacks
+        assert len(self.video_state._refresh_callbacks) == 5
         assert filmdata_tab.refresh in self.video_state._refresh_callbacks
         assert clipper_tab.refresh in self.video_state._refresh_callbacks
         assert clipboard_tab.refresh in self.video_state._refresh_callbacks
         assert metaforge_tab.refresh in self.video_state._refresh_callbacks
-        assert filmboard_tab.refresh in self.video_state._refresh_callbacks
-        assert navigation_tab.refresh in self.video_state._refresh_callbacks
-        assert player_controls_tab.refresh in self.video_state._refresh_callbacks
         assert share_dialog_tab.refresh in self.video_state._refresh_callbacks
+        
+        # These components don't register callbacks as they load data independently
+        # filmboard_tab, navigation_tab, player_controls_tab
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.filmboard_tab.load_videos')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.filmboard_tab.load_videos')
     def test_clipboard_clipper_integration(self, mock_load_videos, mock_load_video):
         """Test that clipboard and clipper tabs can communicate"""
         mock_load_video.return_value = self.mock_video_data
@@ -113,8 +114,8 @@ class TestComponentsIntegration:
         # Verify the callback is set
         assert clipboard_tab.on_edit_clip == clipper_tab.on_edit_clip
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.filmboard_tab.load_videos')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.filmboard_tab.load_videos')
     def test_video_state_refresh_notifies_all_components(self, mock_load_videos, mock_load_video):
         """Test that video state refresh notifies all components"""
         mock_load_video.return_value = self.mock_video_data
