@@ -77,7 +77,7 @@ class NavigationTab:
             with ui.grid(columns=3).classes('w-full items-center'):
                 # Previous
                 if self.prev_video:
-                    with ui.row().classes('items-center cursor-pointer justify-start').on('click', lambda e: self._handle_video_click(self.prev_video['video_id'], e)):
+                    with ui.row().classes('items-center cursor-pointer justify-start').on('click', lambda e: self._handle_video_click(self.prev_video['video_id'])):
                         ui.icon('arrow_back').classes('text-primary text-bold')
                         ui.label(f"Previous Day: {datetime.strptime(self.prev_video['date'], '%Y-%m-%dT%H:%M:%SZ').strftime('%B %d, %Y')}").classes('text-sm text-primary text-bold truncate')
                 else:
@@ -89,18 +89,18 @@ class NavigationTab:
 
                 # Next
                 if self.next_video:
-                    with ui.row().classes('items-center cursor-pointer justify-end').on('click', lambda e: self._handle_video_click(self.next_video['video_id'], e)):
+                    with ui.row().classes('items-center cursor-pointer justify-end').on('click', lambda e: self._handle_video_click(self.next_video['video_id'])):
                         ui.label(f"Next Day: {datetime.strptime(self.next_video['date'], '%Y-%m-%dT%H:%M:%SZ').strftime('%B %d, %Y')}").classes('text-sm text-primary text-bold truncate')
                         ui.icon('arrow_forward').classes('text-primary text-bold')
                 else:
                     ui.label().classes('')  # Empty cell
     
-    def _handle_video_click(self, video_id, event):
+    def _handle_video_click(self, video_id):
         """Handle video navigation click"""
         if self.on_video_select:
-            self.on_video_select(video_id, event)
+            self.on_video_select(video_id)
         else:
-            navigate_to_film(video_id, event)
+            navigate_to_film(video_id)
     
     def get_adjacent_videos(self) -> Tuple[Optional[dict], Optional[dict]]:
         """Get the adjacent videos (previous and next)"""
