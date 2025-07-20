@@ -3,7 +3,7 @@ from nicegui import ui
 import requests
 from utils.utils_notion import generate_tree
 from datetime import datetime
-from cache import cache_get, cache_set
+from utils.cache import cache_get, cache_set
 
 
 #TODO: Persist the notion tree in the mongodb

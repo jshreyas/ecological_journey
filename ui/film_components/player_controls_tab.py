@@ -3,7 +3,7 @@ PlayerControlsTab - Component for video player controls and playlist functionali
 Handles the video player controls and playlist mode
 """
 from nicegui import ui
-from video_player import VideoPlayer
+from utils.video_player import VideoPlayer
 from utils.utils_api import load_video
 from .video_state import VideoState
 from typing import Callable, Optional

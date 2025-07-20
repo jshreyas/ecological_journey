@@ -6,7 +6,7 @@ from nicegui import ui
 from utils.utils_api import add_clip_to_video, update_clip_in_video, get_playlist_id_for_video
 from .video_state import VideoState
 from typing import Callable, Optional
-from dialog_puns import generate_funny_title
+from utils.dialog_puns import generate_funny_title
 
 
 class ClipperTab:
@@ -42,7 +42,7 @@ class ClipperTab:
     
     def _show_clip_form(self, clip=None, is_new=True):
         import uuid
-        from dialog_puns import caught_john_doe
+        from utils.dialog_puns import caught_john_doe
         from nicegui import app
         video = self.video_state.get_video()
         duration = video.get('duration_seconds', 0)

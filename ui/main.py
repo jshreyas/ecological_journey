@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from nicegui import ui, app
 from about import about_page
-from home_page import home_page
+from home import home_page
 from films import films_page
 from playlist import playlist_page
 from clips import clips_page
@@ -14,7 +14,7 @@ from notion import notion_page
 from film import film_page
 from cliplists import cliplists_page
 from partner import partner_page
-from dialog_puns import caught_john_doe, handle_backend_error
+from utils.dialog_puns import caught_john_doe, handle_backend_error
 from utils.utils_api import api_post as api_post_utils
 import sys
 sys.stdout.reconfigure(line_buffering=True)

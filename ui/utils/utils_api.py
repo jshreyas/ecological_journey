@@ -4,7 +4,7 @@ import requests
 
 from typing import Optional, Union, List, Dict, Any
 from dotenv import load_dotenv
-from cache import cache_del, cache_get, cache_set
+from utils.cache import cache_del, cache_get, cache_set
 from utils.utils import format_time
 from utils.utils import parse_query_expression
 load_dotenv()
