@@ -4,7 +4,7 @@ Handles the navigation arrows functionality
 """
 from nicegui import ui
 from utils.utils_api import load_videos
-from films import navigate_to_film
+from pages.films import navigate_to_film
 from datetime import datetime
 from .video_state import VideoState
 from typing import Callable, Tuple, Optional

@@ -1,17 +1,13 @@
 # film.py
 from nicegui import ui, app
 from utils.dialog_puns import caught_john_doe, generate_funny_title
-from utils.video_player import VideoPlayer
 from utils.utils_api import add_clip_to_video, update_clip_in_video, get_playlist_id_for_video, load_video, load_videos, save_video_metadata
-from utils.utils import format_time
-from films import navigate_to_film
 from datetime import datetime
 from film_components import (
     VideoState, FilmdataTab, ClipperTab, ClipboardTab, MetaforgeTab,
     FilmboardTab, NavigationTab, PlayerControlsTab, ShareDialogTab
 )
 import os
-import json
 import uuid
 from dotenv import load_dotenv
 load_dotenv()

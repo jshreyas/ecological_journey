@@ -1,13 +1,10 @@
 from nicegui import ui
 from utils.utils_api import load_videos
-from utils.utils import parse_query_expression
+from utils.utils import navigate_to_film, parse_query_expression
 from functools import partial
 from datetime import datetime
 
 VIDEOS_PER_PAGE = 30
-
-def navigate_to_film(video_id, e):
-    ui.navigate.to(f'/film/{video_id}')
 
 def films_page():
     current_page = {'value': 1}
