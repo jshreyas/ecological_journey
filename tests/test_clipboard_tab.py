@@ -3,8 +3,8 @@ Unit tests for ClipboardTab component
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from ui.film_components.clipboard_tab import ClipboardTab
-from ui.film_components.video_state import VideoState
+from ui.pages.film_components.clipboard_tab import ClipboardTab
+from ui.pages.film_components.video_state import VideoState
 
 
 class TestClipboardTab:
@@ -34,7 +34,7 @@ class TestClipboardTab:
         self.video_state = VideoState(self.video_id)
         self.clipboard_tab = ClipboardTab(self.video_state)
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_init(self, mock_load_video):
         """Test ClipboardTab initialization"""
         mock_load_video.return_value = self.mock_video_data
@@ -45,8 +45,8 @@ class TestClipboardTab:
         assert self.clipboard_tab.on_play_clip is None
         assert self.clipboard_tab.on_share_clip is None
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.clipboard_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.clipboard_tab.ui')
     def test_create_tab(self, mock_ui, mock_load_video):
         """Test creating the clipboard tab"""
         mock_load_video.return_value = self.mock_video_data
@@ -58,8 +58,8 @@ class TestClipboardTab:
         
         assert self.clipboard_tab.container == mock_container
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.clipboard_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.clipboard_tab.ui')
     def test_refresh_with_container(self, mock_ui, mock_load_video):
         """Test refreshing the clipboard tab with container"""
         mock_load_video.return_value = self.mock_video_data
@@ -73,8 +73,8 @@ class TestClipboardTab:
         # Should clear and recreate the UI
         mock_container.clear.assert_called_once()
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.clipboard_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.clipboard_tab.ui')
     def test_refresh_without_container(self, mock_ui, mock_load_video):
         """Test refreshing the clipboard tab without container"""
         mock_load_video.return_value = self.mock_video_data
@@ -82,7 +82,7 @@ class TestClipboardTab:
         # Should not raise any exceptions
         self.clipboard_tab.refresh()
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_video_data(self, mock_load_video):
         """Test getting video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -91,7 +91,7 @@ class TestClipboardTab:
         
         assert video_data == self.mock_video_data
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_clips(self, mock_load_video):
         """Test getting clips from video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -100,7 +100,7 @@ class TestClipboardTab:
         
         assert clips == self.mock_video_data["clips"]
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_get_clips_no_video(self, mock_load_video):
         """Test getting clips when no video data is available"""
         mock_load_video.return_value = None

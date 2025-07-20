@@ -5,7 +5,7 @@ from utils.dialog_puns import caught_john_doe
 from utils.fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils.utils_api import create_video, load_playlists, load_videos, create_playlist, load_playlists_for_user, create_team, fetch_teams_for_user
 from utils.utils import group_videos_by_day
-from home_components.calendar_component import calendar_container
+from pages.home_components.calendar_component import calendar_container
 
 
 @ui.page('/home')

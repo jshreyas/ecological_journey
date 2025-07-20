@@ -3,8 +3,8 @@ Unit tests for ShareDialogTab component
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from ui.film_components.share_dialog_tab import ShareDialogTab
-from ui.film_components.video_state import VideoState
+from ui.pages.film_components.share_dialog_tab import ShareDialogTab
+from ui.pages.film_components.video_state import VideoState
 
 
 class TestShareDialogTab:
@@ -23,7 +23,7 @@ class TestShareDialogTab:
         self.video_state = VideoState(self.video_id)
         self.share_dialog_tab = ShareDialogTab(self.video_state)
     
-    @patch('ui.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.video_state.load_video')
     def test_init(self, mock_load_video):
         """Test ShareDialogTab initialization"""
         mock_load_video.return_value = self.mock_video_data
@@ -32,8 +32,8 @@ class TestShareDialogTab:
         assert self.share_dialog_tab.container is None
         assert self.share_dialog_tab.on_share is None
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.share_dialog_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.share_dialog_tab.ui')
     def test_create_tab(self, mock_ui, mock_load_video):
         """Test creating the share dialog tab"""
         mock_load_video.return_value = self.mock_video_data
@@ -45,8 +45,8 @@ class TestShareDialogTab:
         
         assert self.share_dialog_tab.container == mock_container
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.share_dialog_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.share_dialog_tab.ui')
     def test_refresh_with_container(self, mock_ui, mock_load_video):
         """Test refreshing the share dialog tab with container"""
         mock_load_video.return_value = self.mock_video_data
@@ -60,8 +60,8 @@ class TestShareDialogTab:
         # Should not raise any exceptions
         assert True
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.share_dialog_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.share_dialog_tab.ui')
     def test_refresh_without_container(self, mock_ui, mock_load_video):
         """Test refreshing the share dialog tab without container"""
         mock_load_video.return_value = self.mock_video_data
@@ -69,8 +69,8 @@ class TestShareDialogTab:
         # Should not raise any exceptions
         self.share_dialog_tab.refresh()
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.share_dialog_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.share_dialog_tab.ui')
     def test_share_clip_without_callback(self, mock_ui, mock_load_video):
         """Test sharing a clip without callback"""
         mock_load_video.return_value = self.mock_video_data
@@ -79,8 +79,8 @@ class TestShareDialogTab:
         # Should not raise any exceptions
         self.share_dialog_tab.share_clip(mock_clip)
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.share_dialog_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.share_dialog_tab.ui')
     def test_share_clip_with_callback(self, mock_ui, mock_load_video):
         """Test sharing a clip with callback"""
         mock_load_video.return_value = self.mock_video_data
@@ -92,8 +92,8 @@ class TestShareDialogTab:
         
         mock_callback.assert_called_once_with(mock_clip)
     
-    @patch('ui.film_components.video_state.load_video')
-    @patch('ui.film_components.share_dialog_tab.ui')
+    @patch('ui.pages.film_components.video_state.load_video')
+    @patch('ui.pages.film_components.share_dialog_tab.ui')
     def test_show_share_dialog(self, mock_ui, mock_load_video):
         """Test showing the share dialog"""
         mock_load_video.return_value = self.mock_video_data
