@@ -1,10 +1,12 @@
 import os
 import smtplib
-from email.message import EmailMessage
-from fastapi import BackgroundTasks
-from dotenv import load_dotenv
-from zoneinfo import ZoneInfo
 from datetime import datetime
+from email.message import EmailMessage
+from zoneinfo import ZoneInfo
+
+from dotenv import load_dotenv
+
+# from fastapi import BackgroundTasks  # Unused import
 
 load_dotenv()
 
@@ -43,7 +45,9 @@ def send_feedback_email(feedback: dict):
     </html>
     """
 
-    msg.set_content(f"New Feedback:\n\nMessage: {text}\nSubmitted at: {submitted_at}")  # fallback plain text
+    msg.set_content(
+        f"New Feedback:\n\nMessage: {text}\nSubmitted at: {submitted_at}"
+    )  # fallback plain text
     msg.add_alternative(html, subtype="html")
 
     try:

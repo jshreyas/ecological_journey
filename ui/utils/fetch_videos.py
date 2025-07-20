@@ -1,12 +1,13 @@
 # fetch_videos.py
+# import json  # Unused import
 import os
-import json
 import re
+from datetime import datetime, time
+
+import isodate
+import pytz
 import requests
 from dotenv import load_dotenv
-from datetime import datetime, time
-import pytz
-import isodate
 
 # Load API key from environment
 load_dotenv()
@@ -19,6 +20,7 @@ FETCH_VIDEOS_COUNT = None  # Set to an integer to limit fetched items
 
 pst = pytz.timezone("America/Los_Angeles")
 
+
 def fetch_video_upload_date(video_id):
     """Fetch actual upload date of the video from YouTube Data API."""
     url = f"{BASE_URL}/videos?part=snippet&id={video_id}&key={API_KEY}"
@@ -28,12 +30,12 @@ def fetch_video_upload_date(video_id):
 
     try:
         published_utc = datetime.strptime(
-            response.json()['items'][0]['snippet']['publishedAt'],
-            "%Y-%m-%dT%H:%M:%SZ"
+            response.json()["items"][0]["snippet"]["publishedAt"], "%Y-%m-%dT%H:%M:%SZ"
         )
         return published_utc.replace(tzinfo=pytz.utc).astimezone(pst).date()
     except (IndexError, KeyError, ValueError):
         return None
+
 
 def fetch_video_duration(video_id):
     """Fetch video duration (in seconds) from YouTube Data API."""
@@ -43,12 +45,13 @@ def fetch_video_duration(video_id):
         return None
 
     try:
-        duration_str = response.json()['items'][0]['contentDetails']['duration']
+        duration_str = response.json()["items"][0]["contentDetails"]["duration"]
         # Convert ISO 8601 duration string to total seconds
         video_duration = isodate.parse_duration(duration_str).total_seconds()
         return video_duration
     except (IndexError, KeyError, ValueError):
         return None
+
 
 def check_update_date_title_mismatch(video):
     title = video["title"]
@@ -67,18 +70,23 @@ def check_update_date_title_mismatch(video):
             try:
                 title_date = datetime.strptime(title_date_str, fmt).date()
                 published_utc = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%SZ")
-                published_pst_date = pytz.utc.localize(published_utc).astimezone(pst).date()
+                published_pst_date = (
+                    pytz.utc.localize(published_utc).astimezone(pst).date()
+                )
 
                 if title_date != published_pst_date:
                     actual_upload_date = fetch_video_upload_date(video["video_id"])
                     if actual_upload_date:
-                        new_utc = pst.localize(datetime.combine(actual_upload_date, time.min)).astimezone(pytz.utc)
+                        new_utc = pst.localize(
+                            datetime.combine(actual_upload_date, time.min)
+                        ).astimezone(pytz.utc)
                         video["date"] = new_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
                 pass
             break
 
     return video
+
 
 def fetch_playlist_metadata(playlist_id):
     url = f"{BASE_URL}/playlists?part=snippet&id={playlist_id}&key={API_KEY}"
@@ -91,6 +99,7 @@ def fetch_playlist_metadata(playlist_id):
         return data["items"][0]["snippet"]
     else:
         return None
+
 
 def fetch_playlist_items(playlist_id, latest_saved_date=None, count=None):
     videos = []
@@ -126,7 +135,7 @@ def fetch_playlist_items(playlist_id, latest_saved_date=None, count=None):
                 "positions": [],
                 "notes": "",
                 "labels": [],
-                "clips": []
+                "clips": [],
             }
             # Fetch video duration and add it to the video data
             video_duration = fetch_video_duration(video_id)

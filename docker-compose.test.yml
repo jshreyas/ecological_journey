@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   test:
@@ -11,4 +11,4 @@ services:
     volumes:
       - ./tests:/app/tests
       - ./ui:/app/ui
-    command: ["python", "-m", "pytest", "tests/", "-v"] 
+    command: ["python", "-m", "pytest", "tests/", "-v"]

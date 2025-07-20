@@ -1,0 +1,34 @@
+# Development dependencies for linting, testing, and code quality
+# Install with: pip install -r requirements-dev.txt
+
+# Core development tools
+pre-commit>=3.6.0
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Code formatting and linting
+black>=24.1.0
+isort>=5.13.0
+flake8>=7.0.0
+ruff>=0.11.0
+
+# Type checking
+mypy>=1.8.0
+types-requests>=2.31.0
+types-PyYAML>=6.0.0
+
+# Security and code quality
+bandit>=1.7.5
+pydocstyle>=6.3.0
+
+# Documentation
+mkdocs>=1.5.0
+mkdocs-material>=9.5.0
+
+# Additional testing tools
+pytest-mock>=3.12.0
+pytest-xdist>=3.5.0
+
+# Production dependencies (for development environment)
+-r requirements.txt

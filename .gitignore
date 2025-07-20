@@ -1,7 +1,40 @@
+# Environment and secrets
 .env
 .streamlit/secrets.toml
+
+# Python
 __pycache__/
 *.py[cod]
 *.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE and OS
 .nicegui/
 .DS_Store
+.vscode/
+.idea/
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Build and cache
+*.egg-info/
+dist/
+build/
+
+# Reports and temporary files
+bandit-report.json
+*.tmp
+*.temp
+
+# Development files (should be committed)
+# TODO.txt
+# TODOO.txt
+# ZoomLevel.txt
+# notion-tree-nested.json
+# mongodb.py
+# pytest.ini
+# .python-version

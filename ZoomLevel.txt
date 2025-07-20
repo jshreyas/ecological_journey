@@ -1,0 +1,5 @@
+| Zoom Level                         | User Sees                                                 | Primary Interaction                                | Meta Narrative                                     |
+| ---------------------------------- | --------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------- |
+| **Solar System** (zoomed out)      | Orbiting partner "planets" sized by interaction density   | Hover, click to zoom                               | Overview of social ecosystem, training gravity     |
+| **Planet Focus** (zoom mid-in)     | Full view of a training partner + edge “flagpole” anchors | View detailed metrics, hyperlinks, journal entries | Hero’s journey of the individual, personal archive |
+| **Edge Focus** (zoomed in on edge) | Both nodes in semicircle + edge timeline                  | Chronological clips, journals, emoji reactions     | Shared history, narrative of friendship/rivalry    |
