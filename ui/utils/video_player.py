@@ -1,5 +1,7 @@
-from nicegui import ui, app
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
+
+from nicegui import app, ui
+
 
 class VideoPlayer:
 
@@ -36,38 +38,48 @@ class VideoPlayer:
         else:
             return url  # assume it's already a video ID
 
-
     def _render(self):
         import uuid
+
         self.element_id = f"yt-player-{uuid.uuid4().hex[:8]}"
 
         # 👇 Everything below happens in the right container
         context = self.parent if self.parent else ui
         with context:
 
-            ui.html(f'''
+            ui.html(
+                f"""
                 <div id="yt-player-wrapper" style="top: 0; left: 0; width: 100%; height: 100%; padding-bottom: 56.25%; overflow: hidden;">
                     <div id="{self.element_id}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;"></div>
                 </div>
-            ''')
+            """
+            )
 
-            ui.add_head_html('''
+            ui.add_head_html(
+                """
                 <script src="https://www.youtube.com/iframe_api"></script>
-            ''')
+            """
+            )
 
             if self.on_end:
                 endpoint = f"/_nicegui_api/{self.element_id}_on_end"
+
                 @app.post(endpoint)
                 async def _on_end_event():
                     if callable(self.on_end):
                         self.on_end()
-                    return {'status': 'ok'}
+                    return {"status": "ok"}
 
-            js_on_end = f"""
+            js_on_end = (
+                f"""
                 fetch('/_nicegui_api/{self.element_id}_on_end', {{method: 'POST'}});
-            """ if self.on_end else ""
+            """
+                if self.on_end
+                else ""
+            )
 
-            ui.run_javascript(f'''
+            ui.run_javascript(
+                f"""
                 window.ytConfig = {{
                     videoId: "{self.video_id}",
                     start: {self.start},
@@ -136,15 +148,25 @@ class VideoPlayer:
                 if (window.YT && window.YT.Player) {{
                     window.onYouTubeIframeAPIReady();
                 }}
-            ''')
+            """
+            )
 
             if self.show_speed_slider:
+
                 def on_speed_change(_):
                     self.speed = speed_knob.value
                     ui.run_javascript(f"window.setYTSpeed({speed_knob.value});")
 
-                with ui.row().classes('items-center justify-center mt-2 mx-6'):
-                    speed_knob = ui.knob(
-                        min=0.25, max=2.0, step=0.25, value=self.speed,
-                        track_color='grey-2', show_value=True
-                    ).props('size=60').on('change', on_speed_change)
+                with ui.row().classes("items-center justify-center mt-2 mx-6"):
+                    speed_knob = (
+                        ui.knob(
+                            min=0.25,
+                            max=2.0,
+                            step=0.25,
+                            value=self.speed,
+                            track_color="grey-2",
+                            show_value=True,
+                        )
+                        .props("size=60")
+                        .on("change", on_speed_change)
+                    )

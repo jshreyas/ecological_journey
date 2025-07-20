@@ -1,15 +1,13 @@
 # ---------------- app/auth.py ----------------
 import os
 from datetime import datetime, timedelta
+
 import jwt
-from passlib.context import CryptContext
-from fastapi import Request
-from fastapi.security import (
-    HTTPBearer,
-    HTTPAuthorizationCredentials,
-)
-from fastapi.security.utils import get_authorization_scheme_param
 from dotenv import load_dotenv
+from fastapi import Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security.utils import get_authorization_scheme_param
+from passlib.context import CryptContext
 
 load_dotenv()
 

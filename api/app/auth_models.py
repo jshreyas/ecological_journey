@@ -1,11 +1,10 @@
 # auth_models.py
-from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional
+from typing import Any, List, Optional
+
 from bson import ObjectId
-from pydantic import GetCoreSchemaHandler
+from pydantic import BaseModel, EmailStr, Field, GetCoreSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
-from typing import Any
 
 
 class PyObjectId(ObjectId):

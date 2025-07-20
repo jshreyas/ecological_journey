@@ -13,7 +13,7 @@ function initializePartnerGraph(elementsJson) {
             renderGraphWithFallback(elementsJson);
             return;
         }
-        if (typeof cytoscape !== 'undefined' && 
+        if (typeof cytoscape !== 'undefined' &&
             (typeof window.cytoscapeFcose !== 'undefined' || typeof cytoscapeFcose !== 'undefined')) {
             console.log('All dependencies loaded successfully');
             console.log('cytoscape:', typeof cytoscape);
@@ -265,4 +265,4 @@ function setupEventHandlers() {
     window.cy.on('layouterror', function(event) {
         console.error('Layout error:', event);
     });
-} 
+}

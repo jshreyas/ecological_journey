@@ -1,6 +1,6 @@
 # Ecological Journey
 
-🥋 *Train, Track, and Transcend* – A platform for martial artists to annotate, organize, and reflect on their journey with partners, clips, and insights.
+🥋 _Train, Track, and Transcend_ – A platform for martial artists to annotate, organize, and reflect on their journey with partners, clips, and insights.
 
 ## Features
 
@@ -28,6 +28,8 @@ This avoids failed login attempts and improves user clarity.
 
 ## Local Setup
 
+### Basic Setup
+
 ```bash
 git clone https://github.com/jshreyas/ecological_journey.git
 cd ecological_journey
@@ -35,6 +37,62 @@ cp .env.example .env  # configure backend and redis URLs
 
 # Start services
 docker-compose up --build
+```
+
+### Development Setup with Pre-commit
+
+For contributors and developers, we recommend setting up pre-commit hooks for code quality:
+
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Install pre-commit hooks
+pre-commit install
+
+# Run all checks manually (optional)
+pre-commit run --all-files
+```
+
+#### Pre-commit Hooks Include:
+
+- **Black**: Code formatting
+- **isort**: Import sorting
+- **flake8**: Linting and style checking
+- **mypy**: Type checking
+- **bandit**: Security vulnerability scanning
+- **pydocstyle**: Documentation style checking
+- **prettier**: Frontend code formatting
+- **hadolint**: Dockerfile linting
+
+#### Running Individual Checks:
+
+```bash
+# Format code
+black ui/ api/ tests/
+
+# Sort imports
+isort ui/ api/ tests/
+
+# Lint code
+flake8 ui/ api/ tests/
+
+# Type check
+mypy ui/ api/ tests/
+
+# Security scan
+bandit -r ui/ api/
+
+# Documentation check
+pydocstyle ui/ api/
+```
+
+#### Code Quality Script:
+
+We provide a convenience script to run all checks:
+
+```bash
+./scripts/lint.sh
 ```
 
 ## Production Deployment (Render + Upstash)
