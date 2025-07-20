@@ -19,9 +19,6 @@ class PlayerControlsTab:
         self.player_container = {'ref': None}
         self.player_speed = {'value': 1.0}
         self.clips_playlist_state = {'index': 0, 'clips': []}
-        
-        # Register for video state refresh notifications
-        self.video_state.add_refresh_callback(self.refresh)
     
     def create_tab(self, container, play_clips_playlist=False, autoplay_clip=None):
         """Create the player controls tab UI"""

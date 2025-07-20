@@ -19,9 +19,6 @@ class NavigationTab:
         self.container = None
         self.prev_video = None
         self.next_video = None
-        
-        # Register for video state refresh notifications
-        self.video_state.add_refresh_callback(self.refresh)
     
     def create_tab(self, container):
         """Create the navigation tab UI"""

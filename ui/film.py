@@ -267,17 +267,9 @@ def film_page(video_id: str):
             with splitter.separator:
                 ui.icon('drag_indicator').classes('text-gray-400')
 
-        ui.separator()
+        ui.separator().classes('w-full mt-2')
         with ui.splitter(value=50).classes('w-full h-[600px]') as splitter:
             with splitter.before:
-                # Clipboard heading with count
-                video = load_video(video_id)
-                clips = video.get("clips", [])
-                with ui.column().classes('w-full h-full rounded-lg'):
-                    ui.label(f'📋 Clipboard ({len(clips)})').classes('text-xl font-semibold')
-                    with ui.grid().classes('grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg') as clipboard_container:
-                        clipboard_tab.create_tab(clipboard_container, clip_id)
-            with splitter.after:
                 # Filmboard heading with count
                 current_video_date = filmboard_tab.get_current_video_date()
                 same_day_count = filmboard_tab.get_same_day_videos_count()
@@ -288,6 +280,14 @@ def film_page(video_id: str):
                         ui.label('🎥 More films from the same day').classes('text-xl ml-2 font-semibold')
                     with ui.grid().classes('grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg') as filmboard_container:
                         filmboard_tab.create_tab(filmboard_container)
+            with splitter.after:
+                # Clipboard heading with count
+                video = load_video(video_id)
+                clips = video.get("clips", [])
+                with ui.column().classes('w-full h-full rounded-lg'):
+                    ui.label(f'📋 Clipboard ({len(clips)})').classes('text-xl font-semibold ml-2')
+                    with ui.grid().classes('grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg') as clipboard_container:
+                        clipboard_tab.create_tab(clipboard_container, clip_id)
 
 def chips_input_combined(initial=None):
     """Single chips input for both partners (@) and labels (#)."""
