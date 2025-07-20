@@ -41,10 +41,7 @@ class FilmdataTab:
         if not video:
             ui.label("No video data available")
             return
-        
-        # Title input
-        title_input = ui.input('Title', value=video.get('title', '')).classes('w-full')
-        
+
         # Chips input for @partners and #labels
         chips_input_ref, chips_list, chips_error, chips_container = self._create_chips_input(
             [f'@{p}' for p in video.get('partners', [])] + [f'#{l}' for l in video.get('labels', [])]
