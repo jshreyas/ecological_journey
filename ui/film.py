@@ -288,7 +288,7 @@ def film_page(video_id: str):
                     ui.label(f'📋 Clipboard ({len(clips)})').classes('text-xl font-semibold ml-2')
                     with ui.grid().classes('grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg') as clipboard_container:
                         clipboard_tab.create_tab(clipboard_container, clip_id)
-                
+
 def chips_input_combined(initial=None):
     """Single chips input for both partners (@) and labels (#)."""
     initial = initial or []

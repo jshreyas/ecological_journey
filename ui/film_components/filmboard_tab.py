@@ -17,9 +17,6 @@ class FilmboardTab:
         self.video_state = video_state
         self.on_video_select = on_video_select
         self.container = None
-        
-        # Register for video state refresh notifications
-        self.video_state.add_refresh_callback(self.refresh)
     
     def create_tab(self, container):
         """Create the filmboard tab UI"""
