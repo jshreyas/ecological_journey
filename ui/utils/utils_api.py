@@ -253,7 +253,7 @@ def convert_clips_to_raw_text(
         if video_metadata.get("partners"):
             lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
         if video_metadata.get("labels"):
-            lines.append(" ".join(f"#{l}" for l in video_metadata["labels"]))
+            lines.append(" ".join(f"#{label}" for label in video_metadata["labels"]))
         if video_metadata.get("type"):
             lines.append(f"type: {video_metadata['type']}")
         if video_metadata.get("notes"):
@@ -288,7 +288,7 @@ def convert_clips_to_raw_text(
         title = clip.get("title", "")
         description = clip.get("description", "")
         partners = " ".join(f"@{p}" for p in clip.get("partners", []))
-        labels = " ".join(f"#{l}" for l in clip.get("labels", []))
+        labels = " ".join(f"#{label}" for label in clip.get("labels", []))
         full_desc = " ".join(part for part in [description, partners, labels] if part)
 
         lines.append(
@@ -454,7 +454,7 @@ def update_clip_in_video(
 
 def convert_video_metadata_to_raw_text(video: dict) -> str:
     partners_line = " ".join(f"@{p}" for p in video.get("partners", []))
-    labels_line = " ".join(f"#{l}" for l in video.get("labels", []))
+    labels_line = " ".join(f"#{label}" for label in video.get("labels", []))
     notes = video.get("notes", "")
     return "\n".join(filter(None, [partners_line, labels_line, notes]))
 
@@ -465,9 +465,7 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
         print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
         return False
     try:
-        reponse = api_put(
-            f"/playlists/{playlist_name}/videos", data=video_metadata, token=token
-        )
+        api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
         _refresh_playlists_cache()
         return True
     except Exception as e:
@@ -510,19 +508,7 @@ def save_cliplist(
         "name": name,
         "filters": filters_state,
     }
-    try:
-        response = api_post("/cliplist", data=data, token=token)
-
-        # Invalidate cache for cliplist listing
-        global _cliplist_cache
-        if "cliplists" in _cliplist_cache:
-            del _cliplist_cache["cliplists"]
-        cache_set("cliplists", None)
-
-        return response
-    except requests.HTTPError as e:
-        print(f"Failed to save cliplist: {e}")
-        return None
+    return api_post("/cliplist", data=data, token=token)
 
 
 def get_filtered_clips(cliplist_id: str) -> List[Dict[str, Any]]:

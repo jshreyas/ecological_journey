@@ -3,7 +3,7 @@ FilmdataTab - Component for editing film metadata
 Handles the film metadata editing functionality
 """
 
-from typing import Callable, Optional
+from typing import Callable
 
 from nicegui import app, ui
 from utils.utils_api import save_video_metadata
@@ -49,7 +49,7 @@ class FilmdataTab:
         chips_input_ref, chips_list, chips_error, chips_container = (
             self._create_chips_input(
                 [f"@{p}" for p in video.get("partners", [])]
-                + [f"#{l}" for l in video.get("labels", [])]
+                + [f"#{label}" for label in video.get("labels", [])]
             )
         )
         self.chips_list = chips_list
@@ -205,7 +205,7 @@ class FilmdataTab:
         video_data = self.get_video_data()
         if video_data:
             self.chips_list = [f"@{p}" for p in video_data.get("partners", [])] + [
-                f"#{l}" for l in video_data.get("labels", [])
+                f"#{label}" for label in video_data.get("labels", [])
             ]
             if self.notes_input:
                 self.notes_input.value = video_data.get("notes", "")

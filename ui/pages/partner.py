@@ -1,10 +1,14 @@
 import json
+
+# import os  # Unused
 from collections import Counter, defaultdict
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from nicegui import app, ui
 from utils.utils_api import load_clips, load_playlists, load_videos
+
+# from datetime import datetime  # Unused
 
 
 @app.get("/api/partner_details")
@@ -116,9 +120,7 @@ def partner_page():
             ).classes("w-full")
         with splitter.after:
             # Details panel (will be updated)
-            details = ui.html(
-                '<div id="details_panel" class="p-4 text-base" style="width: 100%"></div>'
-            )
+            pass
 
     with ui.column().classes("items-center w-full"):
         playlists = load_playlists()

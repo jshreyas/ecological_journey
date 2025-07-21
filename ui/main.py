@@ -139,7 +139,7 @@ def logout():
 
 def open_feedback_dialog():
     def submit_feedback(feedback_text: str):
-        response = api_post_utils(
+        api_post_utils(
             "/feedback", {"text": feedback_text}, token=app.storage.user.get("token")
         )
         ui.notify("Thank you for your feedback!", type="positive")

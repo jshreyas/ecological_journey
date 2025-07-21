@@ -3,7 +3,7 @@ ClipperTab - Component for creating and editing clips
 Handles the clip creation and editing functionality
 """
 
-from typing import Callable
+# Removed unused import: from typing import Callable
 
 from nicegui import ui
 from utils.dialog_puns import generate_funny_title
@@ -126,7 +126,7 @@ class ClipperTab:
             chips_input_ref, chips_list, chips_error, chips_container = (
                 self._create_chips_input(
                     [f"@{p}" for p in clip.get("partners", [])]
-                    + [f"#{l}" for l in clip.get("labels", [])]
+                    + [f"#{label}" for label in clip.get("labels", [])]
                 )
             )
             # Notes textarea

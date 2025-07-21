@@ -4,7 +4,7 @@ Handles the clip sharing dialog and URL generation
 """
 
 import os
-from typing import Callable, Optional
+from typing import Callable
 
 from dotenv import load_dotenv
 from nicegui import ui

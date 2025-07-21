@@ -5,7 +5,7 @@ Handles the metaforge functionality for bulk editing
 
 import json
 import uuid
-from typing import Callable, Optional
+from typing import Callable
 
 from nicegui import app, ui
 from utils.dialog_puns import generate_funny_title

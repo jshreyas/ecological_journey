@@ -72,9 +72,9 @@ class ClipboardTab:
         if video_data is None:
             video_data = self.video_state.get_video()
 
-        with ui.card().classes(
-            f"p-2 flex flex-col justify-between max-w-full overflow-hidden{' border-2 border-blue-500' if highlight else ''}"
-        ):
+        highlight_class = " border-2 border-blue-500" if highlight else ""
+        card_classes = f"p-2 flex flex-col justify-between max-w-full overflow-hidden{highlight_class}"
+        with ui.card().classes(card_classes):
             with ui.column().classes("w-full gap-2"):
                 ui.label(clip["title"]).classes("font-medium text-sm truncate")
                 with ui.row().classes("w-full gap-2 justify-between"):
@@ -110,22 +110,24 @@ class ClipboardTab:
             labels_html = ""
             if labels:
                 labels_html = ", ".join(
-                    f"<span style='color:black'>{l}</span>" for l in labels
+                    f"<span style='color:black'>{label}</span>" for label in labels
                 )
             if video_labels:
                 if labels_html:
                     labels_html += ", "
                 labels_html += ", ".join(
-                    f"<span style='color:var(--q-primary)'>{l}</span>"
-                    for l in video_labels
+                    f"<span style='color:var(--q-primary)'>{label}</span>"
+                    for label in video_labels
                 )
             if not labels_html:
                 labels_html = "No labels"
             ui.html(f"🏷️ {labels_html}").classes("text-xs")
 
-            with ui.button_group().classes(
-                "w-full flex-wrap shadow-none border-none items-center max-w-full justify-center gap-2"
-            ):
+            button_group_classes = (
+                "w-full flex-wrap shadow-none border-none items-center "
+                "max-w-full justify-center gap-2"
+            )
+            with ui.button_group().classes(button_group_classes):
                 for icon, color, tooltip, handler in [
                     (
                         "play_arrow",
