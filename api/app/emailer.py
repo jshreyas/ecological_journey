@@ -6,8 +6,6 @@ from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
-# from fastapi import BackgroundTasks  # Unused import
-
 load_dotenv()
 
 
