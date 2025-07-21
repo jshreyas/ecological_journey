@@ -3,24 +3,13 @@ max-line-length = 120
 extend-ignore = E203
 exclude = .git,__pycache__,.venv,.mypy_cache,.ruff_cache,build,dist,node_modules
 per-file-ignores =
-    __init__.py:F401
-    tests/*:E501
     ui/*:E501
-    ui/pages/about.py:E501
     ui/pages/cliplists.py:E501
     ui/pages/clips.py:E501
     ui/pages/film.py:E501
-    ui/pages/film_components/clipboard_tab.py:E501
-    ui/pages/film_components/metaforge_tab.py:E501
     ui/pages/films.py:E501
-    ui/pages/notion.py:E501
     ui/pages/partner.py:E501
     ui/pages/playlist.py:E501
-    ui/utils/dialog_puns.py:E501
     ui/utils/fetch_videos.py:E501
-    ui/utils/utils.py:E501
-    ui/utils/utils_api.py:E501
-    ui/utils/utils_notion.py:E501
     ui/utils/video_player.py:E501
     api/app/emailer.py:E501
-    api/app/routes.py:E501
