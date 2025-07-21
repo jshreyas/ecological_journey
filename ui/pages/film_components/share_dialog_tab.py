@@ -54,18 +54,12 @@ class ShareDialogTab:
 
         with ui.dialog() as dialog, ui.card():
             ui.label("Share this clip").classes("font-bold mb-2")
-            ui.input(value=share_url).props("readonly").classes("w-full").style(
-                "font-size:0.9em"
-            )
-            ui.label("Copy the link above and share it with others.").classes(
-                "mt-2 text-xs text-gray-600"
-            )
+            ui.input(value=share_url).props("readonly").classes("w-full").style("font-size:0.9em")
+            ui.label("Copy the link above and share it with others.").classes("mt-2 text-xs text-gray-600")
             with ui.row().classes("w-full justify-between mt-4"):
                 ui.button(
                     "Open Link",
-                    on_click=lambda: ui.run_javascript(
-                        f'window.open("{share_url}", "_blank")'
-                    ),
+                    on_click=lambda: ui.run_javascript(f'window.open("{share_url}", "_blank")'),
                 ).classes("mt-2")
                 ui.button("Close", on_click=dialog.close).props("flat").classes("mt-1")
         dialog.open()

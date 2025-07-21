@@ -61,7 +61,7 @@ JOHN_DOE_PUNS = [
     lambda: create_dialog(
         title="🎉 John Doe Detected!",
         body="Trying to sneak a click, huh?\n\nDemo mode is safe for browsing but locked for edits.",
-        button_text="I’ll behave",
+        button_text="I'll behave",
     ),
     lambda: create_dialog(
         title="🎭 John Doe detected... deploying sarcasm mode!",
@@ -70,8 +70,8 @@ JOHN_DOE_PUNS = [
     ),
     lambda: create_dialog(
         title="🎉 John Doe Detected!",
-        body="Demo users don’t get to *ginga* all over the DB.",
-        button_text="I’ll tap",
+        body="Demo users don't get to *ginga* all over the DB.",
+        button_text="I'll tap",
     ),
 ]
 
@@ -83,18 +83,18 @@ INPROGRESS_PUNS = [
     ),
     lambda: create_dialog(
         title="🌀 Not Quite Rolê-Ready",
-        body="This move’s still in the lab — like a blue belt trying berimbolo.\n\nSoon™.",
+        body="This move's still in the lab — like a blue belt trying berimbolo.\n\nSoon™.",
         button_text="Respect the process",
     ),
     lambda: create_dialog(
         title="🔧 Still Being Hammered Out",
-        body="Some features train harder than others.\n\nThis one’s hitting pads in the shadows.",
+        body="Some features train harder than others.\n\nThis one's hitting pads in the shadows.",
         button_text="Stay strong, feature",
     ),
     lambda: create_dialog(
         title="🥋 Under Maintenance",
-        body="Like a white belt figuring out grips — it’s gonna take a few tries.",
-        button_text="I’ll be gentle",
+        body="Like a white belt figuring out grips — it's gonna take a few tries.",
+        button_text="I'll be gentle",
     ),
     lambda: create_dialog(
         title="🛠️ Building Momentum",
@@ -103,13 +103,13 @@ INPROGRESS_PUNS = [
     ),
     lambda: create_dialog(
         title="🚫 Incomplete Technique Detected!",
-        body="Don’t worry — the dev is probably working on this in another tab right now.",
+        body="Don't worry — the dev is probably working on this in another tab right now.",
         button_text="Hope they're hydrated",
     ),
     lambda: create_dialog(
         title="⚙️ Prototype in Progress",
         body="Still figuring out whether this should sweep, submit, or just play pandeiro.",
-        button_text="It’s all rhythm",
+        button_text="It's all rhythm",
     ),
 ]
 
@@ -135,9 +135,7 @@ def handle_backend_error(response_text=None):
     # dialog for drama
     with ui.dialog() as d:
         with ui.card().classes("bg-red-100 text-red-900 shadow-lg"):
-            ui.label(f"⚠️ Trouble in {generate_funny_title()} zone!").classes(
-                "text-lg font-bold"
-            )
+            ui.label(f"⚠️ Trouble in {generate_funny_title()} zone!").classes("text-lg font-bold")
             ui.markdown(
                 "Our backend wizard appears to be napping.\n\n"
                 "While we wait, feel free to sip your coffee and try in a bit."

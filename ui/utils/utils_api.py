@@ -79,13 +79,9 @@ def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
     return response
 
 
-def create_playlist(
-    video_data: List[Dict[str, Any]], token: str, name: str, playlist_id: str
-) -> Any:
+def create_playlist(video_data: List[Dict[str, Any]], token: str, name: str, playlist_id: str) -> Any:
     """Create a new playlist with videos."""
-    response = api_post(
-        "/playlists", data={"name": name, "playlist_id": playlist_id}, token=token
-    )
+    response = api_post("/playlists", data={"name": name, "playlist_id": playlist_id}, token=token)
     # TODO: combine all these individual API calls to a single call
     create_video(video_data, token, name)
     # TODO: please do error handling
@@ -96,7 +92,7 @@ def create_playlist(
 def create_video(video_data: List[Dict[str, Any]], token: str, name: str) -> None:
     """Create videos in a playlist."""
     for video in video_data:
-        response = api_post(f"/playlists/{name}/videos", data=video, token=token)
+        api_post(f"/playlists/{name}/videos", data=video, token=token)
     _refresh_playlists_cache()
 
 
@@ -115,9 +111,7 @@ def load_playlists() -> List[Dict[str, Any]]:
     return data
 
 
-def load_playlists_for_user(
-    user_id: str, filter: str = "all"
-) -> Dict[str, List[Dict[str, Any]]]:
+def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
     playlists = load_playlists()
     teams = fetch_teams_for_user(user_id)
     # Combine all teams if teams is a dict (API returns {'owned': [], 'member': []})
@@ -125,16 +119,10 @@ def load_playlists_for_user(
         all_teams = (teams.get("owned", []) or []) + (teams.get("member", []) or [])
     else:
         all_teams = teams or []
-    user_team_ids = {
-        team.get("_id") for team in all_teams if user_id in team.get("member_ids", [])
-    }
+    user_team_ids = {team.get("_id") for team in all_teams if user_id in team.get("member_ids", [])}
 
     owned = [pl for pl in playlists if pl.get("owner_id") == user_id]
-    member = [
-        pl
-        for pl in playlists
-        if pl.get("owner_id") != user_id and pl.get("team_id") in user_team_ids
-    ]
+    member = [pl for pl in playlists if pl.get("owner_id") != user_id and pl.get("team_id") in user_team_ids]
     # Remove duplicates by _id
     owned_ids = {pl["_id"] for pl in owned}
     filtered_member = [pl for pl in member if pl["_id"] not in owned_ids]
@@ -176,9 +164,7 @@ def load_videos(
                 video["playlist_id"] = playlist.get("_id")
                 video["playlist_name"] = playlist.get("name")
                 # Add human-readable duration to each video
-                video["duration_human"] = format_duration(
-                    video.get("duration_seconds", 0)
-                )
+                video["duration_human"] = format_duration(video.get("duration_seconds", 0))
                 videos.append(video)
     videos.sort(key=lambda x: x.get("date", ""), reverse=True)
     if response_dict:
@@ -208,9 +194,7 @@ def load_clips() -> List[Dict[str, Any]]:
         for video in playlist.get("videos", []):
             if video.get("clips", []):
                 for clip in video["clips"]:
-                    partners = (clip.get("partners") or []) + (
-                        video.get("partners") or []
-                    )
+                    partners = (clip.get("partners") or []) + (video.get("partners") or [])
                     labels = (clip.get("labels") or []) + (video.get("labels") or [])
                     clip_data = {
                         "video_id": video["video_id"],
@@ -220,9 +204,7 @@ def load_clips() -> List[Dict[str, Any]]:
                         "end": clip.get("end", 0),
                         "title": clip.get("title", ""),
                         "date": video.get("date", ""),
-                        "duration_human": format_duration(
-                            clip.get("end", 0) - clip.get("start", 0)
-                        ),
+                        "duration_human": format_duration(clip.get("end", 0) - clip.get("start", 0)),
                         "description": clip.get("description", ""),
                         "partners": partners,
                         "labels": labels,
@@ -234,9 +216,7 @@ def load_clips() -> List[Dict[str, Any]]:
     return clips
 
 
-def convert_clips_to_raw_text(
-    video_id: str, video_duration: Optional[int] = None
-) -> str:
+def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
     videos = load_videos()
     video_metadata = next((v for v in videos if v["video_id"] == video_id), {})
     clips = video_metadata.get("clips", [])
@@ -244,9 +224,7 @@ def convert_clips_to_raw_text(
 
     lines = []
 
-    has_metadata = any(
-        video_metadata.get(k) for k in ["partners", "labels", "type", "notes"]
-    )
+    has_metadata = any(video_metadata.get(k) for k in ["partners", "labels", "type", "notes"])
     has_clips = bool(clips)
 
     if has_metadata:
@@ -268,9 +246,7 @@ def convert_clips_to_raw_text(
         ]
 
     if not has_clips and duration:
-        lines.append(
-            "00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2"
-        )
+        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
         clips = [{"start": 0, "end": duration, "type": "autogen"}]
 
     for clip in clips:
@@ -280,9 +256,7 @@ def convert_clips_to_raw_text(
             end = duration
 
         if clip.get("type") != "clip":
-            lines.append(
-                f"{format_time(start)} - {format_time(end)} | Full video | @autogen"
-            )
+            lines.append(f"{format_time(start)} - {format_time(end)} | Full video | @autogen")
             continue
 
         title = clip.get("title", "")
@@ -291,9 +265,7 @@ def convert_clips_to_raw_text(
         labels = " ".join(f"#{label}" for label in clip.get("labels", []))
         full_desc = " ".join(part for part in [description, partners, labels] if part)
 
-        lines.append(
-            f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}"
-        )
+        lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
     return "\n".join(lines)
 
 
@@ -421,9 +393,7 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
         for clip in clips:
             clip_partners = clip.get("partners", [])
             if partner in clip_partners or partner in video_partners:
-                merged_labels = list(
-                    set(video.get("labels", []) + clip.get("labels", []))
-                )
+                merged_labels = list(set(video.get("labels", []) + clip.get("labels", [])))
                 combined = {
                     "video_id": video_id,
                     **video,
@@ -442,9 +412,7 @@ def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str)
     return result
 
 
-def update_clip_in_video(
-    playlist_name: str, video_id: str, clip: dict, token: str
-) -> Any:
+def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str) -> Any:
     """Update a single clip in a video in a playlist."""
     endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
     result = api_put(endpoint, data=clip, token=token)
@@ -501,9 +469,7 @@ def load_cliplist(
         return None  # If not found
 
 
-def save_cliplist(
-    name: str, filters_state: Dict[str, Any], token: str
-) -> Optional[Dict[str, Any]]:
+def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optional[Dict[str, Any]]:
     data = {
         "name": name,
         "filters": filters_state,
@@ -517,9 +483,7 @@ def get_filtered_clips(cliplist_id: str) -> List[Dict[str, Any]]:
     filters_to_use = cliplist.get("filters", {})
 
     parsed_fn = (
-        parse_query_expression(filters_to_use.get("labels"))
-        if filters_to_use.get("labels")
-        else lambda labels: True
+        parse_query_expression(filters_to_use.get("labels")) if filters_to_use.get("labels") else lambda labels: True
     )
     pparsed_fn = (
         parse_query_expression(filters_to_use.get("partners"))

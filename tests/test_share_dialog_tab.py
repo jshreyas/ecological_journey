@@ -2,9 +2,7 @@
 Unit tests for ShareDialogTab component
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.share_dialog_tab import ShareDialogTab
 from ui.pages.film_components.video_state import VideoState

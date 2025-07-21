@@ -9,17 +9,11 @@ from pydantic_core import core_schema
 
 class PyObjectId(ObjectId):
     @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source_type: Any, handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
-        return core_schema.no_info_after_validator_function(
-            cls.validate, core_schema.str_schema()
-        )
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+        return core_schema.no_info_after_validator_function(cls.validate, core_schema.str_schema())
 
     @classmethod
-    def __get_pydantic_json_schema__(
-        cls, core_schema: core_schema.CoreSchema, handler: Any
-    ) -> JsonSchemaValue:
+    def __get_pydantic_json_schema__(cls, core_schema: core_schema.CoreSchema, handler: Any) -> JsonSchemaValue:
         return {"type": "string"}
 
     @classmethod

@@ -56,9 +56,7 @@ class UpstashRestBackend(CacheBackend):
             raise RuntimeError("Upstash REST credentials not set")
 
     def get(self, key):
-        resp = requests.get(
-            f"{self.url}/get/{key}", headers={"Authorization": f"Bearer {self.token}"}
-        )
+        resp = requests.get(f"{self.url}/get/{key}", headers={"Authorization": f"Bearer {self.token}"})
         if resp.status_code == 200:
             val = resp.json().get("result")
             if val:

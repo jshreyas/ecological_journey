@@ -2,9 +2,7 @@
 Unit tests for MetaforgeTab component
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.metaforge_tab import MetaforgeTab
 from ui.pages.film_components.video_state import VideoState
@@ -152,9 +150,7 @@ class TestMetaforgeTab:
         test_metadata = {"title": "Test", "partners": ["Alice"]}
 
         # Mock the save_video_metadata function
-        with patch(
-            "ui.pages.film_components.metaforge_tab.save_video_metadata"
-        ) as mock_save:
+        with patch("ui.pages.film_components.metaforge_tab.save_video_metadata") as mock_save:
             mock_save.return_value = True
 
             self.metaforge_tab.handle_publish(test_metadata)

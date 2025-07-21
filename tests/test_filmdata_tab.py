@@ -2,9 +2,7 @@
 Unit tests for FilmdataTab component
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.filmdata_tab import FilmdataTab
 from ui.pages.film_components.video_state import VideoState
@@ -93,9 +91,7 @@ class TestFilmdataTab:
         mock_app.storage.user.get.return_value = "test_token"
 
         # Mock the save_video_metadata function
-        with patch(
-            "ui.pages.film_components.filmdata_tab.save_video_metadata"
-        ) as mock_save:
+        with patch("ui.pages.film_components.filmdata_tab.save_video_metadata") as mock_save:
             mock_save.return_value = True
 
             # Set up some test data
@@ -117,9 +113,7 @@ class TestFilmdataTab:
         mock_app.storage.user.get.return_value = "test_token"
 
         # Mock the save_video_metadata function to return False
-        with patch(
-            "ui.pages.film_components.filmdata_tab.save_video_metadata"
-        ) as mock_save:
+        with patch("ui.pages.film_components.filmdata_tab.save_video_metadata") as mock_save:
             mock_save.return_value = False
 
             # Set up some test data
@@ -152,9 +146,7 @@ class TestFilmdataTab:
         mock_app.storage.user.get.return_value = "test_token"
 
         # Mock the save_video_metadata function
-        with patch(
-            "ui.pages.film_components.filmdata_tab.save_video_metadata"
-        ) as mock_save:
+        with patch("ui.pages.film_components.filmdata_tab.save_video_metadata") as mock_save:
             mock_save.return_value = True
 
             test_metadata = {"title": "Test", "partners": ["Alice"]}
@@ -198,9 +190,7 @@ class TestFilmdataTab:
         """Test creating chips input"""
         mock_load_video.return_value = self.mock_video_data
 
-        input_ref, chips_list, error_label, container = (
-            self.filmdata_tab._create_chips_input(["@Alice", "#action"])
-        )
+        input_ref, chips_list, error_label, container = self.filmdata_tab._create_chips_input(["@Alice", "#action"])
 
         assert len(chips_list) == 2
         assert "@Alice" in chips_list

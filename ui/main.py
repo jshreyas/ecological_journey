@@ -1,4 +1,3 @@
-# main.py
 import os
 import sys
 
@@ -41,13 +40,9 @@ def api_get(endpoint: str):
 def login_or_signup(mode="login"):
     with (
         ui.dialog() as dialog,
-        ui.card()
-        .style("padding: 2rem; max-width: 400px; width: 90vw;")
-        .classes("w-full"),
+        ui.card().style("padding: 2rem; max-width: 400px; width: 90vw;").classes("w-full"),
     ):
-        ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes(
-            "text-xl font-bold w-full mb-6"
-        )
+        ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes("text-xl font-bold w-full mb-6")
 
         with ui.column().classes("gap-4 w-full"):
             if mode != "login":
@@ -78,14 +73,13 @@ def login_or_signup(mode="login"):
 
             # TODO: remove complex retry logic as the backend is now always awake
             def attempt_login(retries_left=retries):
-                print(
-                    f"Attempting login... Retries left: {retries_left}"
-                )  # Debug print
+                print(f"Attempting login... Retries left: {retries_left}")  # Debug print
                 try:
                     if retries_left == retries:
                         ui.run_javascript(
                             f"""
-                            fetch("{BACKEND_URL}/docs").then(r => console.log('Backend wakeup ping sent'))
+                            fetch("{BACKEND_URL}/docs").then(r =>
+                            console.log('Backend wakeup ping sent'))
                         """
                         )
                         print("wake API called in js")  # Debug print
@@ -114,15 +108,11 @@ def login_or_signup(mode="login"):
                             handle_backend_error()
                     else:
                         waiting_dialog.close()
-                        ui.notify(
-                            f"❌ {response.text or 'Login failed.'}", type="negative"
-                        )
+                        ui.notify(f"❌ {response.text or 'Login failed.'}", type="negative")
                 except Exception as e:
                     print("Exception during login:", e)  # Debug print
                     if retries_left > 0:
-                        ui.timer(
-                            interval, lambda: attempt_login(retries_left - 1), once=True
-                        )
+                        ui.timer(interval, lambda: attempt_login(retries_left - 1), once=True)
                     else:
                         waiting_dialog.close()
                         handle_backend_error()
@@ -139,21 +129,17 @@ def logout():
 
 def open_feedback_dialog():
     def submit_feedback(feedback_text: str):
-        api_post_utils(
-            "/feedback", {"text": feedback_text}, token=app.storage.user.get("token")
-        )
+        api_post_utils("/feedback", {"text": feedback_text}, token=app.storage.user.get("token"))
         ui.notify("Thank you for your feedback!", type="positive")
         dialog.close()
 
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg"):
         ui.label("We'd love your feedback!").classes("text-lg font-bold mb-2")
         feedback_text = ui.textarea(
-            label="be it an idea or appreciation or a bug, please describe your experience!"
+            label="be it an idea or appreciation or a bug, " "please describe your experience!"
         ).classes("w-full")
         with ui.row().classes("justify-end gap-4 mt-4"):
-            ui.button(
-                icon="send", on_click=lambda: submit_feedback(feedback_text.value)
-            ).props("color=primary")
+            ui.button(icon="send", on_click=lambda: submit_feedback(feedback_text.value)).props("color=primary")
     dialog.open()
 
 
@@ -161,7 +147,7 @@ def setup_navbar(title: str = "Ecological Journey"):
     with (
         ui.header()
         .classes(
-            "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
+            "top-navbar flex items-center justify-between px-4 py-2 " "bg-primary fixed top-0 z-50 w-full shadow-sm"
         )
         .style("background-color: #111827;")
     ):
@@ -183,12 +169,8 @@ def setup_navbar(title: str = "Ecological Journey"):
             )
 
         # CENTER: Scrollable nav links
-        with ui.element("div").classes(
-            "flex-1 overflow-x-auto no-scrollbar flex justify-center"
-        ):
-            with ui.button_group().classes(
-                "gap-1 items-center justify-center border-none shadow-none"
-            ):
+        with ui.element("div").classes("flex-1 overflow-x-auto no-scrollbar flex justify-center"):
+            with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
                 ui.element("div").classes("w-[40px] shrink-0")
                 nav_button("Films", "/films")
                 nav_button("Clips", "/clips")
@@ -202,16 +184,14 @@ def setup_navbar(title: str = "Ecological Journey"):
             user = app.storage.user.get("user")
             if user:
                 ui.label(f"Hi, {user}").classes("text-sm text-white")
-                ui.button(icon="logout", on_click=logout).props(
-                    "flat round dense color=red"
-                ).tooltip("Logout")
+                ui.button(icon="logout", on_click=logout).props("flat round dense color=red").tooltip("Logout")
             else:
                 ui.button(icon="person_add", on_click=lambda: caught_john_doe()).props(
                     "flat round dense color=white"
                 ).tooltip("Register")
-                ui.button(
-                    icon="login", on_click=lambda: login_or_signup("login")
-                ).props("flat round dense color=white").tooltip("Login")
+                ui.button(icon="login", on_click=lambda: login_or_signup("login")).props(
+                    "flat round dense color=white"
+                ).tooltip("Login")
 
     # Scroll-triggered navbar hide/show
     ui.run_javascript(
@@ -274,9 +254,15 @@ def ecological_layout():
                 hideOrientationWarning();
             }
         }
-        window.addEventListener("load", checkOrientation);
-        window.addEventListener("resize", checkOrientation);
-        window.addEventListener("orientationchange", checkOrientation);
+        window.addEventListener(
+            "load", checkOrientation
+        );
+        window.addEventListener(
+            "resize", checkOrientation
+        );
+        window.addEventListener(
+            "orientationchange", checkOrientation
+        );
         checkOrientation();
     """
     )
@@ -284,9 +270,9 @@ def ecological_layout():
 
 def setup_footer():
     with ui.page_sticky(x_offset=18, y_offset=18):
-        ui.button(icon="feedback", on_click=open_feedback_dialog).tooltip(
-            "Send Feedback"
-        ).props("round fab fixed color=secondary")
+        ui.button(icon="feedback", on_click=open_feedback_dialog).tooltip("Send Feedback").props(
+            "round fab fixed color=secondary"
+        )
 
 
 @ui.page("/notion")

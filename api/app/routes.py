@@ -7,18 +7,9 @@ import jwt
 from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    OAuth2PasswordBearer,
-    OAuth2PasswordRequestForm,
-)
+from fastapi.security import HTTPAuthorizationCredentials, OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
-from .auth import (
-    auth_scheme_optional,
-    create_access_token,
-    get_password_hash,
-    verify_password,
-)
+from .auth import auth_scheme_optional, create_access_token, get_password_hash, verify_password
 from .auth_models import RegisterUser, Team, User
 from .db import db
 from .emailer import send_feedback_email
@@ -94,9 +85,7 @@ async def get_playlists_for_user(user_id: str) -> list:
 
 
 async def get_video_by_id(playlist_name: str, video_id: str):
-    return await db.playlists.find_one(
-        {"name": playlist_name, "videos.video_id": video_id}
-    )
+    return await db.playlists.find_one({"name": playlist_name, "videos.video_id": video_id})
 
 
 async def insert_playlist(playlist: Playlist):
@@ -104,9 +93,7 @@ async def insert_playlist(playlist: Playlist):
 
 
 async def insert_video(playlist_name: str, video: Video):
-    await db.playlists.update_one(
-        {"name": playlist_name}, {"$push": {"videos": video.dict()}}
-    )
+    await db.playlists.update_one({"name": playlist_name}, {"$push": {"videos": video.dict()}})
 
 
 async def insert_clip(playlist_name: str, video_id: str, clip: Clip):
@@ -139,9 +126,7 @@ async def get_cliplists(
 
 
 @router.get("/cliplist/{cliplist_id}")
-async def get_cliplist(
-    cliplist_id: str, _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)
-):
+async def get_cliplist(cliplist_id: str, _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
     cliplist = await get_cliplist_by_id(cliplist_id)
     if not cliplist:
         raise HTTPException(status_code=404, detail="Cliplist not found.")
@@ -169,9 +154,7 @@ async def update_cliplist_filters(
         raise HTTPException(status_code=404, detail="Cliplist not found.")
 
     if existing.get("owner_id") != user["_id"]:
-        raise HTTPException(
-            status_code=403, detail="Access denied to update this cliplist."
-        )
+        raise HTTPException(status_code=403, detail="Access denied to update this cliplist.")
 
     await update_cliplist(cliplist_id, cliplist.dict(exclude={"id", "owner_id"}))
     return {"msg": "Cliplist updated successfully"}
@@ -186,9 +169,7 @@ async def register(user_data: RegisterUser):
 
     hashed = get_password_hash(user_data.password)
 
-    user = User(
-        username=user_data.username, email=user_data.email, hashed_password=hashed
-    )
+    user = User(username=user_data.username, email=user_data.email, hashed_password=hashed)
 
     result = await db.users.insert_one(user.dict(by_alias=True))
     token = create_access_token({"sub": str(result.inserted_id)})
@@ -211,9 +192,7 @@ async def get_users(
 
 @router.post("/auth/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = await db.users.find_one(
-        {"email": form_data.username}
-    )  # TODO: check username or email?
+    user = await db.users.find_one({"email": form_data.username})  # TODO: check username or email?
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     token = create_access_token({"sub": str(user["_id"])})
@@ -237,9 +216,7 @@ async def get_teams_member_of(user_id: str) -> list:
 async def get_teams_for_user(user_id: str) -> dict:
     owned = await get_teams_owned_by(user_id)
     member = await get_teams_member_of(user_id)
-    filtered_member = [
-        team for team in member if team["_id"] not in {t["_id"] for t in owned}
-    ]
+    filtered_member = [team for team in member if team["_id"] not in {t["_id"] for t in owned}]
     return {"owned": owned, "member": filtered_member}
 
 
@@ -267,9 +244,7 @@ async def create_team(team: Team, user=Depends(get_current_user)):
     team.owner_id = user["_id"]
     team.member_ids = [user["_id"]]
     result = await db.teams.insert_one(team.dict(by_alias=True))
-    await db.users.update_one(
-        {"_id": user["_id"]}, {"$push": {"team_ids": result.inserted_id}}
-    )
+    await db.users.update_one({"_id": user["_id"]}, {"$push": {"team_ids": result.inserted_id}})
     return {"id": str(result.inserted_id)}
 
 
@@ -282,12 +257,8 @@ async def add_user_to_team(team_id: str, user_id: str, user=Depends(get_current_
     if team["owner_id"] != user["_id"]:
         raise HTTPException(status_code=403, detail="Only owner can add members")
 
-    await db.teams.update_one(
-        {"_id": ObjectId(team_id)}, {"$addToSet": {"member_ids": ObjectId(user_id)}}
-    )
-    await db.users.update_one(
-        {"_id": ObjectId(user_id)}, {"$addToSet": {"team_ids": ObjectId(team_id)}}
-    )
+    await db.teams.update_one({"_id": ObjectId(team_id)}, {"$addToSet": {"member_ids": ObjectId(user_id)}})
+    await db.users.update_one({"_id": ObjectId(user_id)}, {"$addToSet": {"team_ids": ObjectId(team_id)}})
     return {"msg": "User added to team"}
 
 
@@ -298,13 +269,8 @@ async def get_team_members(team_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Team not found")
     if user["_id"] not in team["member_ids"]:
         raise HTTPException(status_code=403, detail="Not authorized")
-    members = await db.users.find({"_id": {"$in": team["member_ids"]}}).to_list(
-        length=None
-    )
-    return [
-        {"id": str(m["_id"]), "email": m["email"], "username": m["username"]}
-        for m in members
-    ]
+    members = await db.users.find({"_id": {"$in": team["member_ids"]}}).to_list(length=None)
+    return [{"id": str(m["_id"]), "email": m["email"], "username": m["username"]} for m in members]
 
 
 # playlist
@@ -356,9 +322,7 @@ async def get_playlist(
 
 
 @router.post("/playlists/{playlist_name}/videos")
-async def create_video(
-    playlist_name: str, video: Video, user=Depends(get_current_user)
-):
+async def create_video(playlist_name: str, video: Video, user=Depends(get_current_user)):
 
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
@@ -372,15 +336,11 @@ async def create_video(
         raise HTTPException(status_code=400, detail="Video already exists.")
 
     await insert_video(playlist_name, video)
-    return {
-        "msg": "Video added to playlist!"
-    }  # TODO: return video object or something?
+    return {"msg": "Video added to playlist!"}  # TODO: return video object or something?
 
 
 @router.post("/playlists/{playlist_name}/videos/{video_id}/clips")
-async def create_clip(
-    playlist_name: str, video_id: str, clip: Clip, user=Depends(get_current_user)
-):
+async def create_clip(playlist_name: str, video_id: str, clip: Clip, user=Depends(get_current_user)):
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found.")
@@ -399,9 +359,7 @@ async def create_clip(
 
 
 @router.put("/playlists/{playlist_name}/videos")
-async def update_video(
-    playlist_name: str, updated_video: Video, user=Depends(get_current_user)
-):
+async def update_video(playlist_name: str, updated_video: Video, user=Depends(get_current_user)):
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found.")
@@ -450,26 +408,20 @@ async def update_video(
             updated_data["clips"] = incoming_clips
             videos[i] = updated_data
 
-            await db.playlists.update_one(
-                {"name": playlist_name}, {"$set": {"videos": videos}}
-            )
+            await db.playlists.update_one({"name": playlist_name}, {"$set": {"videos": videos}})
             return {"msg": "Video updated successfully!"}
 
     raise HTTPException(status_code=404, detail="Video not found in playlist.")
 
 
 @router.put("/playlists/{playlist_name}/assign-team")
-async def assign_playlist_to_team(
-    playlist_name: str, team_id: str, user=Depends(get_current_user)
-):
+async def assign_playlist_to_team(playlist_name: str, team_id: str, user=Depends(get_current_user)):
     user_id = user["_id"]
 
     # 1. Check if playlist exists and is owned by the user
     playlist = await get_playlist_by_name(playlist_name)
     if not playlist:
-        raise HTTPException(
-            status_code=404, detail="Playlist not found or not owned by user."
-        )
+        raise HTTPException(status_code=404, detail="Playlist not found or not owned by user.")
     if not playlist["owner_id"] == user_id:
         raise HTTPException(status_code=403, detail="Access denied to this playlist.")
 
@@ -479,9 +431,7 @@ async def assign_playlist_to_team(
         raise HTTPException(status_code=403, detail="User not a member of this team.")
 
     # 3. Assign playlist to team
-    await db.playlists.update_one(
-        {"name": playlist_name}, {"$set": {"team_id": ObjectId(team_id)}}
-    )
+    await db.playlists.update_one({"name": playlist_name}, {"$set": {"team_id": ObjectId(team_id)}})
 
     return {"msg": "Playlist assigned to team successfully."}
 
@@ -520,9 +470,7 @@ async def update_clip(
     if not updated:
         raise HTTPException(status_code=404, detail="Clip not found.")
 
-    await db.playlists.update_one(
-        {"name": playlist_name}, {"$set": {"videos": playlist["videos"]}}
-    )
+    await db.playlists.update_one({"name": playlist_name}, {"$set": {"videos": playlist["videos"]}})
     return {"msg": "Clip updated successfully!"}
 
 

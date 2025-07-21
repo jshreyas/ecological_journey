@@ -43,9 +43,7 @@ def send_feedback_email(feedback: dict):
     </html>
     """
 
-    msg.set_content(
-        f"New Feedback:\n\nMessage: {text}\nSubmitted at: {submitted_at}"
-    )  # fallback plain text
+    msg.set_content(f"New Feedback:\n\nMessage: {text}\nSubmitted at: {submitted_at}")  # fallback plain text
     msg.add_alternative(html, subtype="html")
 
     try:

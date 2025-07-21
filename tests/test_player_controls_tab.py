@@ -2,9 +2,7 @@
 Unit tests for PlayerControlsTab component
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.player_controls_tab import PlayerControlsTab
 from ui.pages.film_components.video_state import VideoState
@@ -80,9 +78,7 @@ class TestPlayerControlsTab:
     @patch("ui.pages.film_components.player_controls_tab.ui")
     @patch("ui.pages.film_components.player_controls_tab.VideoPlayer")
     @patch("ui.pages.film_components.player_controls_tab.load_video")
-    def test_create_tab_playlist_mode(
-        self, mock_load_video_func, mock_video_player, mock_ui, mock_load_video
-    ):
+    def test_create_tab_playlist_mode(self, mock_load_video_func, mock_video_player, mock_ui, mock_load_video):
         """Test creating the player controls tab in playlist mode"""
         mock_load_video.return_value = self.mock_video_data
         mock_load_video_func.return_value = self.mock_video_data
@@ -97,9 +93,7 @@ class TestPlayerControlsTab:
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.player_controls_tab.ui")
     @patch("ui.pages.film_components.player_controls_tab.VideoPlayer")
-    def test_create_tab_autoplay_clip(
-        self, mock_video_player, mock_ui, mock_load_video
-    ):
+    def test_create_tab_autoplay_clip(self, mock_video_player, mock_ui, mock_load_video):
         """Test creating the player controls tab with autoplay clip"""
         mock_load_video.return_value = self.mock_video_data
         mock_container = Mock()
@@ -156,9 +150,7 @@ class TestPlayerControlsTab:
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.player_controls_tab.ui")
     @patch("ui.pages.film_components.player_controls_tab.load_video")
-    def test_play_clips_playlist_mode_with_clips(
-        self, mock_load_video_func, mock_ui, mock_load_video
-    ):
+    def test_play_clips_playlist_mode_with_clips(self, mock_load_video_func, mock_ui, mock_load_video):
         """Test playing clips in playlist mode with clips available"""
         mock_load_video.return_value = self.mock_video_data
         mock_load_video_func.return_value = self.mock_video_data
@@ -175,9 +167,7 @@ class TestPlayerControlsTab:
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.player_controls_tab.ui")
     @patch("ui.pages.film_components.player_controls_tab.load_video")
-    def test_play_clips_playlist_mode_no_clips(
-        self, mock_load_video_func, mock_ui, mock_load_video
-    ):
+    def test_play_clips_playlist_mode_no_clips(self, mock_load_video_func, mock_ui, mock_load_video):
         """Test playing clips in playlist mode with no clips"""
         mock_video_no_clips = self.mock_video_data.copy()
         mock_video_no_clips["clips"] = []

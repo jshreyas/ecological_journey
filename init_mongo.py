@@ -39,9 +39,7 @@ def login_user():
 
 
 # Create a playlist
-def create_playlist(
-    token, name="Grappling Journal"
-):  # TODO: dynamically pull this name
+def create_playlist(token, name="Grappling Journal"):  # TODO: dynamically pull this name
     url = f"{BASE_URL}/playlists"
     headers = {"Authorization": f"Bearer {token}"}
     data = {"name": name}
@@ -101,9 +99,7 @@ def main():
                 "video_id": v["video_id"],
                 "youtube_url": v["url"],
                 "date": v["published_at"],
-                "duration_seconds": v.get(
-                    "duration_seconds", None
-                ),  # Add duration data here
+                "duration_seconds": v.get("duration_seconds", None),  # Add duration data here
                 "type": "",
                 "partners": [],
                 "positions": [],

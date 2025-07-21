@@ -51,40 +51,29 @@ class FilmboardTab:
         same_day_videos = [
             v
             for v in all_videos
-            if v["video_id"] != self.video_state.video_id
-            and v.get("date", "").split("T")[0] == current_video_date
+            if v["video_id"] != self.video_state.video_id and v.get("date", "").split("T")[0] == current_video_date
         ]
 
         if not same_day_videos:
-            ui.label("📭 No other films found from the same day.").classes(
-                "text-sm text-gray-500"
-            )
+            ui.label("📭 No other films found from the same day.").classes("text-sm text-gray-500")
             return
 
         # Display videos from the same day using the original layout
         for v in same_day_videos:
             partners = v.get("partners", [])
             labels = v.get("labels", [])
-            partners_html = (
-                ", ".join(p for p in partners) if partners else "No partners"
-            )
-            labels_html = (
-                ", ".join(label for label in labels) if labels else "No labels"
-            )
+            partners_html = ", ".join(p for p in partners) if partners else "No partners"
+            labels_html = ", ".join(label for label in labels) if labels else "No labels"
 
             card_classes = (
                 "cursor-pointer flex flex-row flex-col p-2 hover:shadow-xl "
                 "transition-shadow duration-200 border-gray-600"
             )
             with (
-                ui.card()
-                .classes(card_classes)
-                .on("click", lambda e, vid=v["video_id"]: self._handle_video_click(vid))
+                ui.card().classes(card_classes).on("click", lambda e, vid=v["video_id"]: self._handle_video_click(vid))
             ):
                 with ui.row().classes("w-full gap-2 justify-between"):
-                    ui.label(v["title"]).tooltip(v["title"]).classes(
-                        "truncate font-bold text-sm sm:text-base"
-                    )
+                    ui.label(v["title"]).tooltip(v["title"]).classes("truncate font-bold text-sm sm:text-base")
                     ui.label(f"⏱ {v['duration_human']}").classes("text-xs")
                 ui.label(f"🎭 {partners_html}").classes("text-xs")
                 ui.label(f"🏷️ {labels_html}").classes("text-xs")
@@ -113,8 +102,7 @@ class FilmboardTab:
         same_day_videos = [
             v
             for v in all_videos
-            if v["video_id"] != self.video_state.video_id
-            and v.get("date", "").split("T")[0] == current_video_date
+            if v["video_id"] != self.video_state.video_id and v.get("date", "").split("T")[0] == current_video_date
         ]
 
         return len(same_day_videos)

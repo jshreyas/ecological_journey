@@ -2,9 +2,7 @@
 Unit tests for FilmboardTab component
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.filmboard_tab import FilmboardTab
 from ui.pages.film_components.video_state import VideoState
@@ -73,9 +71,7 @@ class TestFilmboardTab:
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.filmboard_tab.load_videos")
     @patch("ui.pages.film_components.filmboard_tab.ui")
-    def test_refresh_without_container(
-        self, mock_ui, mock_load_videos, mock_load_video
-    ):
+    def test_refresh_without_container(self, mock_ui, mock_load_videos, mock_load_video):
         """Test refreshing the filmboard tab without container"""
         mock_load_video.return_value = self.mock_video_data
         mock_load_videos.return_value = []
@@ -86,9 +82,7 @@ class TestFilmboardTab:
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.filmboard_tab.load_videos")
     @patch("ui.pages.film_components.filmboard_tab.ui")
-    def test_refresh_with_same_day_videos(
-        self, mock_ui, mock_load_videos, mock_load_video
-    ):
+    def test_refresh_with_same_day_videos(self, mock_ui, mock_load_videos, mock_load_video):
         """Test refresh with videos from the same day"""
         mock_load_video.return_value = self.mock_video_data
 
@@ -121,9 +115,7 @@ class TestFilmboardTab:
         """Test getting count of videos from the same day"""
         mock_load_video.return_value = self.mock_video_data
 
-        with patch(
-            "ui.pages.film_components.filmboard_tab.load_videos"
-        ) as mock_load_videos:
+        with patch("ui.pages.film_components.filmboard_tab.load_videos") as mock_load_videos:
             same_day_videos = [
                 {"video_id": "other1", "date": "2024-01-15T12:00:00Z"},
                 {"video_id": "other2", "date": "2024-01-15T14:00:00Z"},

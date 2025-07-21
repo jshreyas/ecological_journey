@@ -132,12 +132,8 @@ def partner_page():
         a_pp = []
         for playlist in playlists:
             playlist_name = playlist["name"]
-            playlist_clips = sum(
-                1 for c in all_clips if c["playlist_name"] == playlist_name
-            )
-            playlist_videos = sum(
-                1 for v in all_videos if v["playlist_name"] == playlist_name
-            )
+            playlist_clips = sum(1 for c in all_clips if c["playlist_name"] == playlist_name)
+            playlist_videos = sum(1 for v in all_videos if v["playlist_name"] == playlist_name)
             # count number of unique partners from all videos and clips in the playlist
             partners_in_playlist = set()
             for c in all_clips:
@@ -170,9 +166,7 @@ def partner_page():
             "#FAF0E6",
             "#F8F8FF",
         ]
-        playlist_colors = {
-            pl: palette[i % len(palette)] for i, pl in enumerate(all_playlists)
-        }
+        playlist_colors = {pl: palette[i % len(palette)] for i, pl in enumerate(all_playlists)}
 
         # More subtle edge colors
         edge_colors = [
@@ -187,9 +181,7 @@ def partner_page():
             "#DDA0DD",
             "#FFB6C1",
         ]
-        edge_color_map = {
-            pl: edge_colors[i % len(edge_colors)] for i, pl in enumerate(all_playlists)
-        }
+        edge_color_map = {pl: edge_colors[i % len(edge_colors)] for i, pl in enumerate(all_playlists)}
 
         partner_playlist_counter = defaultdict(Counter)
         for clip in all_clips:
@@ -243,14 +235,10 @@ def partner_page():
                 "type": "node",
                 "count": usage_counts[partner],
                 "playlist": playlist,
-                "color": playlist_colors.get(
-                    playlist, "#888"
-                ),  # Use playlist color for node
+                "color": playlist_colors.get(playlist, "#888"),  # Use playlist color for node
                 "parent": f"playlist_{playlist}",
             }
-            classes = (
-                "high-usage" if usage_counts[partner] >= HIGH_USAGE_THRESHOLD else ""
-            )
+            classes = "high-usage" if usage_counts[partner] >= HIGH_USAGE_THRESHOLD else ""
             node = {"data": node_data}
             if classes:
                 node["classes"] = classes
@@ -282,11 +270,7 @@ def partner_page():
             for video in all_videos:
                 if p1 in video.get("partners", []) and p2 in video.get("partners", []):
                     playlist_counter[video.get("playlist_name", "Unknown")] += 1
-            playlist, _ = (
-                playlist_counter.most_common(1)[0]
-                if playlist_counter
-                else ("Unknown", 0)
-            )
+            playlist, _ = playlist_counter.most_common(1)[0] if playlist_counter else ("Unknown", 0)
             color = edge_color_map.get(playlist, "#888")
             edge_data = {
                 "id": f"{p1}_{p2}",
@@ -304,16 +288,10 @@ def partner_page():
         elements_json = json.dumps(elements)
 
     # Load dependencies in the correct order according to cytoscape-fcose documentation
-    ui.add_head_html(
-        '<script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>'
-    )
-    ui.add_head_html(
-        '<script src="https://unpkg.com/layout-base/layout-base.js"></script>'
-    )
+    ui.add_head_html('<script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>')
+    ui.add_head_html('<script src="https://unpkg.com/layout-base/layout-base.js"></script>')
     ui.add_head_html('<script src="https://unpkg.com/cose-base/cose-base.js"></script>')
-    ui.add_head_html(
-        '<script src="https://unpkg.com/cytoscape-fcose/cytoscape-fcose.js"></script>'
-    )
+    ui.add_head_html('<script src="https://unpkg.com/cytoscape-fcose/cytoscape-fcose.js"></script>')
 
     # Load our custom graph implementation
     ui.add_head_html('<script src="/static/partner_graph.js"></script>')

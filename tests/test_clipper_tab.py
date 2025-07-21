@@ -2,9 +2,7 @@
 Unit tests for ClipperTab component
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.clipper_tab import ClipperTab
 from ui.pages.film_components.video_state import VideoState
@@ -135,9 +133,7 @@ class TestClipperTab:
         """Test creating chips input"""
         mock_load_video.return_value = self.mock_video_data
 
-        input_ref, chips_list, error_label, container = (
-            self.clipper_tab._create_chips_input(["@Alice", "#action"])
-        )
+        input_ref, chips_list, error_label, container = self.clipper_tab._create_chips_input(["@Alice", "#action"])
 
         assert len(chips_list) == 2
         assert "@Alice" in chips_list

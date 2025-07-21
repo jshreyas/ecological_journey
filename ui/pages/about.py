@@ -25,9 +25,7 @@ def about_page():
         """
         )
 
-        ui.label("🔍 A Familiar Comparison, Made Martial").classes(
-            "text-xl font-semibold"
-        )
+        ui.label("🔍 A Familiar Comparison, Made Martial").classes("text-xl font-semibold")
         ui.markdown(
             "**Think of it like GitHub for your training — with Strava's community "
             "spirit — all grounded in the soul of a dojo.**"

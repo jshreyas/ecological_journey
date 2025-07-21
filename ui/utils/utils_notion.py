@@ -12,9 +12,7 @@ def get_all_blocks(page_id):
     start_cursor = None
 
     while True:
-        response = notion.blocks.children.list(
-            block_id=page_id, start_cursor=start_cursor
-        )
+        response = notion.blocks.children.list(block_id=page_id, start_cursor=start_cursor)
         all_blocks.extend(response["results"])
         if response.get("has_more"):
             start_cursor = response["next_cursor"]
@@ -46,9 +44,7 @@ def crawl_page_recursive(page_id):
 
 
 def generate_tree(root_id="1c1bc4e1-2692-8016-97db-f4d92b5d2464"):
-    title = notion.pages.retrieve(root_id)["properties"]["title"]["title"][0][
-        "plain_text"
-    ]
+    title = notion.pages.retrieve(root_id)["properties"]["title"]["title"][0]["plain_text"]
     tree = [
         {
             "id": root_id,

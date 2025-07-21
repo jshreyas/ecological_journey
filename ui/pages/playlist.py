@@ -27,15 +27,11 @@ def playlist_page(cliplist_id):
     with ui.splitter(value=70, horizontal=False).classes("w-full h-full") as splitter:
         with splitter.before:
             player_column = (
-                ui.column()
-                .classes("w-full h-full")
-                .style("height: 100%; height: 56.25vw; max-height: 70vh;")
+                ui.column().classes("w-full h-full").style("height: 100%; height: 56.25vw; max-height: 70vh;")
             )
         with splitter.after:
             with (
-                ui.scroll_area()
-                .classes("w-full h-full p-2")
-                .style("height: 100%; height: 56.25vw; max-height: 70vh;")
+                ui.scroll_area().classes("w-full h-full p-2").style("height: 100%; height: 56.25vw; max-height: 70vh;")
             ):
                 card_column = ui.column().classes("w-full").style("gap: 0;")
 
@@ -46,26 +42,16 @@ def playlist_page(cliplist_id):
         start_time = format_time(clip.get("start", 0))
         end_time = format_time(clip.get("end", 0))
 
-        card_classes = (
-            "bg-secondary text-white"
-            if index == current_index
-            else "bg-white text-black"
-        )
+        card_classes = "bg-secondary text-white" if index == current_index else "bg-white text-black"
         card_tailwind = f"{card_classes} p-3 mb-2 mt-2 transition-all duration-200 ease-in-out border-black outline-black outline-4 border-double cursor-pointer rounded-lg shadow-md hover:shadow-lg w-full"
 
-        card = (
-            ui.card()
-            .classes(card_tailwind)
-            .on("click", lambda idx=index: play_clip(idx))
-        )
+        card = ui.card().classes(card_tailwind).on("click", lambda idx=index: play_clip(idx))
         with card:
             # TODO: on click play the clip doesnt work, it must be clashing with the autoplay's queue; either remove onclick or fix the logic
             ui.label(title).classes("text-md font-semibold")
             with ui.row().classes("w-full gap-2 justify-between"):
                 ui.label(f"⏱ {start_time} - {end_time}").classes("text-xs")
-                ui.label(
-                    f"{format_time(clip.get('end', 0) - clip.get('start', 0))}"
-                ).classes("text-xs")
+                ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes("text-xs")
             if partners:
                 ui.label(f"🎭 {partners}").classes("text-sm opacity-80")
             if labels:
