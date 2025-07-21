@@ -444,14 +444,20 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
 def load_cliplist(
     cliplist_id: Optional[str] = None,
 ) -> Union[List[Dict[str, Any]], Dict[str, Any], None]:
+    global _cliplist_cache
     cache_key = "cliplists"
 
-    cached = cache_get(cache_key)
-    if cached:
-        data = cached
+    if cache_key in _cliplist_cache and _cliplist_cache.get(cache_key):
+        data = _cliplist_cache[cache_key]
     else:
-        data = api_get("/cliplists")
-        cache_set(cache_key, data)
+        cached = cache_get(cache_key)
+        if cached:
+            _cliplist_cache[cache_key] = cached
+            data = cached
+        else:
+            data = api_get("/cliplists")
+            cache_set(cache_key, data)
+            _cliplist_cache[cache_key] = data
 
     if not cliplist_id:
         return data
