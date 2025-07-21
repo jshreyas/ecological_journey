@@ -115,8 +115,7 @@ def partner_page():
                 '<div id="cy" style="height: 600px; flex: 1 1 60%; min-width: 900px; border: 1px solid #ccc; background: #f7f7fa;"></div>'
             ).classes("w-full")
         with splitter.after:
-            # Details panel (will be updated)
-            pass
+            ui.html('<div id="details_panel" style="min-height: 400px; padding: 1rem;"></div>')
 
     with ui.column().classes("items-center w-full"):
         playlists = load_playlists()
@@ -152,7 +151,6 @@ def partner_page():
                 }
             )
 
-        # import pdb; pdb.set_trace()
         # Color palette inspired by fcose demo - more subtle and cohesive
         palette = [
             "#E8F4FD",
