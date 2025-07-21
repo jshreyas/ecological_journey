@@ -3,7 +3,7 @@ PlayerControlsTab - Component for video player controls and playlist functionali
 Handles the video player controls and playlist mode
 """
 
-from typing import Callable, Optional
+from typing import Callable
 
 from nicegui import ui
 from utils.utils_api import load_video
@@ -35,7 +35,8 @@ class PlayerControlsTab:
 
         self.container.clear()
         with self.container:
-            with ui.column().classes("w-full h-full p-4 gap-4") as player_container_ref:
+            player_container_classes = "w-full h-full p-4 gap-4"
+            with ui.column().classes(player_container_classes) as player_container_ref:
                 self.player_container["ref"] = player_container_ref
 
                 if play_clips_playlist:

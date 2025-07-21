@@ -5,17 +5,15 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import app, ui
-from pages.film_components import (
-    ClipboardTab,
-    ClipperTab,
-    FilmboardTab,
-    FilmdataTab,
-    MetaforgeTab,
-    NavigationTab,
-    PlayerControlsTab,
-    ShareDialogTab,
-    VideoState,
-)
+from pages.film_components.clipboard_tab import ClipboardTab
+from pages.film_components.clipper_tab import ClipperTab
+from pages.film_components.filmboard_tab import FilmboardTab
+from pages.film_components.filmdata_tab import FilmdataTab
+from pages.film_components.metaforge_tab import MetaforgeTab
+from pages.film_components.navigation_tab import NavigationTab
+from pages.film_components.player_controls_tab import PlayerControlsTab
+from pages.film_components.share_dialog_tab import ShareDialogTab
+from pages.film_components.video_state import VideoState
 from utils.dialog_puns import caught_john_doe, generate_funny_title
 from utils.utils_api import (
     add_clip_to_video,
@@ -37,7 +35,6 @@ def film_page(video_id: str):
     video_state = VideoState(video_id)
 
     state = {"latest_cleaned": None}  # Will store cleaned copy for confirm step
-    diff_area = None  # Will be bound to markdown component
     confirm_dialog = None  # Will be bound to dialog
 
     query_params = ui.context.client.request.query_params
@@ -82,9 +79,6 @@ def film_page(video_id: str):
     with confirm_dialog:
         with ui.card().classes("max-w-xl"):
             ui.label("📝 Review Changes").classes("text-lg font-bold")
-            diff_area = ui.markdown("").classes(
-                "text-sm text-left whitespace-pre-wrap max-h-80 overflow-auto"
-            )
             with ui.row().classes("justify-end w-full"):
                 ui.button(icon="close", on_click=confirm_dialog.close)
                 ui.button(
@@ -193,7 +187,7 @@ def film_page(video_id: str):
                 chips_input_ref, chips_list, chips_error, chips_container = (
                     chips_input_combined(
                         [f"@{p}" for p in clip.get("partners", [])]
-                        + [f"#{l}" for l in clip.get("labels", [])]
+                        + [f"#{label}" for label in clip.get("labels", [])]
                     )
                 )
 

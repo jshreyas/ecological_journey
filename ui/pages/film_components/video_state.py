@@ -2,7 +2,7 @@
 VideoState class for centralized state management of video data
 """
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
 
 from utils.utils_api import load_video
 

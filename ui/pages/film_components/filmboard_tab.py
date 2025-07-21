@@ -68,13 +68,17 @@ class FilmboardTab:
             partners_html = (
                 ", ".join(p for p in partners) if partners else "No partners"
             )
-            labels_html = ", ".join(l for l in labels) if labels else "No labels"
+            labels_html = (
+                ", ".join(label for label in labels) if labels else "No labels"
+            )
 
+            card_classes = (
+                "cursor-pointer flex flex-row flex-col p-2 hover:shadow-xl "
+                "transition-shadow duration-200 border-gray-600"
+            )
             with (
                 ui.card()
-                .classes(
-                    "cursor-pointer flex flex-row flex-col p-2 hover:shadow-xl transition-shadow duration-200 border-gray-600"
-                )
+                .classes(card_classes)
                 .on("click", lambda e, vid=v["video_id"]: self._handle_video_click(vid))
             ):
                 with ui.row().classes("w-full gap-2 justify-between"):

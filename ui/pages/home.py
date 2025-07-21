@@ -1,5 +1,6 @@
-import datetime
+import os
 from collections import Counter
+from datetime import datetime
 
 from nicegui import app, ui
 from pages.home_components.calendar_component import calendar_container
@@ -331,7 +332,7 @@ def home_page():
                         return
 
                     dates = [
-                        datetime.datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ")
+                        datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ")
                         for v in videos
                     ]
                     # total_videos = len(videos)
@@ -580,7 +581,7 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
         existing_videos = load_videos(playlist_id)
         if existing_videos:
             latest_saved_date_str = max(video["date"] for video in existing_videos)
-            latest_saved_date = datetime.datetime.fromisoformat(
+            latest_saved_date = datetime.fromisoformat(
                 latest_saved_date_str.replace("Z", "+00:00")
             )
             existing_video_ids = {video["video_id"] for video in existing_videos}

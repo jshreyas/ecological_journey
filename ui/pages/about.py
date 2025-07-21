@@ -14,11 +14,14 @@ def about_page():
             """
         ### Empowering the Martial Artist
 
-        This platform is an open-source ecosystem for martial artists to **track**, **vlog**, and **share** their training journeys.
+        This platform is an open-source ecosystem for martial artists to **track**,
+        **vlog**, and **share** their training journeys.
 
-        Whether you're a beginner rolling your first rounds, a capoeirista exploring the flow, or a cross-discipline athlete, this space is yours.
+        Whether you're a beginner rolling your first rounds, a capoeirista exploring
+        the flow, or a cross-discipline athlete, this space is yours.
 
-        We believe in **empowering students** to own their journey, reflect with confidence, and build a **living portfolio** of their evolving skills.
+        We believe in **empowering students** to own their journey, reflect with
+        confidence, and build a **living portfolio** of their evolving skills.
         """
         )
 
@@ -26,7 +29,8 @@ def about_page():
             "text-xl font-semibold"
         )
         ui.markdown(
-            "**Think of it like GitHub for your training — with Strava’s community spirit — all grounded in the soul of a dojo.**"
+            "**Think of it like GitHub for your training — with Strava's community "
+            "spirit — all grounded in the soul of a dojo.**"
         )
 
         with ui.row().classes("gap-4 flex-wrap"):
@@ -77,10 +81,14 @@ def about_page():
 
         This project was born out of two needs:
 
-        1. **Personal insight** — As martial artists, we often forget how far we've come. This tool helps you **see the arc** of your own growth.
-        2. **Community learning** — Training isn’t just about what you learn from the coach — it's about **what we teach each other**, by playing, failing, and reflecting.
+        1. **Personal insight** — As martial artists, we often forget how far we've come.
+        This tool helps you **see the arc** of your own growth.
+        2. **Community learning** — Training isn't just about what you learn from the coach —
+        it's about **what we teach each other**, by playing, failing, and reflecting.
 
-        It’s also a love letter to all the late-night YouTube video breakdowns, the after-class chats, the sparring sessions that changed our game, and the feeling of being part of something **bigger than ourselves**.
+        It's also a love letter to all the late-night YouTube video breakdowns, the after-class
+        chats, the sparring sessions that changed our game, and the feeling of being part of
+        something **bigger than ourselves**.
         """
         )
 
@@ -90,7 +98,7 @@ def about_page():
             """
         ### 🧘‍♂️ Philosophy
 
-        Martial arts isn’t just combat — it’s a way of **being**.
+        Martial arts isn't just combat — it's a way of **being**.
 
         We see martial arts as a **living ecosystem** of body, mind, and community. This platform exists to:
 
@@ -99,7 +107,8 @@ def about_page():
         - Celebrate not just results, but **process and progression**
         - Create a sense of **ritual and reflection**, the way ancient martial traditions did
 
-        This is a space for **students of movement**. For those who flow between disciplines. For those who want to leave a trail behind — not just for themselves, but for the next traveler.
+        This is a space for **students of movement**. For those who flow between disciplines.
+        For those who want to leave a trail behind — not just for themselves, but for the next traveler.
 
         We train. We log. We grow. Together.
         """

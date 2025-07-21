@@ -4,7 +4,7 @@ Handles the navigation arrows functionality
 """
 
 from datetime import datetime
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
 from nicegui import ui
 from pages.films import navigate_to_film
@@ -39,7 +39,7 @@ class NavigationTab:
             self._create_navigation_ui()
 
     def _find_adjacent_videos(self):
-        """Find the last video from the previous day and the first video from the next day"""
+        """Find the last video from the previous day and the first video from the next day."""
         video = self.video_state.get_video()
         current_video_date = video.get("date", "").split("T")[0]
 
@@ -91,9 +91,12 @@ class NavigationTab:
                         )
                     ):
                         ui.icon("arrow_back").classes("text-primary text-bold")
-                        ui.label(
-                            f"Previous Day: {datetime.strptime(self.prev_video['date'], '%Y-%m-%dT%H:%M:%SZ').strftime('%B %d, %Y')}"
-                        ).classes("text-sm text-primary text-bold truncate")
+                        prev_date = datetime.strptime(
+                            self.prev_video["date"], "%Y-%m-%dT%H:%M:%SZ"
+                        ).strftime("%B %d, %Y")
+                        ui.label(f"Previous Day: {prev_date}").classes(
+                            "text-sm text-primary text-bold truncate"
+                        )
                 else:
                     ui.label().classes("")  # Empty cell
 
@@ -115,9 +118,12 @@ class NavigationTab:
                             ),
                         )
                     ):
-                        ui.label(
-                            f"Next Day: {datetime.strptime(self.next_video['date'], '%Y-%m-%dT%H:%M:%SZ').strftime('%B %d, %Y')}"
-                        ).classes("text-sm text-primary text-bold truncate")
+                        next_date = datetime.strptime(
+                            self.next_video["date"], "%Y-%m-%dT%H:%M:%SZ"
+                        ).strftime("%B %d, %Y")
+                        ui.label(f"Next Day: {next_date}").classes(
+                            "text-sm text-primary text-bold truncate"
+                        )
                         ui.icon("arrow_forward").classes("text-primary text-bold")
                 else:
                     ui.label().classes("")  # Empty cell
@@ -129,7 +135,7 @@ class NavigationTab:
         else:
             navigate_to_film(video_id)
 
-    def get_adjacent_videos(self) -> Tuple[Optional[dict], Optional[dict]]:
+    def get_adjacent_videos(self) -> tuple[Optional[dict], Optional[dict]]:
         """Get the adjacent videos (previous and next)"""
         return self.prev_video, self.next_video
 

@@ -331,7 +331,7 @@ def films_page():
                                     else "No partners"
                                 )
                                 labels_html = (
-                                    ", ".join(l for l in labels)
+                                    ", ".join(label for label in labels)
                                     if labels
                                     else "No labels"
                                 )

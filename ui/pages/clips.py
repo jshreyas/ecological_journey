@@ -251,7 +251,7 @@ def clips_page():
                     )
 
                     # --- Filter videos based on playlist, date, and labels ---
-                    filtered_clips = [
+                    [
                         v
                         for v in all_videos
                         if v["playlist_name"] in playlist_filter.value
@@ -259,7 +259,6 @@ def clips_page():
                         and parsed_fn(v.get("labels", []))
                         and pparsed_fn(v.get("partners", []))
                     ]
-                    filtered_clip_ids = [v["video_id"] for v in filtered_clips]
                     filters_state = {
                         "playlists": playlist_filter.value,
                         "labels": query_tokens,
@@ -389,7 +388,7 @@ def clips_page():
                                     else "No partners"
                                 )
                                 labels_html = (
-                                    ", ".join(l for l in labels)
+                                    ", ".join(label for label in labels)
                                     if labels
                                     else "No labels"
                                 )

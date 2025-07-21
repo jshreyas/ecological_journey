@@ -116,9 +116,7 @@ def partner_page():
             ).classes("w-full")
         with splitter.after:
             # Details panel (will be updated)
-            details = ui.html(
-                '<div id="details_panel" class="p-4 text-base" style="width: 100%"></div>'
-            )
+            pass
 
     with ui.column().classes("items-center w-full"):
         playlists = load_playlists()

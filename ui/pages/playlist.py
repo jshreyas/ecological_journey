@@ -35,9 +35,7 @@ def playlist_page(cliplist_id):
             with (
                 ui.scroll_area()
                 .classes("w-full h-full p-2")
-                .style(
-                    "height: 100%; height: 56.25vw; max-height: 70vh;"
-                ) as scroll_area
+                .style("height: 100%; height: 56.25vw; max-height: 70vh;")
             ):
                 card_column = ui.column().classes("w-full").style("gap: 0;")
 

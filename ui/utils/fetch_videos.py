@@ -1,5 +1,4 @@
 # fetch_videos.py
-# import json  # Unused import
 import os
 import re
 from datetime import datetime, time
