@@ -29,9 +29,7 @@ class TestClickFunctionality:
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.filmboard_tab.load_videos")
     @patch("ui.pages.film_components.filmboard_tab.navigate_to_film")
-    def test_filmboard_click_navigation(
-        self, mock_navigate, mock_load_videos, mock_load_video
-    ):
+    def test_filmboard_click_navigation(self, mock_navigate, mock_load_videos, mock_load_video):
         """Test that clicking on a filmboard video navigates correctly"""
         mock_load_video.return_value = self.mock_video_data
 
@@ -62,22 +60,14 @@ class TestClickFunctionality:
         for call in mock_navigate.call_args_list:
             args, kwargs = call
             for arg in args:
-                assert not hasattr(
-                    arg, "sender"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "client"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "args"
-                ), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "sender"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "client"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "args"), f"Event object passed as video_id: {arg}"
 
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.navigation_tab.load_videos")
     @patch("ui.pages.film_components.navigation_tab.navigate_to_film")
-    def test_navigation_click_navigation(
-        self, mock_navigate, mock_load_videos, mock_load_video
-    ):
+    def test_navigation_click_navigation(self, mock_navigate, mock_load_videos, mock_load_video):
         """Test that clicking on navigation arrows navigates correctly"""
         mock_load_video.return_value = self.mock_video_data
 
@@ -102,15 +92,9 @@ class TestClickFunctionality:
         for call in mock_navigate.call_args_list:
             args, kwargs = call
             for arg in args:
-                assert not hasattr(
-                    arg, "sender"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "client"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "args"
-                ), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "sender"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "client"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "args"), f"Event object passed as video_id: {arg}"
 
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.filmboard_tab.load_videos")
@@ -132,15 +116,9 @@ class TestClickFunctionality:
         for call in mock_callback.call_args_list:
             args, kwargs = call
             for arg in args:
-                assert not hasattr(
-                    arg, "sender"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "client"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "args"
-                ), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "sender"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "client"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "args"), f"Event object passed as video_id: {arg}"
 
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.navigation_tab.load_videos")
@@ -162,15 +140,9 @@ class TestClickFunctionality:
         for call in mock_callback.call_args_list:
             args, kwargs = call
             for arg in args:
-                assert not hasattr(
-                    arg, "sender"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "client"
-                ), f"Event object passed as video_id: {arg}"
-                assert not hasattr(
-                    arg, "args"
-                ), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "sender"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "client"), f"Event object passed as video_id: {arg}"
+                assert not hasattr(arg, "args"), f"Event object passed as video_id: {arg}"
 
     def test_event_object_not_passed_as_video_id(self):
         """Test that event objects are never passed as video_id parameters"""
@@ -191,9 +163,7 @@ class TestClickFunctionality:
 
         # Verify that if we pass an event object, it doesn't get treated as a video_id
         # by checking that navigate_to_film is called with the correct string
-        with patch(
-            "ui.pages.film_components.filmboard_tab.navigate_to_film"
-        ) as mock_navigate:
+        with patch("ui.pages.film_components.filmboard_tab.navigate_to_film") as mock_navigate:
             filmboard_tab._handle_video_click("test_video_123")
             mock_navigate.assert_called_once_with("test_video_123")
 

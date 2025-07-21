@@ -5,17 +5,13 @@ from utils.utils_api import get_filtered_clips, load_cliplist
 
 
 def cliplists_page():
-    ui.label("🎬 Clips, Lists, and Cliplists!").classes(
-        "text-2xl font-bold mb-4 text-center"
-    )
+    ui.label("🎬 Clips, Lists, and Cliplists!").classes("text-2xl font-bold mb-4 text-center")
 
     def render_filters():
         pass
 
     def render_media_grid_page(render_filters, render_grid):
-        with ui.splitter(horizontal=False, value=0).classes(
-            "w-full h-full rounded shadow"
-        ) as splitter:
+        with ui.splitter(horizontal=False, value=0).classes("w-full h-full rounded shadow") as splitter:
             with splitter.before:
                 render_filters()
             with splitter.after:
@@ -28,16 +24,12 @@ def cliplists_page():
         saved_cliplists = load_cliplist()
         with video_grid:
             for cliplist in saved_cliplists:
-                with ui.card().classes(
-                    "p-4 shadow-md bg-white rounded-lg border w-full"
-                ):
+                with ui.card().classes("p-4 shadow-md bg-white rounded-lg border w-full"):
                     with ui.row().classes("gap-2 w-full justify-between"):
                         ui.label(cliplist["name"]).classes("font-bold text-lg")
                         ui.button(
                             icon="play_arrow",
-                            on_click=lambda c=cliplist: ui.navigate.to(
-                                f'/playlist/{c["_id"]}'
-                            ),
+                            on_click=lambda c=cliplist: ui.navigate.to(f'/playlist/{c["_id"]}'),
                         ).props("flat color=secondary").tooltip("Play")
 
                     operator_set = ["AND", "OR", "NOT"]
@@ -55,27 +47,23 @@ def cliplists_page():
                             for partner in partners
                         ]
                         ui.html(f'🎭🔎 {" ".join(html_parts)}').classes("text-xs")
-                    ui.label(
-                        f"📂 {', '.join(cliplist['filters'].get('playlists', []))}"
-                    ).classes("text-xs text-primary")
+                    ui.label(f"📂 {', '.join(cliplist['filters'].get('playlists', []))}").classes(
+                        "text-xs text-primary"
+                    )
                     date_range = cliplist["filters"].get("date_range", [])
                     if date_range:
-                        start = datetime.strptime(date_range[0], "%Y-%m-%d").strftime(
-                            "%B %d, %Y"
-                        )
-                        end = datetime.strptime(date_range[1], "%Y-%m-%d").strftime(
-                            "%B %d, %Y"
-                        )
+                        start = datetime.strptime(date_range[0], "%Y-%m-%d").strftime("%B %d, %Y")
+                        end = datetime.strptime(date_range[1], "%Y-%m-%d").strftime("%B %d, %Y")
                         ui.label(f"🗓️ {start} to {end}").classes("text-xs text-primary")
                     filtered_videos = get_filtered_clips(cliplist["_id"])
                     total_duration = sum(
-                        (v["end"] - v["start"])
-                        for v in filtered_videos
-                        if "start" in v and "end" in v
+                        (v["end"] - v["start"]) for v in filtered_videos if "start" in v and "end" in v
                     )
                     if total_duration:
                         if total_duration >= 3600:
-                            total_duration_str = f"{total_duration // 3600}h {(total_duration % 3600) // 60}m {(total_duration % 60)}s"
+                            total_duration_str = (
+                                f"{total_duration // 3600}h {(total_duration % 3600) // 60}m {(total_duration % 60)}s"
+                            )
                         elif total_duration >= 60:
                             total_duration_str = f"{(total_duration % 3600) // 60}m {(total_duration % 60)}s"
                         else:

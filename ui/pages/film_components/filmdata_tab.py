@@ -46,27 +46,18 @@ class FilmdataTab:
             return
 
         # Chips input for @partners and #labels
-        chips_input_ref, chips_list, chips_error, chips_container = (
-            self._create_chips_input(
-                [f"@{p}" for p in video.get("partners", [])]
-                + [f"#{label}" for label in video.get("labels", [])]
-            )
+        chips_input_ref, chips_list, chips_error, chips_container = self._create_chips_input(
+            [f"@{p}" for p in video.get("partners", [])] + [f"#{label}" for label in video.get("labels", [])]
         )
         self.chips_list = chips_list
 
         # Notes textarea
-        notes_input = (
-            ui.textarea("Notes", value=video.get("notes", ""))
-            .props("rows=4")
-            .classes("w-full")
-        )
+        notes_input = ui.textarea("Notes", value=video.get("notes", "")).props("rows=4").classes("w-full")
         self.notes_input = notes_input
 
         # Save button
         with ui.row().classes("justify-end gap-2 mt-4"):
-            ui.button(icon="save", on_click=lambda: self._handle_save()).props(
-                "color=primary"
-            )
+            ui.button(icon="save", on_click=lambda: self._handle_save()).props("color=primary")
 
     def _create_chips_input(self, initial=None):
         """Create chips input for partners and labels"""
@@ -146,9 +137,7 @@ class FilmdataTab:
 
                 # Prepare metadata for save
                 metadata = video.copy()
-                metadata.update(
-                    {"partners": partners_list, "labels": labels_list, "notes": notes}
-                )
+                metadata.update({"partners": partners_list, "labels": labels_list, "notes": notes})
 
                 success = save_video_metadata(metadata, token)
                 if success:

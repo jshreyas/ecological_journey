@@ -63,9 +63,7 @@ def film_page(video_id: str):
     def finalize_save():
         confirm_dialog.close()
         print(f"Finalizing save...: {state['latest_cleaned']}")
-        success = save_video_metadata(
-            state["latest_cleaned"], app.storage.user.get("token")
-        )
+        success = save_video_metadata(state["latest_cleaned"], app.storage.user.get("token"))
         if success:
             ui.notify("✅ Filmdata published", type="positive")
             # Clear the state to prevent cumulative delta tracking
@@ -81,9 +79,7 @@ def film_page(video_id: str):
             ui.label("📝 Review Changes").classes("text-lg font-bold")
             with ui.row().classes("justify-end w-full"):
                 ui.button(icon="close", on_click=confirm_dialog.close)
-                ui.button(
-                    icon="save", color="primary", on_click=lambda: finalize_save()
-                )
+                ui.button(icon="save", color="primary", on_click=lambda: finalize_save())
 
     def show_clip_form(clip, is_new=False):
         clip_form_container["container"].clear()
@@ -113,18 +109,12 @@ def film_page(video_id: str):
                     return 0
 
             with ui.card().classes("w-full p-4 mt-2"):
-                with ui.splitter(horizontal=False, value=70).classes(
-                    "w-full"
-                ) as splitter:
+                with ui.splitter(horizontal=False, value=70).classes("w-full") as splitter:
                     with splitter.before:
-                        title = ui.input("Title", value=clip.get("title", "")).classes(
-                            "w-full"
-                        )
+                        title = ui.input("Title", value=clip.get("title", "")).classes("w-full")
                     with splitter.after:
                         # --- Speed input ---
-                        with ui.column().classes(
-                            "w-full h-full justify-center items-center"
-                        ):
+                        with ui.column().classes("w-full h-full justify-center items-center"):
                             speed_knob = ui.knob(
                                 min=0.25,
                                 max=2.0,
@@ -174,9 +164,7 @@ def film_page(video_id: str):
                     except Exception:
                         pass  # Ignore invalid input
 
-                range_slider.on(
-                    "update:model-value", lambda e: update_inputs_from_slider()
-                )
+                range_slider.on("update:model-value", lambda e: update_inputs_from_slider())
                 start_input.on("blur", lambda e: update_slider_from_inputs())
                 end_input.on("blur", lambda e: update_slider_from_inputs())
                 start_input.on("keydown.enter", lambda e: update_slider_from_inputs())
@@ -184,19 +172,12 @@ def film_page(video_id: str):
                 update_inputs_from_slider()
 
                 # --- Chips input for @partners and #labels ---
-                chips_input_ref, chips_list, chips_error, chips_container = (
-                    chips_input_combined(
-                        [f"@{p}" for p in clip.get("partners", [])]
-                        + [f"#{label}" for label in clip.get("labels", [])]
-                    )
+                chips_input_ref, chips_list, chips_error, chips_container = chips_input_combined(
+                    [f"@{p}" for p in clip.get("partners", [])] + [f"#{label}" for label in clip.get("labels", [])]
                 )
 
                 # --- Notes textarea ---
-                notes_input = (
-                    ui.textarea("Notes", value=clip.get("description", ""))
-                    .props("rows=4")
-                    .classes("w-full")
-                )
+                notes_input = ui.textarea("Notes", value=clip.get("description", "")).props("rows=4").classes("w-full")
 
                 with ui.row().classes("justify-end gap-2 mt-4"):
 
@@ -220,19 +201,11 @@ def film_page(video_id: str):
                             return
                         try:
                             if is_new:
-                                add_clip_to_video(
-                                    playlist_name, video_id, updated_clip, token
-                                )
-                                ui.notify(
-                                    "✅ Clip created successfully", type="positive"
-                                )
+                                add_clip_to_video(playlist_name, video_id, updated_clip, token)
+                                ui.notify("✅ Clip created successfully", type="positive")
                             else:
-                                update_clip_in_video(
-                                    playlist_name, video_id, updated_clip, token
-                                )
-                                ui.notify(
-                                    "✅ Clip updated successfully", type="positive"
-                                )
+                                update_clip_in_video(playlist_name, video_id, updated_clip, token)
+                                ui.notify("✅ Clip updated successfully", type="positive")
                             video_state.refresh()
                             reset_to_add_mode()
                         except Exception as e:
@@ -255,9 +228,7 @@ def film_page(video_id: str):
                         show_clip_form(clip_form_state["clip"], is_new=True)
 
                     ui.button(icon="save", on_click=save_clip).props("color=primary")
-                    ui.button(icon="close", on_click=reset_to_add_mode).props(
-                        "color=secondary"
-                    )
+                    ui.button(icon="close", on_click=reset_to_add_mode).props("color=secondary")
 
     # Initialize components
     navigation_tab = NavigationTab(video_state)
@@ -283,34 +254,20 @@ def film_page(video_id: str):
     # Inline render_film_editor functionality
     with ui.column().classes("w-full"):
         # Navigation
-        with ui.row().classes(
-            "w-full justify-between items-center"
-        ) as navigation_container:
+        with ui.row().classes("w-full justify-between items-center") as navigation_container:
             navigation_tab.create_tab(navigation_container)
 
-        with ui.splitter(horizontal=False, value=70).classes(
-            "w-full h-[70vh] rounded shadow"
-        ) as splitter:
+        with ui.splitter(horizontal=False, value=70).classes("w-full h-[70vh] rounded shadow") as splitter:
             with splitter.before:
-                with ui.column().classes(
-                    "w-full h-full p-4 gap-4"
-                ) as player_container_ref:
-                    player_controls_tab.create_tab(
-                        player_container_ref, play_clips_playlist, autoplay_clip
-                    )
+                with ui.column().classes("w-full h-full p-4 gap-4") as player_container_ref:
+                    player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
 
             with splitter.after:
                 video = load_video(video_id)
                 with ui.tabs().classes("w-full") as tabs:
-                    tab_videom = ui.tab("Filmdata").tooltip(
-                        "Edit film metadata like title, date, partners, labels"
-                    )
-                    tab_clipmaker = ui.tab("Clipper").tooltip(
-                        "Create and edit clips from the film"
-                    )
-                    tab_bulk = ui.tab("metaforge").tooltip(
-                        "Bulk edit film and clip metadata in JSON format"
-                    )
+                    tab_videom = ui.tab("Filmdata").tooltip("Edit film metadata like title, date, partners, labels")
+                    tab_clipmaker = ui.tab("Clipper").tooltip("Create and edit clips from the film")
+                    tab_bulk = ui.tab("metaforge").tooltip("Bulk edit film and clip metadata in JSON format")
                 with ui.tab_panels(tabs, value=tab_bulk).classes("w-full h-full"):
 
                     # Create tab panels using components
@@ -320,9 +277,7 @@ def film_page(video_id: str):
                     with ui.tab_panel(tab_clipmaker) as clipper_container:
                         clipper_tab.create_tab(clipper_container)
 
-                    with ui.tab_panel(tab_bulk).classes(
-                        "w-full h-full mt-0"
-                    ) as metaforge_container:
+                    with ui.tab_panel(tab_bulk).classes("w-full h-full mt-0") as metaforge_container:
                         metaforge_tab.create_tab(metaforge_container)
 
             with splitter.separator:
@@ -340,9 +295,7 @@ def film_page(video_id: str):
                             f'🎥 More films from 🗓️ {datetime.strptime(current_video_date, "%Y-%m-%d").strftime("%B %d, %Y")} ({same_day_count + 1})'
                         ).classes("text-xl ml-2 font-semibold")
                     else:
-                        ui.label("🎥 More films from the same day").classes(
-                            "text-xl ml-2 font-semibold"
-                        )
+                        ui.label("🎥 More films from the same day").classes("text-xl ml-2 font-semibold")
                     with ui.grid().classes(
                         "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg"
                     ) as filmboard_container:
@@ -352,9 +305,7 @@ def film_page(video_id: str):
                 video = load_video(video_id)
                 clips = video.get("clips", [])
                 with ui.column().classes("w-full h-full rounded-lg"):
-                    ui.label(f"📋 Clipboard ({len(clips)})").classes(
-                        "text-xl font-semibold ml-2"
-                    )
+                    ui.label(f"📋 Clipboard ({len(clips)})").classes("text-xl font-semibold ml-2")
                     with ui.grid().classes(
                         "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg"
                     ) as clipboard_container:

@@ -7,7 +7,9 @@ notion_iframe = ""
 
 def update_iframe(id: str):
     url = f"https://delightful-canary-0f8.notion.site/ebd/{id.replace('-', '')}"
-    notion_iframe.content = f'<iframe src="{url}" width="100%" height="700px" frameborder="0" allowfullscreen"></iframe>'
+    notion_iframe.content = (
+        f'<iframe src="{url}" width="100%" height="700px" frameborder="0" allowfullscreen"></iframe>'
+    )
 
 
 def get_expanded_first_level_ids(pages):
@@ -45,21 +47,17 @@ def render_tree(pages, user_token):
             ui.label("📚 Notion Pages").classes("font-bold text-lg text-primary")
             with ui.row().classes("gap-2"):
                 if user_token:
-                    ui.button(
-                        icon="sync", on_click=lambda: get_notion_tree(True)
-                    ).props("flat dense round color=primary").tooltip("Sync")
+                    ui.button(icon="sync", on_click=lambda: get_notion_tree(True)).props(
+                        "flat dense round color=primary"
+                    ).tooltip("Sync")
                 else:
                     ui.button(icon="sync", on_click=lambda: caught_john_doe()).props(
                         "flat dense round color=primary"
                     ).tooltip("Sync")
-                toggle_button = ui.button(
-                    icon="unfold_more", on_click=toggle_tree
-                ).props("dense flat")
+                toggle_button = ui.button(icon="unfold_more", on_click=toggle_tree).props("dense flat")
 
         # Create the tree AFTER buttons, so it's below
-        tree = ui.tree(
-            pages, label_key="title", on_select=lambda e: update_iframe(e.value)
-        ).classes("w-full")
+        tree = ui.tree(pages, label_key="title", on_select=lambda e: update_iframe(e.value)).classes("w-full")
 
         # Expand first-level nodes
         tree.expand(expanded_ids.copy())
@@ -70,9 +68,7 @@ def notion_page():
     notion_pages = get_notion_tree()
     user_token = app.storage.user.get("token", None)
 
-    with ui.splitter(horizontal=False, value=25).classes(
-        "w-full h-full rounded shadow"
-    ) as splitter:
+    with ui.splitter(horizontal=False, value=25).classes("w-full h-full rounded shadow") as splitter:
         with splitter.before:
             render_tree(notion_pages, user_token)
         with splitter.after:

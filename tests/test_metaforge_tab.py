@@ -150,9 +150,7 @@ class TestMetaforgeTab:
         test_metadata = {"title": "Test", "partners": ["Alice"]}
 
         # Mock the save_video_metadata function
-        with patch(
-            "ui.pages.film_components.metaforge_tab.save_video_metadata"
-        ) as mock_save:
+        with patch("ui.pages.film_components.metaforge_tab.save_video_metadata") as mock_save:
             mock_save.return_value = True
 
             self.metaforge_tab.handle_publish(test_metadata)

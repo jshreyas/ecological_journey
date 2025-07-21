@@ -85,26 +85,20 @@ class NavigationTab:
                         .classes("items-center cursor-pointer justify-start")
                         .on(
                             "click",
-                            lambda e: self._handle_video_click(
-                                self.prev_video["video_id"]
-                            ),
+                            lambda e: self._handle_video_click(self.prev_video["video_id"]),
                         )
                     ):
                         ui.icon("arrow_back").classes("text-primary text-bold")
-                        prev_date = datetime.strptime(
-                            self.prev_video["date"], "%Y-%m-%dT%H:%M:%SZ"
-                        ).strftime("%B %d, %Y")
-                        ui.label(f"Previous Day: {prev_date}").classes(
-                            "text-sm text-primary text-bold truncate"
+                        prev_date = datetime.strptime(self.prev_video["date"], "%Y-%m-%dT%H:%M:%SZ").strftime(
+                            "%B %d, %Y"
                         )
+                        ui.label(f"Previous Day: {prev_date}").classes("text-sm text-primary text-bold truncate")
                 else:
                     ui.label().classes("")  # Empty cell
 
                 # Center label
                 with ui.row().classes("justify-center"):
-                    ui.label(f'🔍 🎬 {video.get("title", "Untitled Video")}').classes(
-                        "text-2xl font-bold"
-                    )
+                    ui.label(f'🔍 🎬 {video.get("title", "Untitled Video")}').classes("text-2xl font-bold")
 
                 # Next
                 if self.next_video:
@@ -113,17 +107,13 @@ class NavigationTab:
                         .classes("items-center cursor-pointer justify-end")
                         .on(
                             "click",
-                            lambda e: self._handle_video_click(
-                                self.next_video["video_id"]
-                            ),
+                            lambda e: self._handle_video_click(self.next_video["video_id"]),
                         )
                     ):
-                        next_date = datetime.strptime(
-                            self.next_video["date"], "%Y-%m-%dT%H:%M:%SZ"
-                        ).strftime("%B %d, %Y")
-                        ui.label(f"Next Day: {next_date}").classes(
-                            "text-sm text-primary text-bold truncate"
+                        next_date = datetime.strptime(self.next_video["date"], "%Y-%m-%dT%H:%M:%SZ").strftime(
+                            "%B %d, %Y"
                         )
+                        ui.label(f"Next Day: {next_date}").classes("text-sm text-primary text-bold truncate")
                         ui.icon("arrow_forward").classes("text-primary text-bold")
                 else:
                     ui.label().classes("")  # Empty cell

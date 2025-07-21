@@ -62,9 +62,7 @@ class TestComponentsIntegration:
 
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.filmboard_tab.load_videos")
-    def test_components_register_refresh_callbacks(
-        self, mock_load_videos, mock_load_video
-    ):
+    def test_components_register_refresh_callbacks(self, mock_load_videos, mock_load_video):
         """Test that components register refresh callbacks with video state"""
         mock_load_video.return_value = self.mock_video_data
         mock_load_videos.return_value = [self.mock_video_data]
@@ -97,18 +95,14 @@ class TestComponentsIntegration:
 
         # Create components with integration
         clipper_tab = ClipperTab(self.video_state)
-        clipboard_tab = ClipboardTab(
-            self.video_state, on_edit_clip=clipper_tab.on_edit_clip
-        )
+        clipboard_tab = ClipboardTab(self.video_state, on_edit_clip=clipper_tab.on_edit_clip)
 
         # Verify the callback is set
         assert clipboard_tab.on_edit_clip == clipper_tab.on_edit_clip
 
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.filmboard_tab.load_videos")
-    def test_video_state_refresh_notifies_all_components(
-        self, mock_load_videos, mock_load_video
-    ):
+    def test_video_state_refresh_notifies_all_components(self, mock_load_videos, mock_load_video):
         """Test that video state refresh notifies all components"""
         mock_load_video.return_value = self.mock_video_data
         mock_load_videos.return_value = [self.mock_video_data]

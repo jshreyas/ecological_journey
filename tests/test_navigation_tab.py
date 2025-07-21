@@ -73,9 +73,7 @@ class TestNavigationTab:
     @patch("ui.pages.film_components.video_state.load_video")
     @patch("ui.pages.film_components.navigation_tab.load_videos")
     @patch("ui.pages.film_components.navigation_tab.ui")
-    def test_refresh_without_container(
-        self, mock_ui, mock_load_videos, mock_load_video
-    ):
+    def test_refresh_without_container(self, mock_ui, mock_load_videos, mock_load_video):
         """Test refreshing the navigation tab without container"""
         mock_load_video.return_value = self.mock_video_data
         mock_load_videos.return_value = []

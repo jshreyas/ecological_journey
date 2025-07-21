@@ -28,9 +28,7 @@ def fetch_video_upload_date(video_id):
         return None
 
     try:
-        published_utc = datetime.strptime(
-            response.json()["items"][0]["snippet"]["publishedAt"], "%Y-%m-%dT%H:%M:%SZ"
-        )
+        published_utc = datetime.strptime(response.json()["items"][0]["snippet"]["publishedAt"], "%Y-%m-%dT%H:%M:%SZ")
         return published_utc.replace(tzinfo=pytz.utc).astimezone(pst).date()
     except (IndexError, KeyError, ValueError):
         return None
@@ -69,16 +67,12 @@ def check_update_date_title_mismatch(video):
             try:
                 title_date = datetime.strptime(title_date_str, fmt).date()
                 published_utc = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%SZ")
-                published_pst_date = (
-                    pytz.utc.localize(published_utc).astimezone(pst).date()
-                )
+                published_pst_date = pytz.utc.localize(published_utc).astimezone(pst).date()
 
                 if title_date != published_pst_date:
                     actual_upload_date = fetch_video_upload_date(video["video_id"])
                     if actual_upload_date:
-                        new_utc = pst.localize(
-                            datetime.combine(actual_upload_date, time.min)
-                        ).astimezone(pytz.utc)
+                        new_utc = pst.localize(datetime.combine(actual_upload_date, time.min)).astimezone(pytz.utc)
                         video["date"] = new_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
                 pass

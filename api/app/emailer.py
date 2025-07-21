@@ -30,23 +30,20 @@ def send_feedback_email(feedback: dict):
     submitted_at = submitted_at_pacific.strftime("%A, %B %d, %Y at %-I:%M %p %Z")
 
     # Build the HTML body
-    html = (
-        f"<html>"
-        f"<body style='font-family: Arial, sans-serif; line-height: 1.6; background-color: #f9f9f9; padding: 20px;'>"
-        f"<div style='max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px;"
-        f" box-shadow: 0 0 10px rgba(0,0,0,0.05);'>"
-        f"<h2 style='color: #333;'>📩 New Feedback Received</h2>"
-        f"<p><strong>Submitted at:</strong> {submitted_at}</p>"
-        f"<hr />"
-        f"<p style='font-size: 16px; color: #444;'><strong>Message:</strong><br />{text}</p>"
-        f"</div>"
-        f"</body>"
-        f"</html>"
-    )
+    html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; background-color: #f9f9f9; padding: 20px;">
+        <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+          <h2 style="color: #333;">📩 New Feedback Received</h2>
+          <p><strong>Submitted at:</strong> {submitted_at}</p>
+          <hr />
+          <p style="font-size: 16px; color: #444;"><strong>Message:</strong><br />{text}</p>
+        </div>
+      </body>
+    </html>
+    """
 
-    msg.set_content(
-        f"New Feedback:\n\nMessage: {text}\nSubmitted at: {submitted_at}"
-    )  # fallback plain text
+    msg.set_content(f"New Feedback:\n\nMessage: {text}\nSubmitted at: {submitted_at}")  # fallback plain text
     msg.add_alternative(html, subtype="html")
 
     try:

@@ -7,11 +7,7 @@ Handles the clip creation and editing functionality
 
 from nicegui import ui
 from utils.dialog_puns import generate_funny_title
-from utils.utils_api import (
-    add_clip_to_video,
-    get_playlist_id_for_video,
-    update_clip_in_video,
-)
+from utils.utils_api import add_clip_to_video, get_playlist_id_for_video, update_clip_in_video
 
 from .video_state import VideoState
 
@@ -74,13 +70,9 @@ class ClipperTab:
         with ui.card().classes("w-full p-4 mt-2"):
             with ui.splitter(horizontal=False, value=70).classes("w-full") as splitter:
                 with splitter.before:
-                    title = ui.input("Title", value=clip.get("title", "")).classes(
-                        "w-full"
-                    )
+                    title = ui.input("Title", value=clip.get("title", "")).classes("w-full")
                 with splitter.after:
-                    with ui.column().classes(
-                        "w-full h-full justify-center items-center"
-                    ):
+                    with ui.column().classes("w-full h-full justify-center items-center"):
                         speed_knob = ui.knob(
                             min=0.25,
                             max=2.0,
@@ -110,10 +102,7 @@ class ClipperTab:
 
             with ui.row().classes("w-full justify-between items-center"):
                 start_input = (
-                    ui.input(value=seconds_to_hms(start_val))
-                    .props("type=text")
-                    .props("dense")
-                    .classes("w-12 text-xs")
+                    ui.input(value=seconds_to_hms(start_val)).props("type=text").props("dense").classes("w-12 text-xs")
                 )
                 end_input = (
                     ui.input(value=seconds_to_hms(end_val))
@@ -123,18 +112,11 @@ class ClipperTab:
                 )
 
             # Chips input for @partners and #labels
-            chips_input_ref, chips_list, chips_error, chips_container = (
-                self._create_chips_input(
-                    [f"@{p}" for p in clip.get("partners", [])]
-                    + [f"#{label}" for label in clip.get("labels", [])]
-                )
+            chips_input_ref, chips_list, chips_error, chips_container = self._create_chips_input(
+                [f"@{p}" for p in clip.get("partners", [])] + [f"#{label}" for label in clip.get("labels", [])]
             )
             # Notes textarea
-            notes_input = (
-                ui.textarea("Notes", value=clip.get("description", ""))
-                .props("rows=4")
-                .classes("w-full")
-            )
+            notes_input = ui.textarea("Notes", value=clip.get("description", "")).props("rows=4").classes("w-full")
             with ui.row().classes("justify-end gap-2 mt-4"):
 
                 def save_clip():
@@ -158,14 +140,10 @@ class ClipperTab:
                         video = self.video_state.get_video()
                         playlist_name = get_playlist_id_for_video(video["video_id"])
                         if is_new:
-                            add_clip_to_video(
-                                playlist_name, video["video_id"], updated_clip, token
-                            )
+                            add_clip_to_video(playlist_name, video["video_id"], updated_clip, token)
                             ui.notify("✅ Clip created successfully", type="positive")
                         else:
-                            update_clip_in_video(
-                                playlist_name, video["video_id"], updated_clip, token
-                            )
+                            update_clip_in_video(playlist_name, video["video_id"], updated_clip, token)
                             ui.notify("✅ Clip updated successfully", type="positive")
                         self.mode = "add"
                         self.current_edit_clip = None
@@ -179,9 +157,7 @@ class ClipperTab:
                     self.refresh()
 
                 ui.button(icon="save", on_click=save_clip).props("color=primary")
-                ui.button(icon="close", on_click=reset_to_add_mode).props(
-                    "color=secondary"
-                )
+                ui.button(icon="close", on_click=reset_to_add_mode).props("color=secondary")
 
     def _on_cancel(self):
         self.mode = "add"
@@ -193,12 +169,8 @@ class ClipperTab:
             with ui.row().classes("justify-between items-center"):
                 ui.label(clip.get("title", "Untitled")).classes("font-semibold")
                 with ui.row().classes("gap-2"):
-                    ui.button(
-                        icon="edit", on_click=lambda e, c=clip: self._on_edit(c)
-                    ).props("round dense")
-                    ui.button(
-                        icon="play", on_click=lambda e, c=clip: self._play_clip(c)
-                    ).props("round dense")
+                    ui.button(icon="edit", on_click=lambda e, c=clip: self._on_edit(c)).props("round dense")
+                    ui.button(icon="play", on_click=lambda e, c=clip: self._play_clip(c)).props("round dense")
             start_time = clip.get("start", 0)
             end_time = clip.get("end", 0)
             duration = end_time - start_time

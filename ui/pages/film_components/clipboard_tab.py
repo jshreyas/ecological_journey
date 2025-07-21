@@ -60,9 +60,7 @@ class ClipboardTab:
         for clip in clips:
             clip["video_id"] = self.video_state.video_id  # Ensure video_id is present
             if clip_id and clip["clip_id"] == clip_id:
-                self._add_clip_card(
-                    clip, highlight=True, autoplay=True, video_data=video
-                )
+                self._add_clip_card(clip, highlight=True, autoplay=True, video_data=video)
             else:
                 self._add_clip_card(clip, video_data=video)
 
@@ -81,25 +79,18 @@ class ClipboardTab:
                     start_time = format_time(clip.get("start", 0))
                     end_time = format_time(clip.get("end", 0))
                     ui.label(f"⏱ {start_time} - {end_time}").classes("text-xs")
-                    ui.label(
-                        f"{format_time(clip.get('end', 0) - clip.get('start', 0))}"
-                    ).classes("text-xs")
+                    ui.label(f"{format_time(clip.get('end', 0) - clip.get('start', 0))}").classes("text-xs")
 
             # --- Partners (clip in black, video in primary blue) ---
             partners = clip.get("partners", [])
             video_partners = video_data.get("partners", [])
             partners_html = ""
             if partners:
-                partners_html = ", ".join(
-                    f"<span style='color:black'>{p}</span>" for p in partners
-                )
+                partners_html = ", ".join(f"<span style='color:black'>{p}</span>" for p in partners)
             if video_partners:
                 if partners_html:
                     partners_html += ", "
-                partners_html += ", ".join(
-                    f"<span style='color:var(--q-primary)'>{p}</span>"
-                    for p in video_partners
-                )
+                partners_html += ", ".join(f"<span style='color:var(--q-primary)'>{p}</span>" for p in video_partners)
             if not partners_html:
                 partners_html = "No partners"
             ui.html(f"🎭 {partners_html}").classes("text-xs")
@@ -109,23 +100,19 @@ class ClipboardTab:
             video_labels = video_data.get("labels", [])
             labels_html = ""
             if labels:
-                labels_html = ", ".join(
-                    f"<span style='color:black'>{label}</span>" for label in labels
-                )
+                labels_html = ", ".join(f"<span style='color:black'>{label}</span>" for label in labels)
             if video_labels:
                 if labels_html:
                     labels_html += ", "
                 labels_html += ", ".join(
-                    f"<span style='color:var(--q-primary)'>{label}</span>"
-                    for label in video_labels
+                    f"<span style='color:var(--q-primary)'>{label}</span>" for label in video_labels
                 )
             if not labels_html:
                 labels_html = "No labels"
             ui.html(f"🏷️ {labels_html}").classes("text-xs")
 
             button_group_classes = (
-                "w-full flex-wrap shadow-none border-none items-center "
-                "max-w-full justify-center gap-2"
+                "w-full flex-wrap shadow-none border-none items-center " "max-w-full justify-center gap-2"
             )
             with ui.button_group().classes(button_group_classes):
                 for icon, color, tooltip, handler in [
@@ -138,9 +125,9 @@ class ClipboardTab:
                     ("edit", "secondary", "Edit", lambda: self._handle_edit_clip(clip)),
                     ("share", "accent", "Share", lambda: self._handle_share_clip(clip)),
                 ]:
-                    ui.button(icon=icon, on_click=handler).props(
-                        f"flat dense color={color}"
-                    ).tooltip(tooltip).classes("flex-1 min-w-0")
+                    ui.button(icon=icon, on_click=handler).props(f"flat dense color={color}").tooltip(tooltip).classes(
+                        "flex-1 min-w-0"
+                    )
 
             # Optionally, auto-play the clip if requested
             if autoplay:

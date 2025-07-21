@@ -40,9 +40,7 @@ def group_videos_by_day(videos):
     grouped = {}
     for v in videos:
         # Extract the date portion from the timestamp
-        video_date = (
-            datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ").date().isoformat()
-        )
+        video_date = datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ").date().isoformat()
         grouped.setdefault(video_date, []).append(v)
     return grouped
 
@@ -128,9 +126,7 @@ def get_video_orientation_internal(video_id: str) -> str:
         "Origin": "https://www.youtube.com",
     }
     payload = {
-        "context": {
-            "client": {"clientName": "WEB", "clientVersion": "2.20210721.00.00"}
-        },
+        "context": {"client": {"clientName": "WEB", "clientVersion": "2.20210721.00.00"}},
         "videoId": video_id,
     }
 
@@ -190,13 +186,9 @@ def parse_query_expression(tokens):
             if op == "NOT":
                 return not evaluate_ast(ast[1], clip_labels)
             elif op == "AND":
-                return evaluate_ast(ast[1], clip_labels) and evaluate_ast(
-                    ast[2], clip_labels
-                )
+                return evaluate_ast(ast[1], clip_labels) and evaluate_ast(ast[2], clip_labels)
             elif op == "OR":
-                return evaluate_ast(ast[1], clip_labels) or evaluate_ast(
-                    ast[2], clip_labels
-                )
+                return evaluate_ast(ast[1], clip_labels) or evaluate_ast(ast[2], clip_labels)
         return True  # Fallback
 
     ast = parse(tokens)
