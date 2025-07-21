@@ -223,7 +223,7 @@ def home_page():
     username = app.storage.user.get("user", None)
     user_token = app.storage.user.get("token", None)
     user_id = app.storage.user.get("id", None)
-    with ui.splitter(value=25).classes("w-full h-auto gap-4 mt-2") as splitter:
+    with ui.splitter(value=25).classes("w-full h-auto gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
                 tab_playlists = ui.tab("🎵 Playlists")
