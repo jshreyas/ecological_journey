@@ -170,11 +170,11 @@ def load_videos(
     """Load videos from playlists, optionally returning as a dictionary."""
     playlists = load_playlists()
     videos = []
-    for video in playlists:
-        if playlist_id is None or video.get("_id") == playlist_id:
-            for video in video.get("videos", []):
-                video["playlist_id"] = video.get("_id")
-                video["playlist_name"] = video.get("name")
+    for playlist in playlists:
+        if playlist_id is None or playlist.get("_id") == playlist_id:
+            for video in playlist.get("videos", []):
+                video["playlist_id"] = playlist.get("_id")
+                video["playlist_name"] = playlist.get("name")
                 # Add human-readable duration to each video
                 video["duration_human"] = format_duration(
                     video.get("duration_seconds", 0)
