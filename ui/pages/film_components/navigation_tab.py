@@ -41,6 +41,10 @@ class NavigationTab:
     def _find_adjacent_videos(self):
         """Find the last video from the previous day and the first video from the next day."""
         video = self.video_state.get_video()
+        if not video:
+            self.prev_video = None
+            self.next_video = None
+            return
         current_video_date = video.get("date", "").split("T")[0]
 
         if not current_video_date:

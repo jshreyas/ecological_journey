@@ -17,6 +17,7 @@ from pages.partner import partner_page
 from pages.playlist import playlist_page
 from utils.dialog_puns import caught_john_doe, handle_backend_error
 from utils.utils_api import api_post as api_post_utils
+from utils.utils_api import clear_cache
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -93,7 +94,11 @@ def login_or_signup(mode="login"):
                         app.storage.user["id"] = response_data["id"]
                         waiting_dialog.close()
                         ui.notify("✅ Login successful", type="positive")
-                        ui.navigate.to("/")  # refresh navbar
+                        clear_cache()
+                        ui.navigate.reload()
+                        post_login_path = app.storage.user.get("post_login_path", "/")
+                        ui.navigate.to(post_login_path)
+                        app.storage.user["post_login_path"] = "/"
 
                     elif response.status_code == 503:
                         if retries_left > 0:
@@ -143,6 +148,12 @@ def open_feedback_dialog():
     dialog.open()
 
 
+def open_login_dialog():
+    # Store the current path in app.storage
+    app.storage.user["post_login_path"] = ui.context.client.page.path
+    login_or_signup("login")
+
+
 def setup_navbar(title: str = "Ecological Journey"):
     with (
         ui.header()
@@ -189,9 +200,9 @@ def setup_navbar(title: str = "Ecological Journey"):
                 ui.button(icon="person_add", on_click=lambda: caught_john_doe()).props(
                     "flat round dense color=white"
                 ).tooltip("Register")
-                ui.button(icon="login", on_click=lambda: login_or_signup("login")).props(
-                    "flat round dense color=white"
-                ).tooltip("Login")
+                ui.button(icon="login", on_click=open_login_dialog).props("flat round dense color=white").tooltip(
+                    "Login"
+                )
 
     # Scroll-triggered navbar hide/show
     ui.run_javascript(
