@@ -26,7 +26,6 @@ dist/
 build/
 
 # Reports and temporary files
-bandit-report.json
 *.tmp
 *.temp
 
@@ -34,14 +33,5 @@ bandit-report.json
 TODO.txt
 TODOO.txt
 ZoomLevel.txt
-notion-tree-nested.json
-mongodb.py
 pytest.ini
-.python-version
-CLEANUP_SUMMARY.md
-GIT_COMMIT_GUIDE.md
-PR_READY_SUMMARY.md
-FINAL_SUCCESS_SUMMARY.md
 scripts/migrate_add_clip_id.py
-static/manifest.json
-static/service-worker.js
