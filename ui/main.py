@@ -1,4 +1,3 @@
-# main.py
 import os
 import sys
 
@@ -85,7 +84,8 @@ def login_or_signup(mode="login"):
                     if retries_left == retries:
                         ui.run_javascript(
                             f"""
-                            fetch("{BACKEND_URL}/docs").then(r => console.log('Backend wakeup ping sent'))
+                            fetch("{BACKEND_URL}/docs").then(r =>
+                            console.log('Backend wakeup ping sent'))
                         """
                         )
                         print("wake API called in js")  # Debug print
@@ -148,7 +148,8 @@ def open_feedback_dialog():
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg"):
         ui.label("We'd love your feedback!").classes("text-lg font-bold mb-2")
         feedback_text = ui.textarea(
-            label="be it an idea or appreciation or a bug, please describe your experience!"
+            label="be it an idea or appreciation or a bug, "
+            "please describe your experience!"
         ).classes("w-full")
         with ui.row().classes("justify-end gap-4 mt-4"):
             ui.button(
@@ -161,7 +162,8 @@ def setup_navbar(title: str = "Ecological Journey"):
     with (
         ui.header()
         .classes(
-            "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
+            "top-navbar flex items-center justify-between px-4 py-2 "
+            "bg-primary fixed top-0 z-50 w-full shadow-sm"
         )
         .style("background-color: #111827;")
     ):
@@ -274,9 +276,15 @@ def ecological_layout():
                 hideOrientationWarning();
             }
         }
-        window.addEventListener("load", checkOrientation);
-        window.addEventListener("resize", checkOrientation);
-        window.addEventListener("orientationchange", checkOrientation);
+        window.addEventListener(
+            "load", checkOrientation
+        );
+        window.addEventListener(
+            "resize", checkOrientation
+        );
+        window.addEventListener(
+            "orientationchange", checkOrientation
+        );
         checkOrientation();
     """
     )

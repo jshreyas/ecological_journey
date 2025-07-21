@@ -96,7 +96,7 @@ def create_playlist(
 def create_video(video_data: List[Dict[str, Any]], token: str, name: str) -> None:
     """Create videos in a playlist."""
     for video in video_data:
-        response = api_post(f"/playlists/{name}/videos", data=video, token=token)
+        api_post(f"/playlists/{name}/videos", data=video, token=token)
     _refresh_playlists_cache()
 
 
@@ -170,11 +170,11 @@ def load_videos(
     """Load videos from playlists, optionally returning as a dictionary."""
     playlists = load_playlists()
     videos = []
-    for playlist in playlists:
-        if playlist_id is None or playlist.get("_id") == playlist_id:
-            for video in playlist.get("videos", []):
-                video["playlist_id"] = playlist.get("_id")
-                video["playlist_name"] = playlist.get("name")
+    for video in playlists:
+        if playlist_id is None or video.get("_id") == playlist_id:
+            for video in video.get("videos", []):
+                video["playlist_id"] = video.get("_id")
+                video["playlist_name"] = video.get("name")
                 # Add human-readable duration to each video
                 video["duration_human"] = format_duration(
                     video.get("duration_seconds", 0)
@@ -476,20 +476,14 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
 def load_cliplist(
     cliplist_id: Optional[str] = None,
 ) -> Union[List[Dict[str, Any]], Dict[str, Any], None]:
-    global _cliplist_cache
     cache_key = "cliplists"
 
-    if cache_key in _cliplist_cache and _cliplist_cache.get(cache_key):
-        data = _cliplist_cache[cache_key]
+    cached = cache_get(cache_key)
+    if cached:
+        data = cached
     else:
-        cached = cache_get(cache_key)
-        if cached:
-            _cliplist_cache[cache_key] = cached
-            data = cached
-        else:
-            data = api_get("/cliplists")
-            cache_set(cache_key, data)
-            _cliplist_cache[cache_key] = data
+        data = api_get("/cliplists")
+        cache_set(cache_key, data)
 
     if not cliplist_id:
         return data

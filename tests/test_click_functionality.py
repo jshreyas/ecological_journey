@@ -3,9 +3,7 @@ Integration tests for click functionality in filmboard and navigation tabs
 Ensures that clicking on videos navigates correctly without passing event objects
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.filmboard_tab import FilmboardTab
 from ui.pages.film_components.navigation_tab import NavigationTab

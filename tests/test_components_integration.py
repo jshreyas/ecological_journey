@@ -2,17 +2,12 @@
 Integration tests for tab components working together
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.clipboard_tab import ClipboardTab
 from ui.pages.film_components.clipper_tab import ClipperTab
-from ui.pages.film_components.filmboard_tab import FilmboardTab
 from ui.pages.film_components.filmdata_tab import FilmdataTab
 from ui.pages.film_components.metaforge_tab import MetaforgeTab
-from ui.pages.film_components.navigation_tab import NavigationTab
-from ui.pages.film_components.player_controls_tab import PlayerControlsTab
 from ui.pages.film_components.share_dialog_tab import ShareDialogTab
 from ui.pages.film_components.video_state import VideoState
 
@@ -56,9 +51,6 @@ class TestComponentsIntegration:
         clipper_tab = ClipperTab(self.video_state)
         clipboard_tab = ClipboardTab(self.video_state)
         metaforge_tab = MetaforgeTab(self.video_state)
-        filmboard_tab = FilmboardTab(self.video_state)
-        navigation_tab = NavigationTab(self.video_state)
-        player_controls_tab = PlayerControlsTab(self.video_state)
         share_dialog_tab = ShareDialogTab(self.video_state)
 
         # Verify all components use the same video state
@@ -66,9 +58,6 @@ class TestComponentsIntegration:
         assert clipper_tab.video_state == self.video_state
         assert clipboard_tab.video_state == self.video_state
         assert metaforge_tab.video_state == self.video_state
-        assert filmboard_tab.video_state == self.video_state
-        assert navigation_tab.video_state == self.video_state
-        assert player_controls_tab.video_state == self.video_state
         assert share_dialog_tab.video_state == self.video_state
 
     @patch("ui.pages.film_components.video_state.load_video")
@@ -85,9 +74,6 @@ class TestComponentsIntegration:
         clipper_tab = ClipperTab(self.video_state)
         clipboard_tab = ClipboardTab(self.video_state)
         metaforge_tab = MetaforgeTab(self.video_state)
-        filmboard_tab = FilmboardTab(self.video_state)
-        navigation_tab = NavigationTab(self.video_state)
-        player_controls_tab = PlayerControlsTab(self.video_state)
         share_dialog_tab = ShareDialogTab(self.video_state)
 
         # Verify refresh callbacks are registered (using private attribute)
@@ -132,9 +118,6 @@ class TestComponentsIntegration:
         mock_clipper_refresh = Mock()
         mock_clipboard_refresh = Mock()
         mock_metaforge_refresh = Mock()
-        mock_filmboard_refresh = Mock()
-        mock_navigation_refresh = Mock()
-        mock_player_controls_refresh = Mock()
         mock_share_dialog_refresh = Mock()
 
         # Create components and replace their refresh methods
@@ -142,9 +125,6 @@ class TestComponentsIntegration:
         clipper_tab = ClipperTab(self.video_state)
         clipboard_tab = ClipboardTab(self.video_state)
         metaforge_tab = MetaforgeTab(self.video_state)
-        filmboard_tab = FilmboardTab(self.video_state)
-        navigation_tab = NavigationTab(self.video_state)
-        player_controls_tab = PlayerControlsTab(self.video_state)
         share_dialog_tab = ShareDialogTab(self.video_state)
 
         # Replace the refresh methods with mocks
@@ -152,9 +132,6 @@ class TestComponentsIntegration:
         clipper_tab.refresh = mock_clipper_refresh
         clipboard_tab.refresh = mock_clipboard_refresh
         metaforge_tab.refresh = mock_metaforge_refresh
-        filmboard_tab.refresh = mock_filmboard_refresh
-        navigation_tab.refresh = mock_navigation_refresh
-        player_controls_tab.refresh = mock_player_controls_refresh
         share_dialog_tab.refresh = mock_share_dialog_refresh
 
         # Update the callbacks in video state to use the mocked methods
@@ -165,9 +142,6 @@ class TestComponentsIntegration:
                 mock_clipper_refresh,
                 mock_clipboard_refresh,
                 mock_metaforge_refresh,
-                mock_filmboard_refresh,
-                mock_navigation_refresh,
-                mock_player_controls_refresh,
                 mock_share_dialog_refresh,
             ]
         )
@@ -180,7 +154,4 @@ class TestComponentsIntegration:
         mock_clipper_refresh.assert_called_once()
         mock_clipboard_refresh.assert_called_once()
         mock_metaforge_refresh.assert_called_once()
-        mock_filmboard_refresh.assert_called_once()
-        mock_navigation_refresh.assert_called_once()
-        mock_player_controls_refresh.assert_called_once()
         mock_share_dialog_refresh.assert_called_once()

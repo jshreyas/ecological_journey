@@ -1,4 +1,3 @@
-import os
 from collections import Counter
 from datetime import datetime
 
@@ -50,7 +49,8 @@ def home_page():
                         for playlist in playlists:
                             with playlists_column:
                                 with ui.column().classes(
-                                    "w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md"
+                                    "w-full p-4 border border-gray-300 rounded-lg "
+                                    "bg-white shadow-md"
                                 ):
                                     ui.label(playlist["name"]).tooltip(
                                         playlist["_id"]
@@ -101,7 +101,8 @@ def home_page():
                         for playlist in all_playlists:
                             with playlists_column:
                                 with ui.column().classes(
-                                    "w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2"
+                                    "w-full p-4 border border-gray-300 rounded-lg "
+                                    "bg-white shadow-md gap-2"
                                 ):
                                     ui.label(playlist["name"]).tooltip(
                                         playlist["_id"]
@@ -134,7 +135,8 @@ def home_page():
 
                 # === Section: Add Playlist by ID (Card) ===
                 with ui.column().classes(
-                    "w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3"
+                    "w-full p-4 border border-gray-300 rounded-lg bg-white "
+                    "shadow-md gap-3"
                 ):
                     ui.label("➕ Playlist by ID").classes("text-sd font-bold")
 
@@ -242,7 +244,8 @@ def home_page():
 
                     # -- Create Team Card --
                     with ui.column().classes(
-                        "w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3"
+                        "w-full p-4 border border-gray-300 rounded-lg bg-white "
+                        "shadow-md gap-3"
                     ):
                         with ui.row().classes("w-full justify-between items-center"):
 
@@ -253,7 +256,8 @@ def home_page():
                                         "Please enter a team name.", type="warning"
                                     )
                                     return
-                                # TODO: check if team name already exists and if create team is successful
+                                # TODO: check if team name already exists and
+                                # if create team is successful
                                 create_team(name, user_token, user_id)
                                 ui.notify(f'Team "{name}" created successfully!')
                                 refresh_teams()
@@ -272,7 +276,8 @@ def home_page():
                     for team in all_teams:
                         with teams_column:
                             with ui.column().classes(
-                                "w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md"
+                                "w-full p-4 border border-gray-300 rounded-lg "
+                                "bg-white shadow-md"
                             ):
                                 with ui.row().classes(
                                     "w-full justify-between items-center"
@@ -327,7 +332,7 @@ def home_page():
                         with dashboard_column:
                             with ui.card().classes("p-4 text-center"):
                                 ui.label(
-                                    "⚠️ No videos found! Start by adding a playlist above."
+                                    "⚠️ No videos found! Start by adding a playlist."
                                 ).classes("text-md")
                         return
 
@@ -335,20 +340,8 @@ def home_page():
                         datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ")
                         for v in videos
                     ]
-                    # total_videos = len(videos)
-                    # unique_partners = len(set(p for v in videos for p in v['partners']))
-                    # unique_positions = len(set(p for v in videos for p in v['positions']))
 
                     with dashboard_column:
-                        # with ui.row().classes('w-full gap-4'):
-                        #     with ui.card().classes('p-4').tight():
-                        #         ui.label(f"📹 Total Films: {total_videos}").classes('text-lg')
-                        #     with ui.card().classes('p-4').tight():
-                        #         ui.label(f"🧑‍🤝‍🧑 Training Partners: {unique_partners}").classes('text-lg')
-                        #     with ui.card().classes('p-4').tight():
-                        #         ui.label(f"📍 Unique Positions: {unique_positions}").classes('text-lg')
-                        # ui.separator().classes('my-4 w-full')
-
                         calendar_container(grouped_videos_by_day)
 
                         ui.separator().classes("my-4 w-full")
@@ -382,19 +375,19 @@ def home_page():
                                     "axisPointer": {
                                         "type": "shadow"
                                     },  # Highlight bar on hover
-                                    "formatter": "{b}: {c} videos",  # Custom tooltip format
+                                    "formatter": "{b}: {c} videos",
                                 },
                                 "grid": {
                                     "left": "10%",
                                     "right": "10%",
                                     "bottom": "15%",
-                                    "containLabel": True,  # Ensure labels fit within the chart
+                                    "containLabel": True,
                                 },
                                 "xAxis": {
                                     "type": "category",
                                     "data": chart_data["labels"],
                                     "axisLabel": {
-                                        "rotate": 45,  # Rotate labels for better readability
+                                        "rotate": 45,
                                         "fontSize": 12,
                                     },
                                     "axisLine": {
@@ -557,7 +550,8 @@ def open_team_modal(team):
                 with member_container:
                     with ui.row().classes("items-center justify-between w-full"):
                         ui.label(
-                            f"{member['name']} ({member['email']}) - {member['role']}, joined: {member['joined']}"
+                            f"{member['name']} ({member['email']}) - \
+                            {member['role']}, joined: {member['joined']}"
                         )
                         ui.button(
                             "Remove", on_click=lambda m=member: remove_member(m)

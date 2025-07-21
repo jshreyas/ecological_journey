@@ -2,9 +2,7 @@
 Unit tests for NavigationTab component
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from ui.pages.film_components.navigation_tab import NavigationTab
 from ui.pages.film_components.video_state import VideoState
