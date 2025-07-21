@@ -3,7 +3,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY requirements.txt requirements-dev.txt /app/
 
 # Install curl, pytest, and any necessary dependencies
 RUN apt-get update && \
