@@ -3,6 +3,7 @@ from datetime import datetime
 from functools import partial
 
 from nicegui import ui
+from utils.dialog_puns import caught_john_doe
 from utils.utils import navigate_to_film, parse_query_expression
 
 
@@ -184,12 +185,15 @@ def render_media_page(
                         daterange_checkbox = ui.checkbox("Lock Date Range")
 
                         def confirm_save():
+                            if not user:
+                                caught_john_doe()
+                                return
                             if not daterange_checkbox.value:
                                 filters_state["date_range"] = []
                             save_cliplist(
                                 name_input.value,
                                 filters_state,
-                                token=user.token if user else None,
+                                token=user.token,
                             )
                             ui.notify(
                                 f"✅ Save successful with {name_input.value} and filters_state: {filters_state}",

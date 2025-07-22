@@ -195,16 +195,15 @@ def film_page(user: User | None, video_id: str):
                             "speed": speed_knob.value,  # <-- This now reads the current value
                         }
                         playlist_name = get_playlist_id_for_video(video_id)
-                        token = user.token if user else None
-                        if not token:
+                        if not user:
                             caught_john_doe()
                             return
                         try:
                             if is_new:
-                                add_clip_to_video(playlist_name, video_id, updated_clip, token)
+                                add_clip_to_video(playlist_name, video_id, updated_clip, user.token)
                                 ui.notify("✅ Clip created successfully", type="positive")
                             else:
-                                update_clip_in_video(playlist_name, video_id, updated_clip, token)
+                                update_clip_in_video(playlist_name, video_id, updated_clip, user.token)
                                 ui.notify("✅ Clip updated successfully", type="positive")
                             video_state.refresh()
                             reset_to_add_mode()
