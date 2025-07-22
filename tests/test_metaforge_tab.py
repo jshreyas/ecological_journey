@@ -4,8 +4,8 @@ Unit tests for MetaforgeTab component
 
 from unittest.mock import Mock, patch
 
-from ui.pages.film_components.metaforge_tab import MetaforgeTab
-from ui.pages.film_components.video_state import VideoState
+from ui.pages.components.film.metaforge_tab import MetaforgeTab
+from ui.pages.components.film.video_state import VideoState
 from ui.utils.user_context import User
 
 
@@ -38,7 +38,7 @@ class TestMetaforgeTab:
         self.user = User(username="alice", token="tok123", id="id456")
         self.metaforge_tab = MetaforgeTab(self.video_state, self.user)
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_init(self, mock_load_video):
         """Test MetaforgeTab initialization"""
         mock_load_video.return_value = self.mock_video_data
@@ -48,7 +48,7 @@ class TestMetaforgeTab:
         assert self.metaforge_tab.editor_container["ref"] is None
         assert self.metaforge_tab.on_publish is None
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_create_tab(self, mock_load_video):
         """Test creating the metaforge tab"""
         mock_load_video.return_value = self.mock_video_data
@@ -60,7 +60,7 @@ class TestMetaforgeTab:
 
         assert self.metaforge_tab.container == mock_container
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_refresh_with_container(self, mock_load_video):
         """Test refreshing the metaforge tab with container"""
         mock_load_video.return_value = self.mock_video_data
@@ -74,7 +74,7 @@ class TestMetaforgeTab:
         # Should clear and recreate the UI
         mock_container.clear.assert_called_once()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_refresh_without_container(self, mock_load_video):
         """Test refreshing the metaforge tab without container"""
         mock_load_video.return_value = self.mock_video_data
@@ -82,7 +82,7 @@ class TestMetaforgeTab:
         # Should not raise any exceptions
         self.metaforge_tab.refresh()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_get_video_data(self, mock_load_video):
         """Test getting video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -138,7 +138,7 @@ class TestMetaforgeTab:
         assert isinstance(summary, str)
         assert "🔄" in summary or "➕" in summary  # Using emoji indicators
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_handle_publish_without_callback(self, mock_load_video):
         """Test handle publish without custom callback"""
         mock_load_video.return_value = self.mock_video_data
@@ -146,7 +146,7 @@ class TestMetaforgeTab:
         test_metadata = {"title": "Test", "partners": ["Alice"]}
 
         # Mock the save_video_metadata function
-        with patch("ui.pages.film_components.metaforge_tab.save_video_metadata") as mock_save:
+        with patch("ui.pages.components.film.metaforge_tab.save_video_metadata") as mock_save:
             mock_save.return_value = True
 
             self.metaforge_tab.handle_publish(test_metadata)
@@ -154,7 +154,7 @@ class TestMetaforgeTab:
             # Should call save_video_metadata
             mock_save.assert_called_once()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_handle_publish_with_callback(self, mock_load_video):
         """Test handle publish with custom callback"""
         mock_load_video.return_value = self.mock_video_data
@@ -168,7 +168,7 @@ class TestMetaforgeTab:
         # Should call the callback instead of default behavior
         mock_callback.assert_called_once_with(test_metadata)
 
-    @patch("ui.pages.film_components.metaforge_tab.ui")
+    @patch("ui.pages.components.film.metaforge_tab.ui")
     def test_add_clip(self, mock_ui):
         """Test adding a clip to the video"""
         # Mock UI timer
@@ -186,7 +186,7 @@ class TestMetaforgeTab:
         # Should call timer to inject the clip
         mock_timer.assert_called_once()
 
-    @patch("ui.pages.film_components.metaforge_tab.ui")
+    @patch("ui.pages.components.film.metaforge_tab.ui")
     def test_remove_clip(self, mock_ui):
         """Test removing a clip from the video"""
         mock_notify = Mock()
@@ -200,7 +200,7 @@ class TestMetaforgeTab:
         # Should show notification
         mock_notify.assert_called_once()
 
-    @patch("ui.pages.film_components.metaforge_tab.ui")
+    @patch("ui.pages.components.film.metaforge_tab.ui")
     def test_update_clip(self, mock_ui):
         """Test updating a clip in the video"""
         mock_notify = Mock()

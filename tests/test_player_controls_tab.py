@@ -4,8 +4,8 @@ Unit tests for PlayerControlsTab component
 
 from unittest.mock import Mock, patch
 
-from ui.pages.film_components.player_controls_tab import PlayerControlsTab
-from ui.pages.film_components.video_state import VideoState
+from ui.pages.components.film.player_controls_tab import PlayerControlsTab
+from ui.pages.components.film.video_state import VideoState
 
 
 class TestPlayerControlsTab:
@@ -36,7 +36,7 @@ class TestPlayerControlsTab:
         self.video_state = VideoState(self.video_id)
         self.player_controls_tab = PlayerControlsTab(self.video_state)
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_init(self, mock_load_video):
         """Test PlayerControlsTab initialization"""
         mock_load_video.return_value = self.mock_video_data
@@ -46,9 +46,9 @@ class TestPlayerControlsTab:
         assert self.player_controls_tab.on_clip_play is None
         assert self.player_controls_tab.player_speed["value"] == 1.0
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
-    @patch("ui.pages.film_components.player_controls_tab.VideoPlayer")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
+    @patch("ui.pages.components.film.player_controls_tab.VideoPlayer")
     def test_create_tab(self, mock_video_player, mock_ui, mock_load_video):
         """Test creating the player controls tab"""
         mock_load_video.return_value = self.mock_video_data
@@ -60,9 +60,9 @@ class TestPlayerControlsTab:
 
         assert self.player_controls_tab.container == mock_container
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
-    @patch("ui.pages.film_components.player_controls_tab.VideoPlayer")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
+    @patch("ui.pages.components.film.player_controls_tab.VideoPlayer")
     def test_create_tab_normal_mode(self, mock_video_player, mock_ui, mock_load_video):
         """Test creating the player controls tab in normal mode"""
         mock_load_video.return_value = self.mock_video_data
@@ -74,10 +74,10 @@ class TestPlayerControlsTab:
 
         assert self.player_controls_tab.container == mock_container
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
-    @patch("ui.pages.film_components.player_controls_tab.VideoPlayer")
-    @patch("ui.pages.film_components.player_controls_tab.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
+    @patch("ui.pages.components.film.player_controls_tab.VideoPlayer")
+    @patch("ui.pages.components.film.player_controls_tab.load_video")
     def test_create_tab_playlist_mode(self, mock_load_video_func, mock_video_player, mock_ui, mock_load_video):
         """Test creating the player controls tab in playlist mode"""
         mock_load_video.return_value = self.mock_video_data
@@ -90,9 +90,9 @@ class TestPlayerControlsTab:
 
         assert self.player_controls_tab.container == mock_container
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
-    @patch("ui.pages.film_components.player_controls_tab.VideoPlayer")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
+    @patch("ui.pages.components.film.player_controls_tab.VideoPlayer")
     def test_create_tab_autoplay_clip(self, mock_video_player, mock_ui, mock_load_video):
         """Test creating the player controls tab with autoplay clip"""
         mock_load_video.return_value = self.mock_video_data
@@ -105,9 +105,9 @@ class TestPlayerControlsTab:
 
         assert self.player_controls_tab.container == mock_container
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
-    @patch("ui.pages.film_components.player_controls_tab.VideoPlayer")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
+    @patch("ui.pages.components.film.player_controls_tab.VideoPlayer")
     def test_refresh_with_container(self, mock_video_player, mock_ui, mock_load_video):
         """Test refreshing the player controls tab with container"""
         mock_load_video.return_value = self.mock_video_data
@@ -121,8 +121,8 @@ class TestPlayerControlsTab:
         # Should clear and recreate the UI
         mock_container.clear.assert_called_once()
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
     def test_refresh_without_container(self, mock_ui, mock_load_video):
         """Test refreshing the player controls tab without container"""
         mock_load_video.return_value = self.mock_video_data
@@ -147,9 +147,9 @@ class TestPlayerControlsTab:
 
         mock_callback.assert_called_once_with(mock_clip)
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
-    @patch("ui.pages.film_components.player_controls_tab.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
+    @patch("ui.pages.components.film.player_controls_tab.load_video")
     def test_play_clips_playlist_mode_with_clips(self, mock_load_video_func, mock_ui, mock_load_video):
         """Test playing clips in playlist mode with clips available"""
         mock_load_video.return_value = self.mock_video_data
@@ -164,9 +164,9 @@ class TestPlayerControlsTab:
         # Should not raise any exceptions
         assert True
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.player_controls_tab.ui")
-    @patch("ui.pages.film_components.player_controls_tab.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.player_controls_tab.ui")
+    @patch("ui.pages.components.film.player_controls_tab.load_video")
     def test_play_clips_playlist_mode_no_clips(self, mock_load_video_func, mock_ui, mock_load_video):
         """Test playing clips in playlist mode with no clips"""
         mock_video_no_clips = self.mock_video_data.copy()

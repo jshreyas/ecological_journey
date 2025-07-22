@@ -5,9 +5,9 @@ Ensures that clicking on videos navigates correctly without passing event object
 
 from unittest.mock import Mock, patch
 
-from ui.pages.film_components.filmboard_tab import FilmboardTab
-from ui.pages.film_components.navigation_tab import NavigationTab
-from ui.pages.film_components.video_state import VideoState
+from ui.pages.components.film.filmboard_tab import FilmboardTab
+from ui.pages.components.film.navigation_tab import NavigationTab
+from ui.pages.components.film.video_state import VideoState
 
 
 class TestClickFunctionality:
@@ -26,9 +26,9 @@ class TestClickFunctionality:
         }
         self.video_state = VideoState(self.video_id)
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.filmboard_tab.load_videos")
-    @patch("ui.pages.film_components.filmboard_tab.navigate_to_film")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.filmboard_tab.load_videos")
+    @patch("ui.pages.components.film.filmboard_tab.navigate_to_film")
     def test_filmboard_click_navigation(self, mock_navigate, mock_load_videos, mock_load_video):
         """Test that clicking on a filmboard video navigates correctly"""
         mock_load_video.return_value = self.mock_video_data
@@ -64,9 +64,9 @@ class TestClickFunctionality:
                 assert not hasattr(arg, "client"), f"Event object passed as video_id: {arg}"
                 assert not hasattr(arg, "args"), f"Event object passed as video_id: {arg}"
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.navigation_tab.load_videos")
-    @patch("ui.pages.film_components.navigation_tab.navigate_to_film")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.navigation_tab.load_videos")
+    @patch("ui.pages.components.film.navigation_tab.navigate_to_film")
     def test_navigation_click_navigation(self, mock_navigate, mock_load_videos, mock_load_video):
         """Test that clicking on navigation arrows navigates correctly"""
         mock_load_video.return_value = self.mock_video_data
@@ -96,8 +96,8 @@ class TestClickFunctionality:
                 assert not hasattr(arg, "client"), f"Event object passed as video_id: {arg}"
                 assert not hasattr(arg, "args"), f"Event object passed as video_id: {arg}"
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.filmboard_tab.load_videos")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.filmboard_tab.load_videos")
     def test_filmboard_click_with_callback(self, mock_load_videos, mock_load_video):
         """Test that clicking on filmboard video calls custom callback correctly"""
         mock_load_video.return_value = self.mock_video_data
@@ -120,8 +120,8 @@ class TestClickFunctionality:
                 assert not hasattr(arg, "client"), f"Event object passed as video_id: {arg}"
                 assert not hasattr(arg, "args"), f"Event object passed as video_id: {arg}"
 
-    @patch("ui.pages.film_components.video_state.load_video")
-    @patch("ui.pages.film_components.navigation_tab.load_videos")
+    @patch("ui.pages.components.film.video_state.load_video")
+    @patch("ui.pages.components.film.navigation_tab.load_videos")
     def test_navigation_click_with_callback(self, mock_load_videos, mock_load_video):
         """Test that clicking on navigation arrows calls custom callback correctly"""
         mock_load_video.return_value = self.mock_video_data
@@ -163,7 +163,7 @@ class TestClickFunctionality:
 
         # Verify that if we pass an event object, it doesn't get treated as a video_id
         # by checking that navigate_to_film is called with the correct string
-        with patch("ui.pages.film_components.filmboard_tab.navigate_to_film") as mock_navigate:
+        with patch("ui.pages.components.film.filmboard_tab.navigate_to_film") as mock_navigate:
             filmboard_tab._handle_video_click("test_video_123")
             mock_navigate.assert_called_once_with("test_video_123")
 

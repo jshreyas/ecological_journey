@@ -4,8 +4,8 @@ Unit tests for FilmdataTab component
 
 from unittest.mock import Mock, patch
 
-from ui.pages.film_components.filmdata_tab import FilmdataTab
-from ui.pages.film_components.video_state import VideoState
+from ui.pages.components.film.filmdata_tab import FilmdataTab
+from ui.pages.components.film.video_state import VideoState
 from ui.utils.user_context import User
 
 
@@ -27,7 +27,7 @@ class TestFilmdataTab:
         self.user = User(username="alice", token="tok123", id="id456")
         self.filmdata_tab = FilmdataTab(self.video_state, self.user)
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_init(self, mock_load_video):
         """Test FilmdataTab initialization"""
         mock_load_video.return_value = self.mock_video_data
@@ -38,7 +38,7 @@ class TestFilmdataTab:
         assert self.filmdata_tab.notes_input is None
         assert self.filmdata_tab.on_publish is None
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_create_tab(self, mock_load_video):
         """Test creating the filmdata tab"""
         mock_load_video.return_value = self.mock_video_data
@@ -50,7 +50,7 @@ class TestFilmdataTab:
 
         assert self.filmdata_tab.container == mock_container
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_refresh_with_container(self, mock_load_video):
         """Test refreshing the filmdata tab with container"""
         mock_load_video.return_value = self.mock_video_data
@@ -64,7 +64,7 @@ class TestFilmdataTab:
         # Should clear and recreate the UI
         mock_container.clear.assert_called_once()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_refresh_without_container(self, mock_load_video):
         """Test refreshing the filmdata tab without container"""
         mock_load_video.return_value = self.mock_video_data
@@ -72,7 +72,7 @@ class TestFilmdataTab:
         # Should not raise any exceptions
         self.filmdata_tab.refresh()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_get_video_data(self, mock_load_video):
         """Test getting video data"""
         mock_load_video.return_value = self.mock_video_data
@@ -81,13 +81,13 @@ class TestFilmdataTab:
 
         assert video_data == self.mock_video_data
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_handle_save_without_callback(self, mock_load_video):
         """Test handle save without custom callback"""
         mock_load_video.return_value = self.mock_video_data
 
         # Mock the save_video_metadata function
-        with patch("ui.pages.film_components.filmdata_tab.save_video_metadata") as mock_save:
+        with patch("ui.pages.components.film.filmdata_tab.save_video_metadata") as mock_save:
             mock_save.return_value = True
 
             # Set up some test data
@@ -100,13 +100,13 @@ class TestFilmdataTab:
             # Should call save_video_metadata
             mock_save.assert_called_once()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_handle_save_failure(self, mock_load_video):
         """Test handle save when save fails"""
         mock_load_video.return_value = self.mock_video_data
 
         # Mock the save_video_metadata function to return False
-        with patch("ui.pages.film_components.filmdata_tab.save_video_metadata") as mock_save:
+        with patch("ui.pages.components.film.filmdata_tab.save_video_metadata") as mock_save:
             mock_save.return_value = False
 
             # Set up some test data
@@ -119,7 +119,7 @@ class TestFilmdataTab:
             # Should call save_video_metadata
             mock_save.assert_called_once()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_handle_save_no_token(self, mock_load_video):
         """Test handle save when no token is available"""
         mock_load_video.return_value = self.mock_video_data
@@ -127,13 +127,13 @@ class TestFilmdataTab:
         # Should not raise any exceptions
         self.filmdata_tab._handle_save()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_handle_publish_without_callback(self, mock_load_video):
         """Test handle publish without custom callback"""
         mock_load_video.return_value = self.mock_video_data
 
         # Mock the save_video_metadata function
-        with patch("ui.pages.film_components.filmdata_tab.save_video_metadata") as mock_save:
+        with patch("ui.pages.components.film.filmdata_tab.save_video_metadata") as mock_save:
             mock_save.return_value = True
 
             test_metadata = {"title": "Test", "partners": ["Alice"]}
@@ -142,7 +142,7 @@ class TestFilmdataTab:
             # Should call save_video_metadata
             mock_save.assert_called_once()
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_handle_publish_with_callback(self, mock_load_video):
         """Test handle publish with custom callback"""
         mock_load_video.return_value = self.mock_video_data
@@ -156,7 +156,7 @@ class TestFilmdataTab:
         # Should call the callback instead of default behavior
         mock_callback.assert_called_once_with(test_metadata)
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_reset_fields(self, mock_load_video):
         """Test resetting fields to original values"""
         mock_load_video.return_value = self.mock_video_data
@@ -171,7 +171,7 @@ class TestFilmdataTab:
         # Should reset to original values
         assert self.filmdata_tab.chips_list == ["@Alice", "@Bob", "#action", "#drama"]
 
-    @patch("ui.pages.film_components.video_state.load_video")
+    @patch("ui.pages.components.film.video_state.load_video")
     def test_create_chips_input(self, mock_load_video):
         """Test creating chips input"""
         mock_load_video.return_value = self.mock_video_data

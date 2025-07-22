@@ -1,4 +1,4 @@
-from ui.pages.media_components import QueryBuilder
+from ui.pages.components.media import QueryBuilder
 
 
 def dummy_parse(tokens):
