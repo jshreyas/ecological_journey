@@ -85,17 +85,21 @@ async def google_login(request: Request):
 async def google_callback(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
-        print("OAuth token:", token)
         resp = await oauth.google.get("https://openidconnect.googleapis.com/v1/userinfo", token=token)
-        print("User info response:", resp)
         userinfo = resp.json()
     except OAuthError:
         print("OAuth error:", OAuthError)
         return RedirectResponse(url="http://localhost:8080/?error=oauth")
 
     request.session["user"] = userinfo
+    user = await get_or_create_user(userinfo["email"], userinfo["name"], "google", userinfo["sub"])
     return RedirectResponse(
-        url="http://localhost:8080/oauth?token=" + token["access_token"] + "&username=" + userinfo["name"]
+        url="http://localhost:8080/oauth?token="
+        + token["access_token"]
+        + "&username="
+        + userinfo["name"]
+        + "&id="
+        + str(user["_id"])
     )
 
 

@@ -23,6 +23,7 @@ sys.stdout.reconfigure(line_buffering=True)
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
+# TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
 
 
 def api_post(endpoint: str, data: dict):
@@ -124,6 +125,7 @@ def login_or_signup(mode="login"):
                     print("API called, status:", response.status_code)  # Debug print
 
                     if response.status_code == 200:
+                        # TODO: this is repeated code, refactor to a common function
                         response_data = response.json()
                         app.storage.user["token"] = response_data["access_token"]
                         app.storage.user["user"] = response_data["username"]
@@ -132,8 +134,7 @@ def login_or_signup(mode="login"):
                         ui.notify("✅ Login successful", type="positive")
                         clear_cache()
                         ui.navigate.reload()
-                        post_login_path = app.storage.user.get("post_login_path", "/")
-                        ui.navigate.to(post_login_path)
+                        ui.navigate.to(app.storage.user.get("post_login_path", "/"))
                         app.storage.user["post_login_path"] = "/"
 
                     elif response.status_code == 503:
@@ -320,13 +321,14 @@ def setup_footer():
 
 
 @ui.page("/oauth")
-def oauth_page(token: str = ui.query("token"), username: str = ui.query("username")):
-    print("in oauth_page:", token)
+def oauth_page(token: str = ui.query("token"), username: str = ui.query("username"), id: str = ui.query("id")):
     if token:
         app.storage.user["token"] = token
         app.storage.user["user"] = username
+        app.storage.user["id"] = id
         ui.notify("✅ Google login successful", type="positive")
-        # Redirect to home or intended page, NOT reload
+        clear_cache()
+        ui.navigate.reload()
         ui.navigate.to(app.storage.user.get("post_login_path", "/"))
         app.storage.user["post_login_path"] = "/"
 
