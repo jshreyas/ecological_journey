@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 from ui.pages import home as home_module
+from ui.pages.home import with_user_context
+from ui.utils.user_context import User
 
 
 @pytest.fixture(autouse=True)
@@ -58,13 +60,22 @@ def mock_utils(monkeypatch):
     return None
 
 
+class DummyUser:
+    def __init__(self, data):
+        self._data = data
+
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+
+
 def test_render_add_playlist_card_renders(mock_ui, mock_utils):
     parent = MagicMock()
 
     def dummy_refresh():
         pass
 
-    home_module.render_add_playlist_card(parent, "token", "user", dummy_refresh, dummy_refresh)
+    user = User(username="alice", token="tok123", id="id456")
+    home_module.render_add_playlist_card(parent, user, dummy_refresh, dummy_refresh)
     assert parent.__enter__.called or parent.__exit__.called or parent.method_calls
 
 
@@ -74,8 +85,8 @@ def test_render_playlists_list_renders_and_add_card(mock_ui, mock_utils):
     def dummy_refresh():
         pass
 
-    home_module.render_playlists_list(parent, "user", "token", "id", dummy_refresh, dummy_refresh)
-    # Should call parent.clear and render add card
+    user = User(username="alice", token="tok123", id="id456")
+    home_module.render_playlists_list(parent, user, dummy_refresh, dummy_refresh)
     assert parent.clear.called
 
 
@@ -83,7 +94,6 @@ def test_render_dashboard_renders_chart_and_calendar(mock_ui, mock_utils):
     parent = MagicMock()
     home_module.render_dashboard(parent)
     assert parent.clear.called
-    # Should call calendar_container and echart
     assert mock_ui.echart.called
     assert mock_ui.separator.called
 
@@ -93,5 +103,42 @@ def test_render_dashboard_no_videos(mock_ui, monkeypatch):
     monkeypatch.setattr(home_module, "load_videos", Mock(return_value=[]))
     home_module.render_dashboard(parent)
     assert parent.clear.called
-    # Should render the no videos card
     assert mock_ui.card.called
+
+
+def test_with_user_context_logged_in(monkeypatch):
+    # Simulate logged-in user
+    class DummyStorage:
+        pass
+
+    dummy_user = DummyUser({"user": "alice", "token": "tok123", "id": "id456"})
+    dummy_storage = DummyStorage()
+    dummy_storage.user = dummy_user
+    monkeypatch.setattr(home_module.app, "storage", dummy_storage)
+    called = {}
+
+    @with_user_context
+    def dummy_page(user):
+        called["user"] = user
+
+    dummy_page()
+    assert vars(called["user"]) == dict(username="alice", token="tok123", id="id456")
+
+
+def test_with_user_context_not_logged_in(monkeypatch):
+    # Simulate not-logged-in user
+    class DummyStorage:
+        pass
+
+    dummy_user = DummyUser({})
+    dummy_storage = DummyStorage()
+    dummy_storage.user = dummy_user
+    monkeypatch.setattr(home_module.app, "storage", dummy_storage)
+    called = {}
+
+    @with_user_context
+    def dummy_page(user):
+        called["user"] = user
+
+    dummy_page()
+    assert called["user"] is None
