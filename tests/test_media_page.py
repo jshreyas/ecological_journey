@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from ui.pages.media_components import render_media_page
+from ui.pages.components.media import render_media_page
 
 
 def test_render_media_page_renders(monkeypatch):

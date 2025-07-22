@@ -5,15 +5,15 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import ui
-from pages.film_components.clipboard_tab import ClipboardTab
-from pages.film_components.clipper_tab import ClipperTab
-from pages.film_components.filmboard_tab import FilmboardTab
-from pages.film_components.filmdata_tab import FilmdataTab
-from pages.film_components.metaforge_tab import MetaforgeTab
-from pages.film_components.navigation_tab import NavigationTab
-from pages.film_components.player_controls_tab import PlayerControlsTab
-from pages.film_components.share_dialog_tab import ShareDialogTab
-from pages.film_components.video_state import VideoState
+from pages.components.film.clipboard_tab import ClipboardTab
+from pages.components.film.clipper_tab import ClipperTab
+from pages.components.film.filmboard_tab import FilmboardTab
+from pages.components.film.filmdata_tab import FilmdataTab
+from pages.components.film.metaforge_tab import MetaforgeTab
+from pages.components.film.navigation_tab import NavigationTab
+from pages.components.film.player_controls_tab import PlayerControlsTab
+from pages.components.film.share_dialog_tab import ShareDialogTab
+from pages.components.film.video_state import VideoState
 from utils.dialog_puns import caught_john_doe, generate_funny_title
 from utils.user_context import User, with_user_context
 from utils.utils_api import (

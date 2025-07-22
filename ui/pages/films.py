@@ -1,4 +1,4 @@
-from pages.media_components import render_media_page
+from pages.components.media import render_media_page
 from utils.utils_api import load_videos
 
 

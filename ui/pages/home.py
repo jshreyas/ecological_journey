@@ -2,7 +2,7 @@ from collections import Counter
 from datetime import datetime
 
 from nicegui import ui
-from pages.home_components.calendar_component import calendar_container
+from pages.components.home.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
 from utils.fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils.user_context import User, with_user_context
