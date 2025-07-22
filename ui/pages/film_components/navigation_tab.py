@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from nicegui import ui
-from pages.films import navigate_to_film
+from utils.utils import navigate_to_film
 from utils.utils_api import load_videos
 
 from .video_state import VideoState

@@ -6,7 +6,7 @@ Handles the filmboard functionality for showing related videos
 from typing import Callable
 
 from nicegui import ui
-from pages.films import navigate_to_film
+from utils.utils import navigate_to_film
 from utils.utils_api import load_videos
 
 from .video_state import VideoState
