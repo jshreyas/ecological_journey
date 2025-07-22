@@ -218,7 +218,6 @@ def render_dashboard(parent):
         ).classes("w-full h-80")
 
 
-@ui.page("/home")
 @with_user_context
 def home_page(user: User | None):
     with ui.splitter(value=25).classes("w-full h-auto gap-4") as splitter:
