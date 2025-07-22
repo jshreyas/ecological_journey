@@ -7,6 +7,7 @@ Handles the clip creation and editing functionality
 
 from nicegui import ui
 from utils.dialog_puns import generate_funny_title
+from utils.user_context import User
 from utils.utils_api import add_clip_to_video, get_playlist_id_for_video, update_clip_in_video
 
 from .video_state import VideoState
@@ -15,8 +16,9 @@ from .video_state import VideoState
 class ClipperTab:
     """Component for creating and editing clips"""
 
-    def __init__(self, video_state: VideoState):
+    def __init__(self, video_state: VideoState, user: User | None = None):
         self.video_state = video_state
+        self.user = user
         self.container = None
         self.on_edit_clip = None  # Will be set by external component
         self.mode = "add"
@@ -46,7 +48,6 @@ class ClipperTab:
     def _show_clip_form(self, clip=None, is_new=True):
         import uuid
 
-        from nicegui import app
         from utils.dialog_puns import caught_john_doe
 
         video = self.video_state.get_video()
@@ -132,7 +133,7 @@ class ClipperTab:
                         "partners": partners_list,
                         "speed": speed_knob.value,
                     }
-                    token = app.storage.user.get("token")
+                    token = self.user.token if self.user else None
                     if not token:
                         caught_john_doe()
                         return

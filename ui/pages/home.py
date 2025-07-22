@@ -1,10 +1,11 @@
 from collections import Counter
 from datetime import datetime
 
-from nicegui import app, ui
+from nicegui import ui
 from pages.home_components.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
 from utils.fetch_videos import fetch_playlist_items, fetch_playlist_metadata
+from utils.user_context import User, with_user_context
 from utils.utils import group_videos_by_day
 from utils.utils_api import (
     create_playlist,
@@ -17,7 +18,7 @@ from utils.utils_api import (
 )
 
 
-def render_add_playlist_card(parent, user_token, username, refresh_playlists, render_dashboard):
+def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
     with parent:
         with ui.card().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3"):
             ui.label("➕ Playlist by ID").classes("text-md font-bold")
@@ -59,7 +60,7 @@ def render_add_playlist_card(parent, user_token, username, refresh_playlists, re
                 def task():
                     create_playlist(
                         fetch_playlist_items(playlist_id),
-                        user_token,
+                        user.token if user else None,
                         playlist_name,
                         playlist_id,
                     )
@@ -76,7 +77,7 @@ def render_add_playlist_card(parent, user_token, username, refresh_playlists, re
             playlist_id_input.on("change", on_input_change)
             with ui.row().classes("w-full justify-start gap-4"):
                 ui.button(
-                    on_click=(caught_john_doe if not username else verify_playlist),
+                    on_click=(caught_john_doe if not user else verify_playlist),
                     icon="check_circle",
                 ).props(
                     "flat round"
@@ -86,9 +87,9 @@ def render_add_playlist_card(parent, user_token, username, refresh_playlists, re
                 fetch_button.on("click", fetch_playlist_videos)
 
 
-def render_playlists_list(parent, username, user_token, user_id, refresh_playlists, render_dashboard):
+def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
     parent.clear()
-    if not username:
+    if not user:
         playlists = load_playlists()
         for playlist in playlists:
             with parent:
@@ -103,7 +104,7 @@ def render_playlists_list(parent, username, user_token, user_id, refresh_playlis
                             "flat dense round color=primary"
                         ).tooltip("Sync")
     else:
-        both = load_playlists_for_user(user_id)
+        both = load_playlists_for_user(user.id)
         owned, member = both["owned"], both["member"]
         owned_ids = {pl["_id"] for pl in owned}
         all_playlists = owned + [p for p in member if p["_id"] not in owned_ids]
@@ -138,10 +139,10 @@ def render_playlists_list(parent, username, user_token, user_id, refresh_playlis
                                 icon="sync",
                                 on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
                                     "playlist_id"
-                                ]: on_sync_click(pid, user_token, name, play_id),
+                                ]: on_sync_click(pid, user.token, name, play_id),
                             ).props("flat dense round color=primary").tooltip("Sync")
     # Always render the add playlist card at the end
-    render_add_playlist_card(parent, user_token, username, refresh_playlists, render_dashboard)
+    render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
 
 
 def render_dashboard(parent):
@@ -217,12 +218,8 @@ def render_dashboard(parent):
         ).classes("w-full h-80")
 
 
-@ui.page("/home")
-def home_page():
-    # TODO: this user data can be cleaned up a little
-    username = app.storage.user.get("user", None)
-    user_token = app.storage.user.get("token", None)
-    user_id = app.storage.user.get("id", None)
+@with_user_context
+def home_page(user: User | None):
     with ui.splitter(value=25).classes("w-full h-auto gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
@@ -234,9 +231,7 @@ def home_page():
                     def refresh_playlists():
                         render_playlists_list(
                             playlists_container,
-                            username,
-                            user_token,
-                            user_id,
+                            user,
                             refresh_playlists,
                             lambda: render_dashboard(dashboard_column),
                         )
@@ -246,10 +241,10 @@ def home_page():
 
                     def refresh_teams():
                         teams_container.clear()
-                        if not username:
+                        if not user:
                             both = fetch_teams_for_user_jd(44)
                         else:
-                            both = fetch_teams_for_user(user_id)
+                            both = fetch_teams_for_user(user.id)
                         owned, member = both["owned"], both["member"]
                         owned_ids = {t["_id"] for t in owned}
                         all_teams = owned + [t for t in member if t["_id"] not in owned_ids]
@@ -263,14 +258,14 @@ def home_page():
                                     if not name:
                                         ui.notify("Please enter a team name.", type="warning")
                                         return
-                                    create_team(name, user_token, user_id)
+                                    create_team(name, user.token, user.id)
                                     ui.notify(f'Team "{name}" created successfully!')
                                     refresh_teams()
                                     team_name_input.value = ""
 
                                 ui.label("➕ Team").classes("text-sd font-bold")
                                 ui.button(
-                                    on_click=(caught_john_doe if not username else create_new_team),
+                                    on_click=(caught_john_doe if not user else create_new_team),
                                     icon="save",
                                 ).props("flat round").tooltip("Create Team")
                             team_name_input = ui.input("Team Name").classes("w-full")

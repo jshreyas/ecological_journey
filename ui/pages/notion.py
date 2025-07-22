@@ -1,5 +1,6 @@
-from nicegui import app, ui
+from nicegui import ui
 from utils.dialog_puns import caught_john_doe
+from utils.user_context import User, with_user_context
 from utils.utils import get_notion_tree
 
 notion_iframe = ""
@@ -63,11 +64,11 @@ def render_tree(pages, user_token):
         tree.expand(expanded_ids.copy())
 
 
-def notion_page():
+@with_user_context
+def notion_page(user: User | None):
     global notion_iframe
     notion_pages = get_notion_tree()
-    user_token = app.storage.user.get("token", None)
-
+    user_token = user.token if user else None
     with ui.splitter(horizontal=False, value=25).classes("w-full h-full rounded shadow") as splitter:
         with splitter.before:
             render_tree(notion_pages, user_token)

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from dotenv import load_dotenv
-from nicegui import app, ui
+from nicegui import ui
 from pages.film_components.clipboard_tab import ClipboardTab
 from pages.film_components.clipper_tab import ClipperTab
 from pages.film_components.filmboard_tab import FilmboardTab
@@ -15,6 +15,7 @@ from pages.film_components.player_controls_tab import PlayerControlsTab
 from pages.film_components.share_dialog_tab import ShareDialogTab
 from pages.film_components.video_state import VideoState
 from utils.dialog_puns import caught_john_doe, generate_funny_title
+from utils.user_context import User, with_user_context
 from utils.utils_api import (
     add_clip_to_video,
     get_playlist_id_for_video,
@@ -30,7 +31,8 @@ BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 
 
 # TODO: Make this page mobile friendly for logged in user for write access
-def film_page(video_id: str):
+@with_user_context
+def film_page(user: User | None, video_id: str):
     # Initialize VideoState for centralized state management
     video_state = VideoState(video_id)
 
@@ -63,12 +65,10 @@ def film_page(video_id: str):
     def finalize_save():
         confirm_dialog.close()
         print(f"Finalizing save...: {state['latest_cleaned']}")
-        success = save_video_metadata(state["latest_cleaned"], app.storage.user.get("token"))
+        success = save_video_metadata(state["latest_cleaned"], user.token if user else None)
         if success:
-            ui.notify("✅ Filmdata published", type="positive")
-            # Clear the state to prevent cumulative delta tracking
+            ui.notify("\u2705 Filmdata published", type="positive")
             state["latest_cleaned"] = None
-            # Refresh video state and notify all components
             video_state.refresh()
         else:
             ui.notify("❌ Failed to publish filmdata", type="negative")
@@ -195,7 +195,7 @@ def film_page(video_id: str):
                             "speed": speed_knob.value,  # <-- This now reads the current value
                         }
                         playlist_name = get_playlist_id_for_video(video_id)
-                        token = app.storage.user.get("token")
+                        token = user.token if user else None
                         if not token:
                             caught_john_doe()
                             return
@@ -230,13 +230,13 @@ def film_page(video_id: str):
                     ui.button(icon="save", on_click=save_clip).props("color=primary")
                     ui.button(icon="close", on_click=reset_to_add_mode).props("color=secondary")
 
-    # Initialize components
+    # Initialize components with user
     navigation_tab = NavigationTab(video_state)
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
-    filmdata_tab = FilmdataTab(video_state)
-    clipper_tab = ClipperTab(video_state)
-    metaforge_tab = MetaforgeTab(video_state)
+    filmdata_tab = FilmdataTab(video_state, user)
+    clipper_tab = ClipperTab(video_state, user)
+    metaforge_tab = MetaforgeTab(video_state, user)
     filmboard_tab = FilmboardTab(video_state)
 
     def on_edit_clip(clip):
