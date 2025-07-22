@@ -71,7 +71,7 @@ def film_page(user: User | None, video_id: str):
             state["latest_cleaned"] = None
             video_state.refresh()
         else:
-            ui.notify("\u274c Failed to publish filmdata", type="negative")
+            ui.notify("❌ Failed to publish filmdata", type="negative")
 
     confirm_dialog = ui.dialog()
     with confirm_dialog:
