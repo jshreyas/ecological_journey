@@ -39,8 +39,6 @@ def test_render_media_page_renders(monkeypatch):
     render_media_page(
         title="Test",
         data_loader=dummy_loader,
-        parse_query_expression=lambda x: lambda y: True,
-        navigate_to_film=lambda x, y=None: None,
         show_save_button=True,
         show_clips_count=True,
     )

@@ -1,14 +1,15 @@
+import re
 from datetime import datetime
 from functools import partial
 
 from nicegui import ui
+from utils.utils import navigate_to_film, parse_query_expression
 
 
 class QueryBuilder:
-    def __init__(self, items, parse_query_expression, title, tooltip):
+    def __init__(self, items, title, tooltip):
         self.tokens = []
         self.items = items
-        self.parse_query_expression = parse_query_expression
         self.title = title
         self.tooltip = tooltip
         self.display_row = (
@@ -45,7 +46,7 @@ class QueryBuilder:
                     lambda t=token: self.tokens.remove(t) or self.refresh()
                 )
         try:
-            _ = self.parse_query_expression(self.tokens)
+            _ = parse_query_expression(self.tokens)
             ui.notify("✅ Valid syntax")
         except Exception as exc:
             ui.notify(f"⚠️ Invalid query: {exc}", color="negative")
@@ -72,16 +73,14 @@ class QueryBuilder:
         self.refresh()
 
 
-def render_query_builders(all_labels, all_partners, parse_query_expression):
+def render_query_builders(all_labels, all_partners):
     label_qb = QueryBuilder(
         items=all_labels,
-        parse_query_expression=parse_query_expression,
         title="Labels",
         tooltip="ex: 'label1 AND label2 OR NOT label3'",
     )
     partner_qb = QueryBuilder(
         items=all_partners,
-        parse_query_expression=parse_query_expression,
         title="Partners",
         tooltip="ex: 'partner1 AND partner2 OR NOT partner3'",
     )
@@ -92,14 +91,13 @@ def render_media_page(
     *,
     title,
     data_loader,
-    parse_query_expression,
-    navigate_to_film,
     save_cliplist=None,
     user=None,
     show_save_button=False,
     show_clips_count=False,
 ):
     current_page = {"value": 1}
+    label = (m := re.search(r"🎬 (\w+),", title)) and m.group(1)
     ui.label(title).classes("text-2xl font-bold mb-4 text-center")
 
     all_videos = data_loader()
@@ -128,7 +126,7 @@ def render_media_page(
                     .props("use-chips")
                 )
 
-                label_qb, partner_qb = render_query_builders(all_labels, all_partners, parse_query_expression)
+                label_qb, partner_qb = render_query_builders(all_labels, all_partners)
 
                 ui.separator().classes("border-gray-300 w-full")
 
@@ -199,13 +197,13 @@ def render_media_page(
                             )
                             dialog.close()
 
-                        ui.button("Save", on_click=confirm_save)
+                        ui.button(icon="save", on_click=confirm_save)
                     dialog.open()
 
                 with ui.row().classes("justify-between w-full"):
-                    ui.button("Apply", on_click=apply_filters).classes("mt-4")
+                    ui.button(icon="filter_alt", on_click=apply_filters).classes("mt-4")
                     if show_save_button:
-                        ui.button("💾 Save", on_click=save_filtered_clips).classes("mt-4")
+                        ui.button(icon="save", on_click=save_filtered_clips).classes("mt-4")
 
         with splitter.after:
             video_grid = ui.grid().classes(
@@ -221,19 +219,21 @@ def render_media_page(
                 except ValueError:
                     start_date, end_date = min_date, max_date
 
-                parsed_fn = parse_query_expression(label_qb.tokens) if label_qb.tokens else lambda labels: True
-                pparsed_fn = parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
+                parse_label_fn = parse_query_expression(label_qb.tokens) if label_qb.tokens else lambda labels: True
+                parse_partner_fn = (
+                    parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
+                )
 
                 filtered_videos = [
                     v
                     for v in all_videos
                     if v["playlist_name"] in playlist_filter.value
                     and start_date <= v["date"][:10] <= end_date
-                    and parsed_fn(v.get("labels", []))
-                    and pparsed_fn(v.get("partners", []))
+                    and parse_label_fn(v.get("labels", []))
+                    and parse_partner_fn(v.get("partners", []))
                 ]
 
-                ui.notify(f"🔍 Filtered {title.lower()}: {len(filtered_videos)}", color="green")
+                ui.notify(f"🔍 Filtered {label}: {len(filtered_videos)}", color="green")
                 all_grouped_counts = {}
                 for v in filtered_videos:
                     day = v["date"][:10]
@@ -254,7 +254,7 @@ def render_media_page(
                 video_grid.clear()
                 with video_grid:
                     if not paginated_videos:
-                        ui.label(f"No {title.lower()} found for the selected filters.").classes(
+                        ui.label(f"No {label} found for the selected filters.").classes(
                             "text-center text-gray-400 col-span-full mb-8"
                         )
                     else:
@@ -317,15 +317,17 @@ def render_media_page(
                 except ValueError:
                     start_date, end_date = min_date, max_date
 
-                parsed_fn = parse_query_expression(label_qb.tokens) if label_qb.tokens else lambda labels: True
-                pparsed_fn = parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
+                parse_label_fn = parse_query_expression(label_qb.tokens) if label_qb.tokens else lambda labels: True
+                parse_partner_fn = (
+                    parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
+                )
                 filtered_videos = [
                     v
                     for v in all_videos
                     if v["playlist_name"] in playlist_filter.value
                     and start_date <= v["date"][:10] <= end_date
-                    and parsed_fn(v.get("labels", []))
-                    and pparsed_fn(v.get("partners", []))
+                    and parse_label_fn(v.get("labels", []))
+                    and parse_partner_fn(v.get("partners", []))
                 ]
                 VIDEOS_PER_PAGE = 30
                 total_pages = max(1, (len(filtered_videos) + VIDEOS_PER_PAGE - 1) // VIDEOS_PER_PAGE)

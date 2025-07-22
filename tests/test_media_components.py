@@ -47,7 +47,7 @@ def test_query_builder_adds_tokens(monkeypatch):
     monkeypatch.setattr("nicegui.ui.chip", lambda *a, **k: DummyChip())
     monkeypatch.setattr("nicegui.ui.notify", lambda *a, **k: None)
 
-    qb = QueryBuilder(["a", "b"], dummy_parse, "Test", "tip")
+    qb = QueryBuilder(["a", "b"], "Test", "tip")
     qb.add_item("a")
     qb.add_operator("AND")
     qb.add_item("b")
