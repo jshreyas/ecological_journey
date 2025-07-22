@@ -4,120 +4,88 @@ from functools import partial
 from nicegui import ui
 
 
-def render_query_builder(
-    all_labels, all_partners, parse_query_expression, label_title="Labels", partner_title="Partners"
-):
-    # --- Label Query Builder ---
-    ui.label(label_title).classes("font-semibold text-gray-600")
-    query_tokens = []
-    query_display_row = (
-        ui.row(wrap=True)
-        .classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]")
-        .tooltip("ex: 'label1 AND label2 OR NOT label3'")
-    )
+class QueryBuilder:
+    def __init__(self, items, parse_query_expression, title, tooltip):
+        self.tokens = []
+        self.items = items
+        self.parse_query_expression = parse_query_expression
+        self.title = title
+        self.tooltip = tooltip
+        self.display_row = (
+            ui.row(wrap=True)
+            .classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]")
+            .tooltip(self.tooltip)
+        )
+        self._build_ui()
 
-    def refresh_query_bar():
-        query_display_row.clear()
-        with query_display_row:
-            for token in query_tokens:
-                ui.chip(token).classes("text-xs bg-blue-100 text-blue-800").props("outline").on_click(
-                    lambda t=token: query_tokens.remove(t) or refresh_query_bar()
-                )
-        try:
-            _ = parse_query_expression(query_tokens)
-            ui.notify("✅ Valid syntax")
-        except Exception:
-            ui.notify("⚠️ Invalid label query", color="negative")
+    def _build_ui(self):
+        ui.label(self.title).classes("font-semibold text-gray-600")
+        self._render_operators()
+        self._render_items()
 
-    def add_operator(op):
-        if not query_tokens:
-            if op == "NOT":
-                query_tokens.append(op)
-        else:
-            last = query_tokens[-1]
-            if op == "NOT":
-                if last not in ("NOT",):
-                    query_tokens.append(op)
-            elif last not in ("AND", "OR", "NOT"):
-                query_tokens.append(op)
-        refresh_query_bar()
-
-    def on_label_click(label):
-        if query_tokens:
-            last = query_tokens[-1]
-            if last not in ("AND", "OR", "NOT"):
-                query_tokens.append("OR")
-        query_tokens.append(label)
-        refresh_query_bar()
-
-    label_chip_container = ui.row(wrap=True).classes(
-        "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
-    )
-
-    with label_chip_container:
+    def _render_operators(self):
         with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
             for op in ["AND", "OR", "NOT"]:
-                ui.chip(op).on_click(partial(add_operator, op)).classes("text-xs bg-grey-4 text-primary")
-        for label in all_labels:
-            chip = ui.chip(label).on_click(partial(on_label_click, label))
-            chip.props("color=grey-3 text-black text-xs")
+                ui.chip(op).on_click(partial(self.add_operator, op)).classes("text-xs bg-grey-4 text-primary")
 
-    # --- Partner Query Builder ---
-    ui.label(partner_title).classes("font-semibold text-gray-600")
-    pquery_tokens = []
-    pquery_display_row = (
-        ui.row(wrap=True)
-        .classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]")
-        .tooltip("ex: 'partner1 AND partner2 OR NOT partner3'")
-    )
+    def _render_items(self):
+        container = ui.row(wrap=True).classes(
+            "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
+        )
+        with container:
+            for item in self.items:
+                chip = ui.chip(item).on_click(partial(self.add_item, item))
+                chip.props("color=grey-3 text-black text-xs")
 
-    def refresh_pquery_bar():
-        pquery_display_row.clear()
-        with pquery_display_row:
-            for token in pquery_tokens:
+    def refresh(self):
+        self.display_row.clear()
+        with self.display_row:
+            for token in self.tokens:
                 ui.chip(token).classes("text-xs bg-blue-100 text-blue-800").props("outline").on_click(
-                    lambda t=token: pquery_tokens.remove(t) or refresh_pquery_bar()
+                    lambda t=token: self.tokens.remove(t) or self.refresh()
                 )
         try:
-            _ = parse_query_expression(pquery_tokens)
+            _ = self.parse_query_expression(self.tokens)
             ui.notify("✅ Valid syntax")
         except Exception as exc:
-            ui.notify(f"⚠️ Invalid partner query: {exc}", color="negative")
+            ui.notify(f"⚠️ Invalid query: {exc}", color="negative")
 
-    def padd_operator(op):
-        if not pquery_tokens:
+    def add_operator(self, op):
+        if not self.tokens:
             if op == "NOT":
-                pquery_tokens.append(op)
+                self.tokens.append(op)
         else:
-            last = pquery_tokens[-1]
+            last = self.tokens[-1]
             if op == "NOT":
                 if last not in ("NOT",):
-                    pquery_tokens.append(op)
+                    self.tokens.append(op)
             elif last not in ("AND", "OR", "NOT"):
-                pquery_tokens.append(op)
-        refresh_pquery_bar()
+                self.tokens.append(op)
+        self.refresh()
 
-    def on_partner_click(label):
-        if pquery_tokens:
-            last = pquery_tokens[-1]
+    def add_item(self, item):
+        if self.tokens:
+            last = self.tokens[-1]
             if last not in ("AND", "OR", "NOT"):
-                pquery_tokens.append("OR")
-        pquery_tokens.append(label)
-        refresh_pquery_bar()
+                self.tokens.append("OR")
+        self.tokens.append(item)
+        self.refresh()
 
-    partner_chip_container = ui.row(wrap=True).classes(
-        "gap-2 max-h-40 overflow-auto w-full border border-gray-300 rounded pt-0 pr-2 pb-2 pl-2 bg-white relative"
+
+def render_query_builders(all_labels, all_partners, parse_query_expression):
+    label_qb = QueryBuilder(
+        items=all_labels,
+        parse_query_expression=parse_query_expression,
+        title="Labels",
+        tooltip="ex: 'label1 AND label2 OR NOT label3'",
     )
-
-    with partner_chip_container:
-        with ui.row().classes("gap-2 sticky top-0 w-full bg-white z-10"):
-            for op in ["AND", "OR", "NOT"]:
-                ui.chip(op).on_click(partial(padd_operator, op)).classes("text-xs bg-grey-4 text-primary")
-        for partner in all_partners:
-            chip = ui.chip(partner).on_click(partial(on_partner_click, partner))
-            chip.props("color=grey-3 text-black text-xs")
-
-    return query_tokens, pquery_tokens, refresh_query_bar, refresh_pquery_bar
+    partner_qb = QueryBuilder(
+        items=all_partners,
+        parse_query_expression=parse_query_expression,
+        title="Partners",
+        tooltip="ex: 'partner1 AND partner2 OR NOT partner3'",
+    )
+    return label_qb, partner_qb
 
 
 def render_media_page(
@@ -160,9 +128,7 @@ def render_media_page(
                     .props("use-chips")
                 )
 
-                query_tokens, pquery_tokens, refresh_query_bar, refresh_pquery_bar = render_query_builder(
-                    all_labels, all_partners, parse_query_expression
-                )
+                label_qb, partner_qb = render_query_builders(all_labels, all_partners, parse_query_expression)
 
                 ui.separator().classes("border-gray-300 w-full")
 
@@ -210,8 +176,8 @@ def render_media_page(
 
                     filters_state = {
                         "playlists": playlist_filter.value,
-                        "labels": query_tokens,
-                        "partners": pquery_tokens,
+                        "labels": label_qb.tokens,
+                        "partners": partner_qb.tokens,
                         "date_range": [start_date, end_date],
                     }
                     with ui.dialog() as dialog, ui.card():
@@ -255,8 +221,8 @@ def render_media_page(
                 except ValueError:
                     start_date, end_date = min_date, max_date
 
-                parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
-                pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
+                parsed_fn = parse_query_expression(label_qb.tokens) if label_qb.tokens else lambda labels: True
+                pparsed_fn = parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
 
                 filtered_videos = [
                     v
@@ -351,8 +317,8 @@ def render_media_page(
                 except ValueError:
                     start_date, end_date = min_date, max_date
 
-                parsed_fn = parse_query_expression(query_tokens) if query_tokens else lambda labels: True
-                pparsed_fn = parse_query_expression(pquery_tokens) if pquery_tokens else lambda partners: True
+                parsed_fn = parse_query_expression(label_qb.tokens) if label_qb.tokens else lambda labels: True
+                pparsed_fn = parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
                 filtered_videos = [
                     v
                     for v in all_videos
