@@ -4,9 +4,11 @@ from typing import Literal, Optional
 from uuid import uuid4
 
 import jwt
+from authlib.integrations.starlette_client import OAuth, OAuthError
 from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from .auth import auth_scheme_optional, create_access_token, get_password_hash, verify_password
@@ -38,6 +40,63 @@ async def get_current_user(
 
 # APIRouter
 router = APIRouter()
+
+oauth = OAuth()
+oauth.register(
+    name="google",
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    client_kwargs={"scope": "openid email profile"},
+    redirect_uri="http://localhost:8000/auth/google/callback",
+)
+
+
+async def get_or_create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
+    # Try to find an existing user by their Google sub or email
+    user = await db.users.find_one(
+        {"$or": [{"email": email}, {"oauth_provider": oauth_provider, "oauth_sub": oauth_sub}]}
+    )
+
+    if user:
+        return user
+
+    # If not found, create a new user
+    new_user = {
+        "username": username,
+        "email": email,
+        "oauth_provider": oauth_provider,
+        "oauth_sub": oauth_sub,
+        "hashed_password": None,  # not set for OAuth users
+    }
+
+    result = await db.users.insert_one(new_user)
+    new_user["_id"] = result.inserted_id
+    return new_user
+
+
+@router.get("/auth/google/login")
+async def google_login(request: Request):
+    redirect_uri = request.url_for("google_callback")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/auth/google/callback")
+async def google_callback(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        print("OAuth token:", token)
+        resp = await oauth.google.get("https://openidconnect.googleapis.com/v1/userinfo", token=token)
+        print("User info response:", resp)
+        userinfo = resp.json()
+    except OAuthError:
+        print("OAuth error:", OAuthError)
+        return RedirectResponse(url="http://localhost:8080/?error=oauth")
+
+    request.session["user"] = userinfo
+    return RedirectResponse(
+        url="http://localhost:8080/oauth?token=" + token["access_token"] + "&username=" + userinfo["name"]
+    )
 
 
 # Utility functions

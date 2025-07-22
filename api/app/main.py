@@ -1,8 +1,14 @@
 # app/main.py
+import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from .routes import router
+
+load_dotenv()
 
 app = FastAPI(
     title="Ecological Journey API",
@@ -19,3 +25,4 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("JWT_SECRET"))
