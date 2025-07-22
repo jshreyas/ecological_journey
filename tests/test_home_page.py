@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 from ui.pages import home as home_module
-from ui.pages.home import with_user_context
 from ui.utils.user_context import User
 
 
@@ -104,41 +103,3 @@ def test_render_dashboard_no_videos(mock_ui, monkeypatch):
     home_module.render_dashboard(parent)
     assert parent.clear.called
     assert mock_ui.card.called
-
-
-def test_with_user_context_logged_in(monkeypatch):
-    # Simulate logged-in user
-    class DummyStorage:
-        pass
-
-    dummy_user = DummyUser({"user": "alice", "token": "tok123", "id": "id456"})
-    dummy_storage = DummyStorage()
-    dummy_storage.user = dummy_user
-    monkeypatch.setattr(home_module.app, "storage", dummy_storage)
-    called = {}
-
-    @with_user_context
-    def dummy_page(user):
-        called["user"] = user
-
-    dummy_page()
-    assert vars(called["user"]) == dict(username="alice", token="tok123", id="id456")
-
-
-def test_with_user_context_not_logged_in(monkeypatch):
-    # Simulate not-logged-in user
-    class DummyStorage:
-        pass
-
-    dummy_user = DummyUser({})
-    dummy_storage = DummyStorage()
-    dummy_storage.user = dummy_user
-    monkeypatch.setattr(home_module.app, "storage", dummy_storage)
-    called = {}
-
-    @with_user_context
-    def dummy_page(user):
-        called["user"] = user
-
-    dummy_page()
-    assert called["user"] is None

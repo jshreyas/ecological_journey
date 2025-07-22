@@ -7,8 +7,9 @@ import json
 import uuid
 from typing import Callable
 
-from nicegui import app, ui
+from nicegui import ui
 from utils.dialog_puns import generate_funny_title
+from utils.user_context import User
 from utils.utils_api import save_video_metadata
 
 from .video_state import VideoState
@@ -17,8 +18,9 @@ from .video_state import VideoState
 class MetaforgeTab:
     """Component for bulk editing video metadata"""
 
-    def __init__(self, video_state: VideoState, on_publish: Callable = None):
+    def __init__(self, video_state: VideoState, user: User | None = None, on_publish: Callable = None):
         self.video_state = video_state
+        self.user = user
         self.on_publish = on_publish
         self.container = None
         self.editor_container = {"ref": None}
@@ -463,7 +465,8 @@ class MetaforgeTab:
         """Finalize the save operation"""
         self.confirm_dialog.close()
         print(f"Finalizing save...: {self.state['latest_cleaned']}")
-        success = save_video_metadata(self.state["latest_cleaned"], app.storage.user.get("token"))
+        token = self.user.token if self.user else None
+        success = save_video_metadata(self.state["latest_cleaned"], token)
         if success:
             ui.notify("✅ Filmdata published", type="positive")
             # Clear the state to prevent cumulative delta tracking
@@ -505,7 +508,7 @@ class MetaforgeTab:
             self.on_publish(video_metadata)
         else:
             # Default publish behavior
-            token = app.storage.user.get("token")
+            token = self.user.token if self.user else None
             if not token:
                 ui.notify("❌ Authentication required", type="negative")
                 return

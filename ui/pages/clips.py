@@ -1,14 +1,16 @@
 from datetime import datetime
 from functools import partial
 
-from nicegui import app, ui
+from nicegui import ui
+from utils.user_context import User, with_user_context
 from utils.utils import navigate_to_film, parse_query_expression
 from utils.utils_api import load_clips, save_cliplist
 
 VIDEOS_PER_PAGE = 30
 
 
-def clips_page():
+@with_user_context
+def clips_page(user: User | None):
     current_page = {"value": 1}
     ui.label("🎬 Clips, Clips, and more Clips!").classes("text-2xl font-bold mb-4 text-center")
 
@@ -235,7 +237,7 @@ def clips_page():
                             save_cliplist(
                                 name_input.value,
                                 filters_state,
-                                token=app.storage.user.get("token"),
+                                token=user.token if user else None,
                             )
                             # TODO: check failure and notify user of the failure
                             ui.notify(

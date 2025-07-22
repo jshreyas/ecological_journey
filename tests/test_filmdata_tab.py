@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 from ui.pages.film_components.filmdata_tab import FilmdataTab
 from ui.pages.film_components.video_state import VideoState
+from ui.utils.user_context import User
 
 
 class TestFilmdataTab:
@@ -23,7 +24,8 @@ class TestFilmdataTab:
             "clips": [],
         }
         self.video_state = VideoState(self.video_id)
-        self.filmdata_tab = FilmdataTab(self.video_state)
+        self.user = User(username="alice", token="tok123", id="id456")
+        self.filmdata_tab = FilmdataTab(self.video_state, self.user)
 
     @patch("ui.pages.film_components.video_state.load_video")
     def test_init(self, mock_load_video):
