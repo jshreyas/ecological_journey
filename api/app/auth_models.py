@@ -37,6 +37,8 @@ class User(BaseModel):
     email: EmailStr
     hashed_password: str
     team_ids: List[PyObjectId] = []
+    oauth_provider: Optional[str] = None
+    oauth_sub: Optional[str] = None
 
     class Config:
         populate_by_name = True

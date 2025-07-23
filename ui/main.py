@@ -23,6 +23,8 @@ sys.stdout.reconfigure(line_buffering=True)
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
+BACKEND_REDIRECT_URL = os.getenv("BACKEND_REDIRECT_URL")
+# TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
 
 
 def api_post(endpoint: str, data: dict):
@@ -38,12 +40,46 @@ def api_get(endpoint: str):
     return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
 
 
+def google_login_button():
+    with (
+        ui.button("", on_click=open_google_login_dialog)
+        .props("outline")
+        .classes("items-center text-sm hover:bg-gray-100")
+    ):
+
+        with (
+            ui.element("div")
+            .classes("q-icon notranslate")
+            .style("width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;")
+        ):
+            ui.html(
+                """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="width:20px; height:20px;">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0
+                14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58
+                2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92
+                16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15
+                1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98
+                6.19C6.51 42.62 14.62 48 24 48z"/>
+                <path fill="none" d="M0 0h48v48H0z"/>
+            </svg>
+            """
+            )
+
+
 def login_or_signup(mode="login"):
     with (
         ui.dialog() as dialog,
         ui.card().style("padding: 2rem; max-width: 400px; width: 90vw;").classes("w-full"),
     ):
-        ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes("text-xl font-bold w-full mb-6")
+        with ui.row().classes("justify-between items-center w-full"):
+            ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes("text-xl font-bold")
+            with ui.row().classes("justify-end items-center"):
+                ui.button(icon="person_add", on_click=lambda: caught_john_doe())
+                google_login_button()
 
         with ui.column().classes("gap-4 w-full"):
             if mode != "login":
@@ -51,9 +87,9 @@ def login_or_signup(mode="login"):
             email = ui.input("Email").classes("w-full")
             password = ui.input("Password", password=True).classes("w-full")
 
-        with ui.row().classes("justify-end gap-4 mt-6"):
-            ui.button("Submit", on_click=lambda: submit()).props("color=primary")
-            ui.button("Cancel", on_click=dialog.close).props("flat color=grey")
+        with ui.row().classes("justify-center gap-4 mt-6 w-full"):
+            ui.button(icon="send", on_click=lambda: submit())
+            ui.button(icon="close", on_click=dialog.close)
 
         def submit():
             endpoint = "/auth/token" if mode == "login" else "/auth/register"
@@ -88,6 +124,7 @@ def login_or_signup(mode="login"):
                     print("API called, status:", response.status_code)  # Debug print
 
                     if response.status_code == 200:
+                        # TODO: this is repeated code, refactor to a common function
                         response_data = response.json()
                         app.storage.user["token"] = response_data["access_token"]
                         app.storage.user["user"] = response_data["username"]
@@ -96,8 +133,7 @@ def login_or_signup(mode="login"):
                         ui.notify("✅ Login successful", type="positive")
                         clear_cache()
                         ui.navigate.reload()
-                        post_login_path = app.storage.user.get("post_login_path", "/")
-                        ui.navigate.to(post_login_path)
+                        ui.navigate.to(app.storage.user.get("post_login_path", "/"))
                         app.storage.user["post_login_path"] = "/"
 
                     elif response.status_code == 503:
@@ -146,6 +182,14 @@ def open_feedback_dialog():
         with ui.row().classes("justify-end gap-4 mt-4"):
             ui.button(icon="send", on_click=lambda: submit_feedback(feedback_text.value)).props("color=primary")
     dialog.open()
+
+
+def open_google_login_dialog():
+    # Store the current path in app.storage
+    post_login_path = ui.context.client.page.path
+    ui.run_javascript(
+        f"window.location.href = '{BACKEND_REDIRECT_URL}/auth/google/login?post_login_path={post_login_path}'"
+    )
 
 
 def open_login_dialog():
@@ -197,9 +241,6 @@ def setup_navbar(title: str = "Ecological Journey"):
                 ui.label(f"Hi, {user}").classes("text-sm text-white")
                 ui.button(icon="logout", on_click=logout).props("flat round dense color=red").tooltip("Logout")
             else:
-                ui.button(icon="person_add", on_click=lambda: caught_john_doe()).props(
-                    "flat round dense color=white"
-                ).tooltip("Register")
                 ui.button(icon="login", on_click=open_login_dialog).props("flat round dense color=white").tooltip(
                     "Login"
                 )
@@ -284,6 +325,23 @@ def setup_footer():
         ui.button(icon="feedback", on_click=open_feedback_dialog).tooltip("Send Feedback").props(
             "round fab fixed color=secondary"
         )
+
+
+@ui.page("/oauth")
+def oauth_page(
+    token: str = ui.query("token"),
+    username: str = ui.query("username"),
+    id: str = ui.query("id"),
+    post_login_path: str = ui.query("post_login_path"),
+):
+    if token:
+        app.storage.user["token"] = token
+        app.storage.user["user"] = username
+        app.storage.user["id"] = id
+        ui.notify("✅ Google login successful", type="positive")
+        clear_cache()
+        ui.navigate.to(post_login_path or "/")
+        app.storage.user["post_login_path"] = "/"
 
 
 @ui.page("/notion")
