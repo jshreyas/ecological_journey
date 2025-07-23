@@ -77,8 +77,9 @@ async def get_or_create_user(email: str, username: str, oauth_provider: str, oau
 
 @router.get("/auth/google/login")
 async def google_login(request: Request):
+    post_login_path = request.query_params.get("post_login_path")
     redirect_uri = request.url_for("google_callback")
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
 
 
 @router.get("/auth/google/callback")
@@ -90,9 +91,12 @@ async def google_callback(request: Request):
     except OAuthError:
         print("OAuth error:", OAuthError)
         return RedirectResponse(url="http://localhost:8080/?error=oauth")
-
+    # TODO: Handle token expiration and refresh
+    # TODO: Parameterize redirect URL
     request.session["user"] = userinfo
     user = await get_or_create_user(userinfo["email"], userinfo["name"], "google", userinfo["sub"])
+    post_login_path = request.query_params.get("state")
+    print("In google_callback:", post_login_path)
     return RedirectResponse(
         url="http://localhost:8080/oauth?token="
         + token["access_token"]
@@ -100,6 +104,8 @@ async def google_callback(request: Request):
         + userinfo["name"]
         + "&id="
         + str(user["_id"])
+        + "&post_login_path="
+        + post_login_path
     )
 
 

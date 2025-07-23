@@ -41,9 +41,7 @@ def api_get(endpoint: str):
 
 def google_login_button():
     with (
-        ui.button(
-            "", on_click=lambda: ui.run_javascript("window.location.href = 'http://localhost:8000/auth/google/login'")
-        )
+        ui.button("", on_click=open_google_login_dialog)
         .props("outline")
         .classes("items-center text-sm hover:bg-gray-100")
     ):
@@ -185,6 +183,15 @@ def open_feedback_dialog():
     dialog.open()
 
 
+def open_google_login_dialog():
+    # Store the current path in app.storage
+    post_login_path = ui.context.client.page.path
+    print("Post-login path stored:", post_login_path)  # Debug print
+    ui.run_javascript(
+        f"window.location.href = 'http://localhost:8000/auth/google/login?post_login_path={post_login_path}'"
+    )
+
+
 def open_login_dialog():
     # Store the current path in app.storage
     app.storage.user["post_login_path"] = ui.context.client.page.path
@@ -321,15 +328,21 @@ def setup_footer():
 
 
 @ui.page("/oauth")
-def oauth_page(token: str = ui.query("token"), username: str = ui.query("username"), id: str = ui.query("id")):
+def oauth_page(
+    token: str = ui.query("token"),
+    username: str = ui.query("username"),
+    id: str = ui.query("id"),
+    post_login_path: str = ui.query("post_login_path"),
+):
+    # def oauth_page(token: str = ui.query("token"), username: str = ui.query("username"), id: str = ui.query("id")):
     if token:
         app.storage.user["token"] = token
         app.storage.user["user"] = username
         app.storage.user["id"] = id
         ui.notify("✅ Google login successful", type="positive")
         clear_cache()
-        ui.navigate.reload()
-        ui.navigate.to(app.storage.user.get("post_login_path", "/"))
+        print("User info in oauth_page:", post_login_path)  # Debug print
+        ui.navigate.to(post_login_path or "/")
         app.storage.user["post_login_path"] = "/"
 
 
