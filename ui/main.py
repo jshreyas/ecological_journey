@@ -23,6 +23,7 @@ sys.stdout.reconfigure(line_buffering=True)
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
+BACKEND_REDIRECT_URL = os.getenv("BACKEND_REDIRECT_URL")
 # TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
 
 
@@ -186,9 +187,8 @@ def open_feedback_dialog():
 def open_google_login_dialog():
     # Store the current path in app.storage
     post_login_path = ui.context.client.page.path
-    print("Post-login path stored:", post_login_path)  # Debug print
     ui.run_javascript(
-        f"window.location.href = 'http://localhost:8000/auth/google/login?post_login_path={post_login_path}'"
+        f"window.location.href = '{BACKEND_REDIRECT_URL}/auth/google/login?post_login_path={post_login_path}'"
     )
 
 
@@ -334,14 +334,12 @@ def oauth_page(
     id: str = ui.query("id"),
     post_login_path: str = ui.query("post_login_path"),
 ):
-    # def oauth_page(token: str = ui.query("token"), username: str = ui.query("username"), id: str = ui.query("id")):
     if token:
         app.storage.user["token"] = token
         app.storage.user["user"] = username
         app.storage.user["id"] = id
         ui.notify("✅ Google login successful", type="positive")
         clear_cache()
-        print("User info in oauth_page:", post_login_path)  # Debug print
         ui.navigate.to(post_login_path or "/")
         app.storage.user["post_login_path"] = "/"
 

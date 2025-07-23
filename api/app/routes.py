@@ -19,6 +19,8 @@ from .models import Clip, Cliplist, Feedback, Playlist, Video
 
 load_dotenv()
 
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+BACKEND_URL = os.getenv("BACKEND_URL")
 SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
@@ -48,7 +50,7 @@ oauth.register(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     client_kwargs={"scope": "openid email profile"},
-    redirect_uri="http://localhost:8000/auth/google/callback",
+    redirect_uri=f"{BACKEND_URL}/auth/google/callback",
 )
 
 
@@ -90,22 +92,14 @@ async def google_callback(request: Request):
         userinfo = resp.json()
     except OAuthError:
         print("OAuth error:", OAuthError)
-        return RedirectResponse(url="http://localhost:8080/?error=oauth")
+        return RedirectResponse(url=f"{FRONTEND_URL}/?error=oauth")
     # TODO: Handle token expiration and refresh
-    # TODO: Parameterize redirect URL
     request.session["user"] = userinfo
     user = await get_or_create_user(userinfo["email"], userinfo["name"], "google", userinfo["sub"])
     post_login_path = request.query_params.get("state")
-    print("In google_callback:", post_login_path)
     return RedirectResponse(
-        url="http://localhost:8080/oauth?token="
-        + token["access_token"]
-        + "&username="
-        + userinfo["name"]
-        + "&id="
-        + str(user["_id"])
-        + "&post_login_path="
-        + post_login_path
+        url=f'{FRONTEND_URL}/oauth?token={token["access_token"]}&username={userinfo["name"]}'
+        f'&id={str(user["_id"])}&post_login_path={post_login_path}'
     )
 
 

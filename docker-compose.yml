@@ -5,6 +5,8 @@ services:
     command: ["mongod", "--config", "/etc/mongod.conf"]
     ports:
       - "27017:27017"
+    networks:
+      - ecological-network
     volumes:
       - mongo_data:/data/db
       - ./mongod.conf:/etc/mongod.conf
@@ -14,6 +16,8 @@ services:
     container_name: ecological_redis
     ports:
       - "6379:6379"
+    networks:
+      - ecological-network
     volumes:
       - redis_data:/data
 
@@ -41,11 +45,15 @@ services:
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
+      - BACKEND_URL=${BACKEND_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
       - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     tty: true
     stdin_open: true
+    networks:
+      - ecological-network
     develop:
       watch:
         - action: sync
@@ -70,6 +78,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - API_KEY=${API_KEY}
       - BACKEND_URL=${BACKEND_URL}
+      - BACKEND_REDIRECT_URL=${BACKEND_REDIRECT_URL}
       - BASE_URL_SHARE=${BASE_URL_SHARE}
       - NOTION_TOKEN=${NOTION_TOKEN}
       # - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL} # only if testing Upstash Redis locally`
@@ -86,7 +95,13 @@ services:
           target: /app
         - action: rebuild
           path: ./requirements.txt
+    networks:
+      - ecological-network
 
 volumes:
   mongo_data:
   redis_data:
+
+networks:
+  ecological-network:
+    driver: bridge
