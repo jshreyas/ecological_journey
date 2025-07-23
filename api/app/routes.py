@@ -81,7 +81,7 @@ async def get_or_create_user(email: str, username: str, oauth_provider: str, oau
 @router.get("/auth/google/login")
 async def google_login(request: Request):
     post_login_path = request.query_params.get("post_login_path")
-    redirect_uri = request.url_for("google_callback")
+    redirect_uri = f"{BACKEND_URL}/auth/google/callback"
     print("Redirect URI:", redirect_uri)
     return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
 
