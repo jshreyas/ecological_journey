@@ -52,6 +52,7 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
     redirect_uri=f"{BACKEND_URL}/auth/google/callback",
 )
+print("OAuth registered with Google: redirect_uri =", f"{BACKEND_URL}/auth/google/callback")
 
 
 async def get_or_create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
@@ -81,6 +82,7 @@ async def get_or_create_user(email: str, username: str, oauth_provider: str, oau
 async def google_login(request: Request):
     post_login_path = request.query_params.get("post_login_path")
     redirect_uri = request.url_for("google_callback")
+    print("Redirect URI:", redirect_uri)
     return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
 
 
