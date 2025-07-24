@@ -7,6 +7,7 @@ on:
     paths:
       - "api/**"
       - "Dockerfile.api"
+      - "docker-compose.prd.yml"
 
 jobs:
   build:
@@ -36,3 +37,20 @@ jobs:
           file: Dockerfile.api
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/api:latest
+
+      - name: Deploy to remote server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME || ubuntu }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            echo "Pulling latest Docker image..."
+            docker pull ghcr.io/${{ github.repository_owner }}/api:latest
+
+            # TODO: copy the docker-compose.prd.yml file from repo to remote server
+            docker compose -f /path/to/docker-compose.prd.yml up -d
+
+            echo "Removing dangling images..."
+            docker image prune -f
