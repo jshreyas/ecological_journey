@@ -15,7 +15,7 @@ from .auth import auth_scheme_optional, create_access_token, get_password_hash, 
 from .auth_models import RegisterUser, Team, User
 from .db import db
 from .emailer import send_feedback_email
-from .models import Clip, Cliplist, Feedback, Playlist, Video
+from .models import Clip, Cliplist, Feedback, Notion, Playlist, Video
 
 load_dotenv()
 
@@ -548,3 +548,23 @@ async def receive_feedback(
     await db.feedback.insert_one(feedback.dict(by_alias=True))
     background_tasks.add_task(send_feedback_email, feedback.dict())
     return {"status": "received"}
+
+
+@router.post("/notion")
+async def save_notion(
+    notion: Notion,
+    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+):
+    await db.notion.insert_one(notion.dict(by_alias=True))
+    return {"status": "received"}
+
+
+@router.get("/notion")
+async def get_notion(
+    _: HTTPAuthorizationCredentials = Depends(auth_scheme_optional),
+):
+    notion_doc = await db.notion.find_one(sort=[("submitted_at", -1)])  # Get most recent document
+    if notion_doc:
+        return convert_objectid(notion_doc)
+    else:
+        return {"status": "No notion documents found"}
