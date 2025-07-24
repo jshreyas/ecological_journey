@@ -20,7 +20,7 @@ from .models import Clip, Cliplist, Feedback, Playlist, Video
 load_dotenv()
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
-BACKEND_URL = os.getenv("BACKEND_URL")
+BACKEND_REDIRECT_URL = os.getenv("BACKEND_REDIRECT_URL")
 SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
@@ -50,9 +50,8 @@ oauth.register(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     client_kwargs={"scope": "openid email profile"},
-    redirect_uri=f"{BACKEND_URL}/auth/google/callback",
+    redirect_uri=f"{BACKEND_REDIRECT_URL}/auth/google/callback",
 )
-print("OAuth registered with Google: redirect_uri =", f"{BACKEND_URL}/auth/google/callback")
 
 
 async def get_or_create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
@@ -81,8 +80,7 @@ async def get_or_create_user(email: str, username: str, oauth_provider: str, oau
 @router.get("/auth/google/login")
 async def google_login(request: Request):
     post_login_path = request.query_params.get("post_login_path")
-    redirect_uri = f"{BACKEND_URL}/auth/google/callback"
-    print("Redirect URI:", redirect_uri)
+    redirect_uri = f"{BACKEND_REDIRECT_URL}/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
 
 
