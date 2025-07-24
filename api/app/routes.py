@@ -96,9 +96,10 @@ async def google_callback(request: Request):
     # TODO: Handle token expiration and refresh
     request.session["user"] = userinfo
     user = await get_or_create_user(userinfo["email"], userinfo["name"], "google", userinfo["sub"])
+    jwt_token = create_access_token({"sub": str(user["_id"])})
     post_login_path = request.query_params.get("state")
     return RedirectResponse(
-        url=f'{FRONTEND_URL}/oauth?token={token["access_token"]}&username={userinfo["name"]}'
+        url=f'{FRONTEND_URL}/oauth?token={jwt_token}&username={userinfo["name"]}'
         f'&id={str(user["_id"])}&post_login_path={post_login_path}'
     )
 
@@ -224,6 +225,7 @@ async def update_cliplist_filters(
 
 
 # auth Routes
+# TODO: Verify email before allowing registration
 @router.post("/auth/register")
 async def register(user_data: RegisterUser):
     existing = await db.users.find_one({"email": user_data.email})
