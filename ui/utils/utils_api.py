@@ -59,6 +59,21 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None) -> Any:
     return response.json()
 
 
+def get_notion_tree(recache: bool = False):
+    """Fetch the Notion tree structure from the cache or generate it if not cached."""
+    cached_tree = cache_get("notion_tree")
+    if not recache and cached_tree is not None:
+        return cached_tree
+
+    if recache:
+        response = api_post("/fetch_notion", data={})  # Trigger backend to refresh Notion tree
+        print(f"Triggered Notion tree refresh: {response}")
+    tree = api_get("/notion")["tree"]
+
+    cache_set("notion_tree", tree, 300)
+    return tree
+
+
 def create_team(name: str, token: str, user_id: str) -> Any:
     """Create a new team and refresh cache."""
     cache_key = f"teams_user_{user_id}"

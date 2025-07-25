@@ -3,7 +3,6 @@ from datetime import datetime
 
 import requests
 from nicegui import ui
-from utils.cache import cache_get, cache_set
 
 
 def navigate_to_film(video_id, clip_id=None):
@@ -11,19 +10,6 @@ def navigate_to_film(video_id, clip_id=None):
     if clip_id:
         url += f"?clip={clip_id}"
     ui.navigate.to(url)
-
-
-# TODO: Persist the notion tree in the mongodb
-def get_notion_tree(recache: bool = False):
-    """Fetch the Notion tree structure from the cache or generate it if not cached."""
-    cached_tree = cache_get("notion_tree")
-    if not recache and cached_tree:
-        return cached_tree
-    # TODO: Make GET request to the Notion API to fetch the tree structure
-    # Generate the tree structure
-    return
-    cache_set("notion_tree", "tree")
-    # return tree
 
 
 def format_time(seconds):
