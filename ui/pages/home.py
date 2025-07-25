@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from nicegui import ui
 from pages.components.home.calendar_component import calendar_container
@@ -452,7 +452,7 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
         existing_videos = load_videos(playlist_id)
         if existing_videos:
             latest_saved_date_str = max(video["date"] for video in existing_videos)
-            latest_saved_date = datetime.fromisoformat(latest_saved_date_str.replace("Z", "+00:00"))
+            latest_saved_date = datetime.fromisoformat(latest_saved_date_str.replace("Z", "+00:00")) - timedelta(days=1)
             existing_video_ids = {video["video_id"] for video in existing_videos}
         else:
             latest_saved_date = None

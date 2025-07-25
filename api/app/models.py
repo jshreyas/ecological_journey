@@ -9,6 +9,21 @@ from pydantic import BaseModel, Field
 from .auth_models import PyObjectId
 
 
+class TreeNode(BaseModel):
+    id: str
+    title: str
+    embed_url: str
+    children: List["TreeNode"] = []  # Recursive typing
+
+
+TreeNode.model_rebuild()
+
+
+class Notion(BaseModel):
+    tree: List[TreeNode]
+    submitted_at: datetime = datetime.utcnow()
+
+
 class Feedback(BaseModel):
     text: str
     submitted_at: datetime = datetime.utcnow()

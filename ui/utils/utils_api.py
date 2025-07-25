@@ -59,6 +59,25 @@ def api_put(endpoint: str, data: dict, token: Optional[str] = None) -> Any:
     return response.json()
 
 
+def trigger_fetch_notion() -> None:
+    """Trigger a Notion tree refresh."""
+    response = api_post("/fetch_notion", data={})  # Trigger backend to refresh Notion tree
+    print(f"Triggered Notion tree refresh: {response}")
+    return response
+
+
+def get_notion_tree():
+    """Fetch the Notion tree structure from the cache or generate it if not cached."""
+    cached_tree = cache_get("notion_tree")
+    if cached_tree:
+        return cached_tree
+
+    tree = api_get("/notion")["tree"]
+
+    cache_set("notion_tree", tree, 300)
+    return tree
+
+
 def create_team(name: str, token: str, user_id: str) -> Any:
     """Create a new team and refresh cache."""
     cache_key = f"teams_user_{user_id}"
@@ -92,7 +111,11 @@ def create_playlist(video_data: List[Dict[str, Any]], token: str, name: str, pla
 def create_video(video_data: List[Dict[str, Any]], token: str, name: str) -> None:
     """Create videos in a playlist."""
     for video in video_data:
-        api_post(f"/playlists/{name}/videos", data=video, token=token)
+        try:
+            api_post(f"/playlists/{name}/videos", data=video, token=token)
+        except requests.HTTPError as e:
+            print("Failure details:", e.response.text)
+            print(f"Failed to create video: {e} with data {video}")
     _refresh_playlists_cache()
 
 
