@@ -4,7 +4,6 @@ from datetime import datetime
 import requests
 from nicegui import ui
 from utils.cache import cache_get, cache_set
-from utils.utils_notion import generate_tree
 
 
 def navigate_to_film(video_id, clip_id=None):
@@ -20,12 +19,11 @@ def get_notion_tree(recache: bool = False):
     cached_tree = cache_get("notion_tree")
     if not recache and cached_tree:
         return cached_tree
-
+    # TODO: Make GET request to the Notion API to fetch the tree structure
     # Generate the tree structure
-    tree = generate_tree()
-
-    cache_set("notion_tree", tree)
-    return tree
+    return
+    cache_set("notion_tree", "tree")
+    # return tree
 
 
 def format_time(seconds):

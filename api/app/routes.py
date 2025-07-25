@@ -1,8 +1,10 @@
 # ---------------- app/routes.py ----------------
+import asyncio
 import os
 from typing import Literal, Optional
 from uuid import uuid4
 
+import anyio
 import jwt
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from bson import ObjectId
@@ -16,6 +18,7 @@ from .auth_models import RegisterUser, Team, User
 from .db import db
 from .emailer import send_feedback_email
 from .models import Clip, Cliplist, Feedback, Notion, Playlist, Video
+from .utils_notion import generate_tree
 
 load_dotenv()
 
@@ -539,7 +542,7 @@ async def update_clip(
     return {"msg": "Clip updated successfully!"}
 
 
-@router.post("/feedback")
+@router.post("/feedback", status_code=202)
 async def receive_feedback(
     feedback: Feedback,
     background_tasks: BackgroundTasks,
@@ -557,6 +560,18 @@ async def save_notion(
 ):
     await db.notion.insert_one(notion.dict(by_alias=True))
     return {"status": "received"}
+
+
+@router.post("/fetch_notion", status_code=202)
+async def fetch_notion(_: HTTPAuthorizationCredentials = Depends(auth_scheme_optional)):
+    asyncio.create_task(save_notion_tree())
+    return {"status": "received"}
+
+
+async def save_notion_tree():
+    tree = await anyio.to_thread.run_sync(generate_tree)
+    notion = Notion(tree=tree)
+    await db.notion.insert_one(notion.dict(by_alias=True))
 
 
 @router.get("/notion")
