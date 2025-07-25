@@ -46,7 +46,8 @@ def fetch_video_duration(video_id):
         # Convert ISO 8601 duration string to total seconds
         video_duration = isodate.parse_duration(duration_str).total_seconds()
         return video_duration
-    except (IndexError, KeyError, ValueError):
+    except (IndexError, KeyError, ValueError) as e:
+        print(f"Error fetching duration for video {video_id}: {e}")
         return None
 
 

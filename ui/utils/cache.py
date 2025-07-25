@@ -101,7 +101,7 @@ def cache_get(key: str):
 
 
 def cache_set(key: str, value, ex: int = None):
-    print(f"cache write: {key} with value: {value}")
+    print(f"cache write: {key}")
     ttl = ex if ex is not None else CACHE_TTL
     cache_backend.set(key, value, ex=ttl)
 
