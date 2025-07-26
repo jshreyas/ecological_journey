@@ -12,4 +12,4 @@ per-file-ignores =
     ui/pages/playlist.py:E501
     ui/utils/fetch_videos.py:E501
     ui/utils/video_player.py:E501
-    api/app/emailer.py:E501
+    api/app/utils/emailer.py:E501

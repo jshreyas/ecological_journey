@@ -2,9 +2,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
 from ..db import db
-from ..emailer import send_feedback_email
 from ..models import Feedback
 from ..routes.auth import auth_scheme_optional
+from ..utils.emailer import send_feedback_email
 
 router = APIRouter()
 

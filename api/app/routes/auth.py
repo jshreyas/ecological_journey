@@ -11,8 +11,8 @@ from fastapi.security import HTTPAuthorizationCredentials, OAuth2PasswordBearer,
 from fastapi.security.utils import get_authorization_scheme_param
 from passlib.context import CryptContext
 
-from ..auth_models import RegisterUser, User
 from ..db import db
+from ..models import RegisterUser, User
 
 load_dotenv()
 

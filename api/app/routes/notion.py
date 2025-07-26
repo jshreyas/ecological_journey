@@ -7,8 +7,8 @@ from fastapi.security import HTTPAuthorizationCredentials
 from ..db import db
 from ..models import Notion
 from ..routes.auth import auth_scheme_optional
-from ..utils import convert_objectid
-from ..utils_notion import generate_tree
+from ..utils.utils import convert_objectid
+from ..utils.utils_notion import generate_tree
 
 router = APIRouter()
 

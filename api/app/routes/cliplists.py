@@ -4,7 +4,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from ..db import db
 from ..models import Cliplist
 from ..routes.auth import auth_scheme_optional, get_current_user
-from ..utils import convert_objectid
+from ..utils.utils import convert_objectid
 
 router = APIRouter()
 

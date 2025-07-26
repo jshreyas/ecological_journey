@@ -3,7 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from ..db import db
 from ..routes.auth import auth_scheme_optional
-from ..utils import convert_objectid
+from ..utils.utils import convert_objectid
 
 router = APIRouter()
 
