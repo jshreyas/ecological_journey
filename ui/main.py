@@ -186,7 +186,7 @@ def open_feedback_dialog():
 
 def open_google_login_dialog():
     # Store the current path in app.storage
-    post_login_path = ui.context.client.page.path
+    post_login_path = ui.context.client.request.url.path
     ui.run_javascript(
         f"window.location.href = '{BACKEND_REDIRECT_URL}/auth/google/login?post_login_path={post_login_path}'"
     )
@@ -194,16 +194,15 @@ def open_google_login_dialog():
 
 def open_login_dialog():
     # Store the current path in app.storage
-    app.storage.user["post_login_path"] = ui.context.client.page.path
+    post_login_path = ui.context.client.request.url.path
+    app.storage.user["post_login_path"] = post_login_path
     login_or_signup("login")
 
 
 def setup_navbar(title: str = "Ecological Journey"):
     with (
         ui.header()
-        .classes(
-            "top-navbar flex items-center justify-between px-4 py-2 " "bg-primary fixed top-0 z-50 w-full shadow-sm"
-        )
+        .classes("top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm")
         .style("background-color: #111827;")
     ):
 
