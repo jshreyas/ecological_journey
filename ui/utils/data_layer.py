@@ -1,36 +1,16 @@
 import os
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from bson import ObjectId
 from bunnet import Document, init_bunnet
 from dotenv import load_dotenv
-from pydantic import Field, GetCoreSchemaHandler
-from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import core_schema
+from pydantic import Field
 from pymongo import MongoClient
 
 load_dotenv()
 
 MONGODB_URI = os.getenv("MONGODB_URI")
-
-
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
-        return core_schema.no_info_after_validator_function(cls.validate, core_schema.str_schema())
-
-    @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema: core_schema.CoreSchema, handler: Any) -> JsonSchemaValue:
-        return {"type": "string"}
-
-    @classmethod
-    def validate(cls, v: Any) -> "PyObjectId":
-        if isinstance(v, ObjectId):
-            return cls(str(v))
-        if ObjectId.is_valid(v):
-            return cls(v)
-        raise ValueError("Invalid ObjectId")
 
 
 class Cliplist(Document):
