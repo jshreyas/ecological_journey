@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from nicegui import ui
-from utils.utils_api import get_filtered_clips, load_cliplist
+from utils.data_layer import load_cliplist
+from utils.utils_api import get_filtered_clips  # , load_cliplist
 
 
 def cliplists_page():
