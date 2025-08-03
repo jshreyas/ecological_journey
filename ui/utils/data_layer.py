@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from bson import ObjectId
@@ -7,6 +7,7 @@ from bunnet import Document, init_bunnet
 from dotenv import load_dotenv
 from pydantic import Field
 from pymongo import MongoClient
+from utils.cache import cache_result
 
 load_dotenv()
 
@@ -38,10 +39,29 @@ client = MongoClient(MONGODB_URI)
 init_bunnet(database=client.ecological_journey, document_models=[Cliplist])
 
 
-def to_dicts(docs: list[Document]) -> list[dict]:
-    return [doc.model_dump(by_alias=True) for doc in docs]
+def to_dicts(obj: Any) -> Any:
+    # Case 1: Bunnet or Pydantic document
+    if isinstance(obj, Document):
+        return to_dicts(obj.model_dump(by_alias=True))
+
+    # Case 2: ObjectId
+    elif isinstance(obj, ObjectId):
+        return str(obj)
+
+    # Case 3: Dict (recursively process keys and values)
+    elif isinstance(obj, dict):
+        return {to_dicts(k): to_dicts(v) for k, v in obj.items()}
+
+    # Case 4: List or tuple
+    elif isinstance(obj, (list, tuple)):
+        return [to_dicts(item) for item in obj]
+
+    # Case 5: Anything else (primitive types, etc.)
+    else:
+        return obj
 
 
+@cache_result("cliplists", ttl_seconds=3600)
 def load_cliplist():
     print("Loading cliplists from database...")
     cliplists = Cliplist.find_all().run()
