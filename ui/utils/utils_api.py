@@ -3,9 +3,9 @@ import re
 from typing import Any, Dict, List, Optional, Union
 
 import requests
+from data.crud import load_cliplist, load_playlists
 from dotenv import load_dotenv
 from utils.cache import cache_del, cache_get, cache_set
-from utils.data_layer import load_cliplist
 from utils.utils import format_time, parse_query_expression
 
 load_dotenv()
@@ -118,21 +118,6 @@ def create_video(video_data: List[Dict[str, Any]], token: str, name: str) -> Non
             print("Failure details:", e.response.text)
             print(f"Failed to create video: {e} with data {video}")
     _refresh_playlists_cache()
-
-
-def load_playlists() -> List[Dict[str, Any]]:
-    global _playlists_cache
-    if _playlists_cache is not None:
-        return _playlists_cache
-    cache_key = "playlists"
-    cached = cache_get(cache_key)
-    if cached:
-        _playlists_cache = cached
-        return cached
-    data = api_get("/playlists")
-    cache_set(cache_key, data)
-    _playlists_cache = data
-    return data
 
 
 def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:

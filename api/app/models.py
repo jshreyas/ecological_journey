@@ -114,7 +114,7 @@ class Video(BaseModel):
 class Playlist(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
     name: str
-    video_ids: List[str] = []
+    videos: List[str] = []
     owner_id: Optional[PyObjectId] = None  # will be filled in route if not provided
     team_id: Optional[PyObjectId] = None
     playlist_id: Optional[str] = None

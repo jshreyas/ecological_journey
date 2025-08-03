@@ -1,7 +1,7 @@
 from datetime import datetime
 
+from data.crud import load_cliplists
 from nicegui import ui
-from utils.data_layer import load_cliplists
 from utils.utils_api import get_filtered_clips
 
 

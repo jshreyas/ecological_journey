@@ -1,42 +1,9 @@
-import os
-from typing import Any, Dict, List, Optional
-from uuid import uuid4
+from typing import Any
 
 from bson import ObjectId
-from bunnet import Document, init_bunnet
-from dotenv import load_dotenv
-from pydantic import Field
-from pymongo import MongoClient
+from bunnet import Document
+from data.models import Cliplist, Playlist
 from utils.cache import cache_result
-
-load_dotenv()
-
-MONGODB_URI = os.getenv("MONGODB_URI")
-
-
-class Cliplist(Document):
-    id: str = Field(default_factory=lambda: str(uuid4()), alias="_id")
-    name: str
-    filters: Optional[Dict] = None
-    clip_ids: Optional[List[str]] = []
-    ordered: bool = True
-    owner_id: Optional[ObjectId] = None
-    team_id: Optional[ObjectId] = None
-
-    class Settings:
-        name = "cliplists"
-
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-
-
-# Bunnet uses Pymongo client under the hood
-client = MongoClient(MONGODB_URI)
-
-# Initialize bunnet with the Product document class
-init_bunnet(database=client.ecological_journey, document_models=[Cliplist])
 
 
 def to_dicts(obj: Any) -> Any:
@@ -59,6 +26,13 @@ def to_dicts(obj: Any) -> Any:
     # Case 5: Anything else (primitive types, etc.)
     else:
         return obj
+
+
+@cache_result("playlists", ttl_seconds=3600)
+def load_playlists():
+    print("Loading playlists from database...")
+    playlists = Playlist.find_all().run()
+    return to_dicts(playlists)
 
 
 @cache_result("cliplists", ttl_seconds=3600)
