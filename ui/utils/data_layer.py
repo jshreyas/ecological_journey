@@ -62,7 +62,14 @@ def to_dicts(obj: Any) -> Any:
 
 
 @cache_result("cliplists", ttl_seconds=3600)
-def load_cliplist():
+def load_cliplists():
     print("Loading cliplists from database...")
     cliplists = Cliplist.find_all().run()
     return to_dicts(cliplists)
+
+
+def load_cliplist(cliplist_id: str):
+    for cliplist in load_cliplists():
+        if cliplist.get("_id") == cliplist_id:
+            return cliplist
+    return None

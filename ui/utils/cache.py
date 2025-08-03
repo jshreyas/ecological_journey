@@ -124,7 +124,7 @@ def cache_result(cache_key: str, ttl_seconds: int = 3600):
             # Check in-memory cache
             global _cache
             if cache_key in _cache:
-                print(f"Local cache hit for key: {cache_key}")
+                # print(f"Local cache hit for key: {cache_key}")
                 return _cache[cache_key]
 
             # Check Redis cache

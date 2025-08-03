@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 import requests
 from dotenv import load_dotenv
 from utils.cache import cache_del, cache_get, cache_set
+from utils.data_layer import load_cliplist
 from utils.utils import format_time, parse_query_expression
 
 load_dotenv()
@@ -462,34 +463,6 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
     except Exception as e:
         print(f"Failed to save video metadata: {e}")
         return False
-
-
-def load_cliplist(
-    cliplist_id: Optional[str] = None,
-) -> Union[List[Dict[str, Any]], Dict[str, Any], None]:
-    global _cliplist_cache
-    cache_key = "cliplists"
-
-    if cache_key in _cliplist_cache and _cliplist_cache.get(cache_key):
-        data = _cliplist_cache[cache_key]
-    else:
-        cached = cache_get(cache_key)
-        if cached:
-            _cliplist_cache[cache_key] = cached
-            data = cached
-        else:
-            data = api_get("/cliplists")
-            cache_set(cache_key, data)
-            _cliplist_cache[cache_key] = data
-
-    if not cliplist_id:
-        return data
-    else:
-        # Return the specific cliplist by id
-        for cliplist in data:
-            if cliplist.get("_id") == cliplist_id:
-                return cliplist
-        return None  # If not found
 
 
 def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optional[Dict[str, Any]]:
