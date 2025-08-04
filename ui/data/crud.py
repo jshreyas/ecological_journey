@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Cliplist, Feedback, Notion, Playlist, Team, User
+from data.models import Cliplist, Feedback, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
 from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
@@ -124,6 +124,18 @@ def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], u
         owner_id=user.id,  # inject user id
     )
     playlist.insert()
+    return to_dicts(playlist)
+
+
+@with_user_from_token
+@invalidate_cache(keys=["playlists"])
+def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):
+    playlist = Playlist.find_one(Playlist.playlist_id == playlist_id, Playlist.owner_id == user.id).run()
+    if not playlist:
+        raise ValueError("Playlist not found or access denied")
+
+    playlist.videos.extend([Video(**video) for video in new_videos])
+    playlist.save()
     return to_dicts(playlist)
 
 

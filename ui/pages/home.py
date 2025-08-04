@@ -466,7 +466,7 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
             return
 
         # Step 3: Append new videos
-        create_video(new_video_data, token, playlist_name)
+        create_video(new_video_data, token, play_id)
         ui.notify(f'✅ Synced {len(new_video_data)} new videos to "{playlist_name}".')
 
     except Exception as e:

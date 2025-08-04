@@ -2,7 +2,7 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-from data.crud import create_cliplist
+from data.crud import add_video_to_playlist, create_cliplist
 from data.crud import create_playlist as cp
 from data.crud import create_team as ct
 from data.crud import load_cliplist, load_notion_latest, load_playlists, load_teams
@@ -92,15 +92,9 @@ def create_playlist(video_data: List[Dict[str, Any]], token: str, name: str, pla
     return cp(name=name, playlist_id=playlist_id, videos=video_data, token=token)
 
 
-def create_video(video_data: List[Dict[str, Any]], token: str, name: str) -> None:
+def create_video(video_data: List[Dict[str, Any]], token: str, playlist_id: str) -> None:
     """Create videos in a playlist."""
-    for video in video_data:
-        try:
-            api_post(f"/playlists/{name}/videos", data=video, token=token)
-        except requests.HTTPError as e:
-            print("Failure details:", e.response.text)
-            print(f"Failed to create video: {e} with data {video}")
-    _refresh_playlists_cache()
+    return add_video_to_playlist(playlist_id=playlist_id, new_videos=video_data, token=token)
 
 
 def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
