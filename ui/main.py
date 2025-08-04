@@ -76,49 +76,24 @@ def login_or_signup(mode="login"):
             ui.button(icon="close", on_click=dialog.close)
 
         def submit():
-            waiting_dialog = ui.dialog().props("persistent")
-            with waiting_dialog:
-                ui.spinner(size="lg")
-                ui.label("backend must be napping...").classes("text-lg mt-2")
-
-            waiting_dialog.open()
-            interval = 15  # TODO: make this configurable
-            retries = 10  # TODO: make this configurable
-
-            # TODO: remove complex retry logic as the backend is now always awake
-            def attempt_login(retries_left=retries):
-                print(f"Attempting login... Retries left: {retries_left}")  # Debug print
+            def attempt_login():
                 try:
-                    if retries_left == retries:
-                        ui.run_javascript(
-                            f"""
-                            fetch("{BACKEND_URL}/docs").then(r =>
-                            console.log('Backend wakeup ping sent'))
-                        """
-                        )
-                        print("wake API called in js")  # Debug print
                     response = login_user(email.value, password.value)
                     if not response:
                         print("Login failed with given credentials")
                         ui.notify("❌ Login failed with given credentials", type="negative")
-                        waiting_dialog.close()
                         return
                     else:
                         app.storage.user["token"] = response["access_token"]
                         app.storage.user["user"] = response["username"]
                         app.storage.user["id"] = response["id"]
-                        waiting_dialog.close()
                         ui.notify("✅ Login successful", type="positive")
                         clear_cache()
                         ui.navigate.to(app.storage.user.get("post_login_path", "/"))
                         app.storage.user["post_login_path"] = "/"
                 except Exception as e:
                     print("Exception during login:", e)  # Debug print
-                    if retries_left > 0:
-                        ui.timer(interval, lambda: attempt_login(retries_left - 1), once=True)
-                    else:
-                        waiting_dialog.close()
-                        handle_backend_error()
+                    handle_backend_error()
 
             attempt_login()
 
