@@ -21,6 +21,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
+CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
+
 
 @invalidate_cache(keys=["teams", "notion_tree", "playlists", "cliplists"])
 def clear_cache() -> None:
@@ -80,7 +82,7 @@ def to_dicts(obj: Any) -> Any:
         return obj
 
 
-@cache_result("teams", ttl_seconds=3600)
+@cache_result("teams", ttl_seconds=CACHE_TTL)
 def load_teams():
     print("Loading teams from database...")
     teams = Team.find_all().run()
@@ -99,7 +101,7 @@ def create_team(name: str, user=None, **kwargs):
     return to_dicts(team)
 
 
-@cache_result("notion_tree", ttl_seconds=3600)
+@cache_result("notion_tree", ttl_seconds=CACHE_TTL)
 def load_notion():
     print("Loading Notion data from database...")
     notion_data = Notion.find_all().run()
@@ -132,7 +134,7 @@ def trigger_notion_refresh():
     ui.notify("Started Notion tree generation in background", type="info")
 
 
-@cache_result("playlists", ttl_seconds=3600)  # TODO: update ttl
+@cache_result("playlists", ttl_seconds=CACHE_TTL)
 def load_playlists():
     print("Loading playlists from database...")
     playlists = Playlist.find_all().run()
@@ -225,7 +227,7 @@ def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
     return to_dicts(cliplist)
 
 
-@cache_result("cliplists", ttl_seconds=3600)
+@cache_result("cliplists", ttl_seconds=CACHE_TTL)
 def load_cliplists():
     print("Loading cliplists from database...")
     cliplists = Cliplist.find_all().run()
