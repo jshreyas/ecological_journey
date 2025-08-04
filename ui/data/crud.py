@@ -1,12 +1,14 @@
 import os
 from datetime import datetime, timedelta
-from typing import Any
+from functools import wraps
+from typing import Any, Dict
 
 import jwt
 from bson import ObjectId
 from bunnet import Document
 from data.models import Cliplist, Feedback, Notion, Playlist, Team, User
 from dotenv import load_dotenv
+from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
 from utils.cache import cache_result
 
@@ -15,6 +17,37 @@ SECRET_KEY = os.getenv("JWT_SECRET")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+
+def get_user_from_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload["sub"]
+        user = User.find_one(User.id == ObjectId(user_id)).run()
+        if not user:
+            raise ValueError("User not found")
+        return user
+    except Exception as e:
+        print(f"Token error: {e}")
+        return None
+
+
+def with_user_from_token(fn):
+    @wraps(fn)
+    def wrapper(*args, token=None, **kwargs):
+        if not token:
+            ui.notify("Missing token", type="negative")
+            return None
+
+        user = get_user_from_token(token)
+        if not user:
+            ui.notify("Invalid or expired token", type="negative")
+            return None
+
+        # Inject user into kwargs
+        return fn(*args, user=user, **kwargs)
+
+    return wrapper
 
 
 def to_dicts(obj: Any) -> Any:
@@ -67,6 +100,17 @@ def load_playlists():
     print("Loading playlists from database...")
     playlists = Playlist.find_all().run()
     return to_dicts(playlists)
+
+
+@with_user_from_token
+def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
+    cliplist = Cliplist(
+        name=name,
+        filters=filters,
+        owner_id=user.id,  # inject user id
+    )
+    cliplist.insert()
+    return to_dicts(cliplist)
 
 
 @cache_result("cliplists", ttl_seconds=3600)

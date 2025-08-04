@@ -3,7 +3,7 @@ import re
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-from data.crud import load_cliplist, load_notion_latest, load_playlists, load_teams
+from data.crud import create_cliplist, load_cliplist, load_notion_latest, load_playlists, load_teams
 from dotenv import load_dotenv
 from utils.cache import cache_del, cache_get, cache_set
 from utils.utils import format_time, parse_query_expression
@@ -442,11 +442,7 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
 
 
 def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optional[Dict[str, Any]]:
-    data = {
-        "name": name,
-        "filters": filters_state,
-    }
-    return api_post("/cliplist", data=data, token=token)
+    return create_cliplist(name=name, filters=filters_state, token=token)
 
 
 def get_filtered_clips(cliplist_id: str) -> List[Dict[str, Any]]:
