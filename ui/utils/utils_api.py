@@ -4,11 +4,8 @@ from data.crud import add_video_to_playlist, create_cliplist
 from data.crud import create_playlist as cp
 from data.crud import create_team as ct
 from data.crud import edit_video_in_playlist, load_cliplist, load_notion_latest, load_playlists, load_teams
-from dotenv import load_dotenv
 from utils.cache import cache_get, cache_set
 from utils.utils import parse_query_expression
-
-load_dotenv()
 
 
 def get_notion_tree():
