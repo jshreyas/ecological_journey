@@ -7,6 +7,7 @@ import isodate
 import pytz
 import requests
 from dotenv import load_dotenv
+from log import log
 
 # Load API key from environment
 load_dotenv()
@@ -47,7 +48,7 @@ def fetch_video_duration(video_id):
         video_duration = isodate.parse_duration(duration_str).total_seconds()
         return video_duration
     except (IndexError, KeyError, ValueError) as e:
-        print(f"Error fetching duration for video {video_id}: {e}")
+        log.error(f"Error fetching duration for video {video_id}: {e}")
         return None
 
 

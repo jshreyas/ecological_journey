@@ -1,6 +1,7 @@
 import os
 
 from dotenv import load_dotenv
+from log import log
 from notion_client import Client
 
 load_dotenv()
@@ -44,7 +45,7 @@ def crawl_page_recursive(page_id):
 
 
 def generate_tree(root_id="1c1bc4e1-2692-8016-97db-f4d92b5d2464"):
-    print(f"Generating Notion tree for root ID: {root_id}")
+    log.info("Generating Notion tree started")
     title = notion.pages.retrieve(root_id)["properties"]["title"]["title"][0]["plain_text"]
     tree = [
         {
@@ -54,5 +55,5 @@ def generate_tree(root_id="1c1bc4e1-2692-8016-97db-f4d92b5d2464"):
             "children": crawl_page_recursive(root_id),
         }
     ]
-    print("Notion tree generated successfully.")
+    log.info("Notion tree generated successfully.")
     return tree
