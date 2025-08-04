@@ -120,7 +120,6 @@ class ClipboardTab:
                         "Play",
                         lambda: self._handle_play_clip(clip),
                     ),
-                    # ("edit", "secondary", "Edit", lambda: self._handle_edit_clip(clip)),
                     ("share", "accent", "Share", lambda: self._handle_share_clip(clip)),
                 ]:
                     ui.button(icon=icon, on_click=handler).props(f"flat dense color={color}").tooltip(tooltip).classes(
