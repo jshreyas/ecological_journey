@@ -5,19 +5,10 @@ from data.crud import create_playlist as cp
 from data.crud import create_team as ct
 from data.crud import edit_video_in_playlist, load_cliplist, load_notion_latest, load_playlists, load_teams
 from dotenv import load_dotenv
-from utils.cache import cache_del, cache_get, cache_set
+from utils.cache import cache_get, cache_set
 from utils.utils import parse_query_expression
 
 load_dotenv()
-
-
-# TODO: currecntly clears the 2 heavy hitters, how about the rest and parameterization?
-def clear_cache() -> None:
-    """Clear both in-memory and Redis caches."""
-
-    # Clear Redis
-    cache_del("cliplists")
-    cache_del("playlists")
 
 
 def get_notion_tree():

@@ -2,7 +2,7 @@ import os
 import sys
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from data.crud import create_access_token, create_feedback, get_or_create_user, login_user
+from data.crud import clear_cache, create_access_token, create_feedback, get_or_create_user, login_user
 from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -18,7 +18,6 @@ from pages.notion import notion_page
 from pages.partner import partner_page
 from pages.playlist import playlist_page
 from utils.dialog_puns import caught_john_doe, handle_backend_error
-from utils.utils_api import clear_cache
 
 sys.stdout.reconfigure(line_buffering=True)
 

@@ -22,6 +22,11 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 
+@invalidate_cache(keys=["teams", "notion_tree", "playlists", "cliplists"])
+def clear_cache() -> None:
+    pass
+
+
 def get_user_from_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
