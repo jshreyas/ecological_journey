@@ -75,8 +75,11 @@ services:
     depends_on:
       - api
       - redis
+      - mongo
     environment:
       - MONGODB_URI=${MONGODB_URI}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JWT_SECRET=${JWT_SECRET}
       - API_KEY=${API_KEY}
       - BACKEND_URL=${BACKEND_URL}

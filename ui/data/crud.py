@@ -83,6 +83,25 @@ def load_cliplist(cliplist_id: str):
     return None
 
 
+def get_or_create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
+    user = load_user(email)
+    if user:
+        return user
+    return create_user(email, username, oauth_provider, oauth_sub)
+
+
+def create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
+    user = User(
+        username=username,
+        email=email,
+        oauth_provider=oauth_provider,
+        oauth_sub=oauth_sub,
+        hashed_password=None,
+    )
+    user.insert().run()
+    return to_dicts(user)
+
+
 def load_user(email: str):
     user = User.find_one(User.email == email).run()
     if user:

@@ -2,9 +2,11 @@ import os
 import sys
 
 import requests
-from data.crud import login_user
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from data.crud import create_access_token, get_or_create_user, login_user
 from dotenv import load_dotenv
-from fastapi.responses import PlainTextResponse
+from fastapi import Request
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
 from pages.about import about_page
@@ -158,9 +160,7 @@ def open_feedback_dialog():
 def open_google_login_dialog():
     # Store the current path in app.storage
     post_login_path = ui.context.client.request.url.path
-    ui.run_javascript(
-        f"window.location.href = '{BACKEND_REDIRECT_URL}/auth/google/login?post_login_path={post_login_path}'"
-    )
+    ui.navigate.to(f"/auth/google/login?post_login_path={post_login_path}")
 
 
 def open_login_dialog():
@@ -390,3 +390,45 @@ ui.run(
     reload=True,
     storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
 )
+
+FRONTEND_URL = "http://localhost:8080"
+
+oauth = OAuth()
+
+oauth.register(
+    name="google",
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    client_kwargs={"scope": "openid email profile"},
+    redirect_uri=f"{FRONTEND_URL}/auth/google/callback",
+)
+
+
+@app.get("/auth/google/login")
+async def google_login(request: Request):
+    post_login_path = request.query_params.get("post_login_path", "/")
+    redirect_uri = f"{FRONTEND_URL}/auth/google/callback"
+    return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
+
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        resp = await oauth.google.get("https://openidconnect.googleapis.com/v1/userinfo", token=token)
+        userinfo = resp.json()
+    except OAuthError:
+        return RedirectResponse(url=f"{FRONTEND_URL}/?error=oauth")
+
+    request.session["user"] = userinfo  # Or store in Redis/etc.
+
+    # Replace with your own logic
+    user = get_or_create_user(userinfo["email"], userinfo["name"], "google", userinfo["sub"])
+    jwt_token = create_access_token({"sub": str(user["_id"])})
+
+    post_login_path = request.query_params.get("state")
+    return RedirectResponse(
+        url=f'{FRONTEND_URL}/oauth?token={jwt_token}&username={userinfo["name"]}'
+        f'&id={str(user["_id"])}&post_login_path={post_login_path}'
+    )
