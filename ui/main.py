@@ -1,9 +1,8 @@
 import os
 import sys
 
-import requests
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from data.crud import create_access_token, get_or_create_user, login_user
+from data.crud import create_access_token, create_feedback, get_or_create_user, login_user
 from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -19,7 +18,6 @@ from pages.notion import notion_page
 from pages.partner import partner_page
 from pages.playlist import playlist_page
 from utils.dialog_puns import caught_john_doe, handle_backend_error
-from utils.utils_api import api_post as api_post_utils
 from utils.utils_api import clear_cache
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -27,13 +25,6 @@ sys.stdout.reconfigure(line_buffering=True)
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
 # TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
-
-
-def api_post(endpoint: str, data: dict):
-    if "token" in endpoint:
-        return requests.post(f"{BACKEND_URL}{endpoint}", data=data, timeout=5)
-    else:
-        return requests.post(f"{BACKEND_URL}{endpoint}", json=data, timeout=5)
 
 
 def google_login_button():
@@ -142,7 +133,7 @@ def logout():
 
 def open_feedback_dialog():
     def submit_feedback(feedback_text: str):
-        api_post_utils("/feedback", {"text": feedback_text}, token=app.storage.user.get("token"))
+        create_feedback(feedback_text)
         ui.notify("Thank you for your feedback!", type="positive")
         dialog.close()
 

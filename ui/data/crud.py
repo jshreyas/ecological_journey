@@ -5,7 +5,7 @@ from typing import Any
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Cliplist, Notion, Playlist, Team, User
+from data.models import Cliplist, Feedback, Notion, Playlist, Team, User
 from dotenv import load_dotenv
 from passlib.context import CryptContext
 from utils.cache import cache_result
@@ -98,7 +98,7 @@ def create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
         oauth_sub=oauth_sub,
         hashed_password=None,
     )
-    user.insert().run()
+    user.insert()
     return to_dicts(user)
 
 
@@ -133,3 +133,17 @@ def login_user(email: str, password: str):
         "email": user["email"],
         "username": user["username"],
     }
+
+
+def load_feedback():
+    print("Loading feedback from database...")
+    feedbacks = Feedback.find_all().run()
+    return to_dicts(feedbacks)
+
+
+def create_feedback(feedback: str):
+    feedb = Feedback(
+        text=feedback,
+    )
+    feedb.insert()
+    return to_dicts(feedb)

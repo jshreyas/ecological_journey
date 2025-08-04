@@ -122,3 +122,11 @@ class User(Document):
         populate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
+
+
+class Feedback(Document):
+    text: str
+    submitted_at: datetime = datetime.utcnow()
+
+    class Settings:
+        name = "feedback"
