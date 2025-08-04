@@ -3,7 +3,9 @@ import re
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-from data.crud import create_cliplist, load_cliplist, load_notion_latest, load_playlists, load_teams
+from data.crud import create_cliplist
+from data.crud import create_team as ct
+from data.crud import load_cliplist, load_notion_latest, load_playlists, load_teams
 from dotenv import load_dotenv
 from utils.cache import cache_del, cache_get, cache_set
 from utils.utils import format_time, parse_query_expression
@@ -73,12 +75,7 @@ def get_notion_tree():
 
 def create_team(name: str, token: str, user_id: str) -> Any:
     """Create a new team and refresh cache."""
-    cache_key = f"teams_user_{user_id}"
-    response = api_post("/teams", data={"name": name}, token=token)
-    # Refresh cache for this user
-    teams_get = api_get(f"/teams?user_id={user_id}")
-    cache_set(cache_key, teams_get)
-    return response
+    return ct(name=name, token=token)
 
 
 def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:

@@ -79,6 +79,18 @@ def load_teams():
     return to_dicts(teams)
 
 
+@with_user_from_token
+@invalidate_cache(keys=["teams"])
+def create_team(name: str, user=None, **kwargs):
+    team = Team(
+        name=name,
+        owner_id=user.id,  # inject user id
+        member_ids=[user.id],  # inject user id
+    )
+    team.insert()
+    return to_dicts(team)
+
+
 @cache_result("notion_tree", ttl_seconds=3600)
 def load_notion():
     print("Loading Notion data from database...")
