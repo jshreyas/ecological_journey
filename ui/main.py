@@ -22,7 +22,6 @@ from utils.dialog_puns import caught_john_doe, handle_backend_error
 sys.stdout.reconfigure(line_buffering=True)
 
 load_dotenv()
-BACKEND_URL = os.getenv("BACKEND_URL")
 # TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
 
 
