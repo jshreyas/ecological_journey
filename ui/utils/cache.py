@@ -1,7 +1,7 @@
 import json
 import os
 from functools import wraps
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 import requests
 from dotenv import load_dotenv
@@ -143,6 +143,23 @@ def cache_result(cache_key: str, ttl_seconds: int = 3600):
             cache_set(cache_key, data, ttl_seconds)
             _cache[cache_key] = data
             return data
+
+        return wrapper
+
+    return decorator
+
+
+def invalidate_cache(keys: List[str]):
+    def decorator(func: Callable):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            global _cache
+            result = func(*args, **kwargs)
+            for key in keys:
+                _cache.pop(key, None)
+                cache_del(key)
+                print(f"Cache invalidated for key: {key}")
+            return result
 
         return wrapper
 

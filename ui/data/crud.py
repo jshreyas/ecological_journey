@@ -10,7 +10,7 @@ from data.models import Cliplist, Feedback, Notion, Playlist, Team, User
 from dotenv import load_dotenv
 from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
-from utils.cache import cache_result
+from utils.cache import cache_result, invalidate_cache
 
 load_dotenv()
 SECRET_KEY = os.getenv("JWT_SECRET")
@@ -103,6 +103,7 @@ def load_playlists():
 
 
 @with_user_from_token
+@invalidate_cache(keys=["cliplists"])
 def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
     cliplist = Cliplist(
         name=name,
