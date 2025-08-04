@@ -95,22 +95,17 @@ cache_backend = get_cache_backend()
 def cache_get(key: str):
     value = cache_backend.get(key)
     if value:
-        # print(f"cache hit for key: {key}")
         return value
     else:
-        # print(f"cache miss for key: {key}")
         return None
 
 
 def cache_set(key: str, value, ex: int = None):
-    # print(f"cache write: {key}")
     ttl = ex if ex is not None else CACHE_TTL
     cache_backend.set(key, value, ex=ttl)
 
 
 def cache_del(*keys):
-    for key in keys:
-        print(f"Deleted cache key: {key}")
     cache_backend.delete(*keys)
 
 
@@ -138,7 +133,7 @@ def cache_result(cache_key: str, ttl_seconds: int = 3600):
             # Call actual function
             data = func(*args, **kwargs)
 
-            print(f"Caching result for key: {cache_key}")
+            print(f"Caching setting for key: {cache_key}")
             # Set both caches
             cache_set(cache_key, data, ttl_seconds)
             _cache[cache_key] = data
@@ -158,7 +153,7 @@ def invalidate_cache(keys: List[str]):
             for key in keys:
                 _cache.pop(key, None)
                 cache_del(key)
-                print(f"Cache invalidated for key: {key}")
+                print(f"Cache deleted for key: {key}")
             return result
 
         return wrapper

@@ -133,6 +133,7 @@ def load_clips() -> List[Dict[str, Any]]:
     return clips
 
 
+# TODO: make this consistent with @cache_result decorator
 def get_all_partners() -> List[str]:
     cache_key = "all_partners"
     cached = cache_get(cache_key)
