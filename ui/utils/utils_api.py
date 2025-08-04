@@ -3,7 +3,7 @@ import re
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-from data.crud import load_cliplist, load_notion_latest, load_playlists
+from data.crud import load_cliplist, load_notion_latest, load_playlists, load_teams
 from dotenv import load_dotenv
 from utils.cache import cache_del, cache_get, cache_set
 from utils.utils import format_time, parse_query_expression
@@ -82,12 +82,13 @@ def create_team(name: str, token: str, user_id: str) -> Any:
 
 
 def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
-    cache_key = f"teams_user_{user_id}"
-    cached = cache_get(cache_key)
-    if cached:
-        return cached
-    response = api_get(f"/teams?user_id={user_id}")
-    cache_set(cache_key, response)
+    teams = load_teams()
+    print(f"Fetched teams for user {user_id}: {teams}")
+    response = {
+        "owned": [team for team in teams if team.get("owner_id") == user_id],
+        "member": [team for team in teams if user_id in team.get("member_ids", [])],
+    }
+    print(f"Fetched teams for user {user_id}: {response}")
     return response
 
 

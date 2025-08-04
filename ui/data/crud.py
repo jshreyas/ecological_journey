@@ -2,7 +2,7 @@ from typing import Any
 
 from bson import ObjectId
 from bunnet import Document
-from data.models import Cliplist, Notion, Playlist
+from data.models import Cliplist, Notion, Playlist, Team
 from utils.cache import cache_result
 
 
@@ -26,6 +26,13 @@ def to_dicts(obj: Any) -> Any:
     # Case 5: Anything else (primitive types, etc.)
     else:
         return obj
+
+
+@cache_result("teams", ttl_seconds=3600)
+def load_teams():
+    print("Loading teams from database...")
+    teams = Team.find_all().run()
+    return to_dicts(teams)
 
 
 @cache_result("notion_tree", ttl_seconds=3600)

@@ -89,3 +89,18 @@ class Notion(Document):
 
     class Settings:
         name = "notion"
+
+
+class Team(Document):
+    id: Optional[ObjectId] = Field(default_factory=ObjectId, alias="_id")
+    name: str
+    owner_id: Optional[ObjectId] = None
+    member_ids: List[ObjectId] = []
+
+    class Settings:
+        name = "teams"
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
