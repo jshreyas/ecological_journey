@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from bson import ObjectId
 from bunnet import Document
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class Clip(Document):
@@ -99,6 +99,24 @@ class Team(Document):
 
     class Settings:
         name = "teams"
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+
+class User(Document):
+    id: Optional[ObjectId] = Field(default_factory=ObjectId, alias="_id")
+    username: str
+    email: EmailStr
+    hashed_password: str
+    team_ids: List[ObjectId] = []
+    oauth_provider: Optional[str] = None
+    oauth_sub: Optional[str] = None
+
+    class Settings:
+        name = "users"
 
     class Config:
         populate_by_name = True

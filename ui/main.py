@@ -2,6 +2,7 @@ import os
 import sys
 
 import requests
+from data.crud import login_user
 from dotenv import load_dotenv
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -82,8 +83,6 @@ def login_or_signup(mode="login"):
                 google_login_button()
 
         with ui.column().classes("gap-4 w-full"):
-            if mode != "login":
-                username = ui.input("Username").classes("w-full")
             email = ui.input("Email").classes("w-full")
             password = ui.input("Password", password=True).classes("w-full")
 
@@ -92,13 +91,6 @@ def login_or_signup(mode="login"):
             ui.button(icon="close", on_click=dialog.close)
 
         def submit():
-            endpoint = "/auth/token" if mode == "login" else "/auth/register"
-            if mode == "login":
-                data = {"username": email.value, "password": password.value}
-            else:
-                data = {"email": email.value, "password": password.value}
-                data["username"] = username.value
-
             waiting_dialog = ui.dialog().props("persistent")
             with waiting_dialog:
                 ui.spinner(size="lg")
@@ -120,36 +112,21 @@ def login_or_signup(mode="login"):
                         """
                         )
                         print("wake API called in js")  # Debug print
-                    response = api_post(endpoint, data)
-                    print("API called, status:", response.status_code)  # Debug print
-
-                    if response.status_code == 200:
-                        # TODO: this is repeated code, refactor to a common function
-                        response_data = response.json()
-                        app.storage.user["token"] = response_data["access_token"]
-                        app.storage.user["user"] = response_data["username"]
-                        app.storage.user["id"] = response_data["id"]
+                    response = login_user(email.value, password.value)
+                    if not response:
+                        print("Login failed with given credentials")
+                        ui.notify("❌ Login failed with given credentials", type="negative")
+                        waiting_dialog.close()
+                        return
+                    else:
+                        app.storage.user["token"] = response["access_token"]
+                        app.storage.user["user"] = response["username"]
+                        app.storage.user["id"] = response["id"]
                         waiting_dialog.close()
                         ui.notify("✅ Login successful", type="positive")
                         clear_cache()
-                        ui.navigate.reload()
                         ui.navigate.to(app.storage.user.get("post_login_path", "/"))
                         app.storage.user["post_login_path"] = "/"
-
-                    elif response.status_code == 503:
-                        if retries_left > 0:
-                            print("Backend waking up, retrying...")
-                            ui.timer(
-                                interval,
-                                lambda: attempt_login(retries_left - 1),
-                                once=True,
-                            )
-                        else:
-                            waiting_dialog.close()
-                            handle_backend_error()
-                    else:
-                        waiting_dialog.close()
-                        ui.notify(f"❌ {response.text or 'Login failed.'}", type="negative")
                 except Exception as e:
                     print("Exception during login:", e)  # Debug print
                     if retries_left > 0:

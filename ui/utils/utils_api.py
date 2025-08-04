@@ -83,12 +83,10 @@ def create_team(name: str, token: str, user_id: str) -> Any:
 
 def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
     teams = load_teams()
-    print(f"Fetched teams for user {user_id}: {teams}")
     response = {
         "owned": [team for team in teams if team.get("owner_id") == user_id],
         "member": [team for team in teams if user_id in team.get("member_ids", [])],
     }
-    print(f"Fetched teams for user {user_id}: {response}")
     return response
 
 

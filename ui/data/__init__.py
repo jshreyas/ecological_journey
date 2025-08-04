@@ -1,7 +1,7 @@
 import os
 
 from bunnet import init_bunnet
-from data.models import Clip, Cliplist, Notion, Playlist, Team, Video
+from data.models import Clip, Cliplist, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
@@ -14,4 +14,4 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 client = MongoClient(MONGODB_URI)
 
 # Initialize bunnet with the Product document class
-init_bunnet(database=client.ecological_journey, document_models=[Cliplist, Playlist, Video, Clip, Notion, Team])
+init_bunnet(database=client.ecological_journey, document_models=[Cliplist, Playlist, Video, Clip, Notion, Team, User])

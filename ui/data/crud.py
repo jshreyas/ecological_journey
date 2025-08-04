@@ -1,9 +1,20 @@
+import os
+from datetime import datetime, timedelta
 from typing import Any
 
+import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Cliplist, Notion, Playlist, Team
+from data.models import Cliplist, Notion, Playlist, Team, User
+from dotenv import load_dotenv
+from passlib.context import CryptContext
 from utils.cache import cache_result
+
+load_dotenv()
+SECRET_KEY = os.getenv("JWT_SECRET")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 
 def to_dicts(obj: Any) -> Any:
@@ -70,3 +81,36 @@ def load_cliplist(cliplist_id: str):
         if cliplist.get("_id") == cliplist_id:
             return cliplist
     return None
+
+
+def load_user(email: str):
+    user = User.find_one(User.email == email).run()
+    if user:
+        return to_dicts(user)
+    return None
+
+
+def verify_password(plain_password, hashed):
+    return pwd_context.verify(plain_password, hashed)
+
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def login_user(email: str, password: str):
+    user = load_user(email)
+    if not user or not verify_password(password, user["hashed_password"]):
+        print("Incorrect email or password")
+        return False
+
+    token = create_access_token({"sub": str(user["_id"])})
+    return {
+        "access_token": token,
+        "id": str(user["_id"]),
+        "email": user["email"],
+        "username": user["username"],
+    }
