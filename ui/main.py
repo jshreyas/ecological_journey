@@ -35,12 +35,6 @@ def api_post(endpoint: str, data: dict):
         return requests.post(f"{BACKEND_URL}{endpoint}", json=data, timeout=5)
 
 
-def api_get(endpoint: str):
-    token = app.storage.user.get("token")
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
-
-
 def google_login_button():
     with (
         ui.button("", on_click=open_google_login_dialog)
