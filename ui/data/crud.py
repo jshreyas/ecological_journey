@@ -1,4 +1,5 @@
 import os
+import threading
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Dict, List
@@ -12,6 +13,7 @@ from dotenv import load_dotenv
 from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
 from utils.cache import cache_result, invalidate_cache
+from utils.notion import generate_tree
 
 load_dotenv()
 SECRET_KEY = os.getenv("JWT_SECRET")
@@ -106,6 +108,23 @@ def load_notion_latest():
         return None
     latest = max(all_notion, key=lambda x: x.get("submitted_at", ""))
     return latest
+
+
+@invalidate_cache(keys=["notion_tree"])
+def generate_and_store_notion_tree():
+    print("Generating Notion tree...")
+    tree = generate_tree()  # long-running blocking call
+    notion = Notion(tree=tree)
+    notion.insert()
+    print("Saved Notion tree to DB and cleared cache.")
+
+
+def trigger_notion_refresh():
+    def background_job():
+        generate_and_store_notion_tree()
+
+    threading.Thread(target=background_job, daemon=True).start()
+    ui.notify("Started Notion tree generation in background", type="info")
 
 
 @cache_result("playlists", ttl_seconds=3600)  # TODO: update ttl

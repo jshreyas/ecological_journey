@@ -1,7 +1,5 @@
-import os
 from typing import Any, Dict, List, Optional, Union
 
-import requests
 from data.crud import add_video_to_playlist, create_cliplist
 from data.crud import create_playlist as cp
 from data.crud import create_team as ct
@@ -12,61 +10,14 @@ from utils.utils import parse_query_expression
 
 load_dotenv()
 
-BASE_URL = os.getenv("BACKEND_URL")
-_playlists_cache: Optional[List[Dict[str, Any]]] = None  # file-level in-memory cache
-_cliplist_cache: Dict[str, Any] = {}
-
 
 # TODO: currecntly clears the 2 heavy hitters, how about the rest and parameterization?
 def clear_cache() -> None:
     """Clear both in-memory and Redis caches."""
-    # Clear in-process memory
-    global _cliplist_cache, _playlists_cache
-    _cliplist_cache = {}
-    _playlists_cache = None
 
     # Clear Redis
     cache_del("cliplists")
     cache_del("playlists")
-
-
-def get_headers(token: Optional[str] = None) -> Dict[str, str]:
-    """Get headers for API requests."""
-    headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    return headers
-
-
-def api_get(endpoint: str, token: Optional[str] = None) -> Any:
-    """Make a GET request to the API."""
-    url = f"{BASE_URL}{endpoint}"
-    response = requests.get(url, headers=get_headers(token))
-    response.raise_for_status()
-    return response.json()
-
-
-def api_post(endpoint: str, data: dict, token: Optional[str] = None) -> Any:
-    """Make a POST request to the API."""
-    url = f"{BASE_URL}{endpoint}"
-    response = requests.post(url, json=data, headers=get_headers(token))
-    response.raise_for_status()
-    return response.json()
-
-
-def api_put(endpoint: str, data: dict, token: Optional[str] = None) -> Any:
-    """Make a PUT request to the API."""
-    url = f"{BASE_URL}{endpoint}"
-    response = requests.put(url, json=data, headers=get_headers(token))
-    response.raise_for_status()
-    return response.json()
-
-
-def trigger_fetch_notion() -> None:
-    """Trigger a Notion tree refresh."""
-    response = api_post("/fetch_notion", data={})  # Trigger backend to refresh Notion tree
-    print(f"Triggered Notion tree refresh: {response}")
-    return response
 
 
 def get_notion_tree():

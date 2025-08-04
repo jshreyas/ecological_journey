@@ -1,7 +1,8 @@
+from data.crud import trigger_notion_refresh
 from nicegui import ui
 from utils.dialog_puns import caught_john_doe
 from utils.user_context import User, with_user_context
-from utils.utils_api import get_notion_tree, trigger_fetch_notion
+from utils.utils_api import get_notion_tree
 
 notion_iframe = ""
 
@@ -48,7 +49,7 @@ def render_tree(pages, user_token):
             ui.label("📚 Notion Pages").classes("font-bold text-lg text-primary")
             with ui.row().classes("gap-2"):
                 if user_token:
-                    ui.button(icon="sync", on_click=lambda: trigger_fetch_notion()).props(
+                    ui.button(icon="sync", on_click=lambda: trigger_notion_refresh()).props(
                         "flat dense round color=primary"
                     ).tooltip("Sync")
                 else:
