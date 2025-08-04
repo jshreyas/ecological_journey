@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import requests
 from data.crud import create_cliplist
+from data.crud import create_playlist as cp
 from data.crud import create_team as ct
 from data.crud import load_cliplist, load_notion_latest, load_playlists, load_teams
 from dotenv import load_dotenv
@@ -88,12 +89,7 @@ def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
 
 def create_playlist(video_data: List[Dict[str, Any]], token: str, name: str, playlist_id: str) -> Any:
     """Create a new playlist with videos."""
-    response = api_post("/playlists", data={"name": name, "playlist_id": playlist_id}, token=token)
-    # TODO: combine all these individual API calls to a single call
-    create_video(video_data, token, name)
-    # TODO: please do error handling
-    _refresh_playlists_cache()
-    return response
+    return cp(name=name, playlist_id=playlist_id, videos=video_data, token=token)
 
 
 def create_video(video_data: List[Dict[str, Any]], token: str, name: str) -> None:

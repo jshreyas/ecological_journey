@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import jwt
 from bson import ObjectId
@@ -112,6 +112,19 @@ def load_playlists():
     print("Loading playlists from database...")
     playlists = Playlist.find_all().run()
     return to_dicts(playlists)
+
+
+@with_user_from_token
+@invalidate_cache(keys=["playlists"])
+def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], user=None, **kwargs):
+    playlist = Playlist(
+        name=name,
+        playlist_id=playlist_id,
+        videos=videos,
+        owner_id=user.id,  # inject user id
+    )
+    playlist.insert()
+    return to_dicts(playlist)
 
 
 @with_user_from_token
