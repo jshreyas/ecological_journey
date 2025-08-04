@@ -34,6 +34,7 @@ services:
       - redis
       - mongo
     environment:
+      - LOKI_URL=${LOKI_URL}
       - MONGODB_URI=${MONGODB_URI}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}

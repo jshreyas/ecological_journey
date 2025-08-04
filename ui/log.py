@@ -1,6 +1,8 @@
 import logging
+import os
 
 import structlog
+from dotenv import load_dotenv
 from logging_loki import LokiHandler
 from nicegui import app
 from opentelemetry import trace
@@ -8,9 +10,11 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 
+load_dotenv()
 resource = Resource(attributes={"service.name": "nicegui-app"})
 trace.set_tracer_provider(TracerProvider(resource=resource))
 FastAPIInstrumentor.instrument_app(app)
+LOKI_URL = os.getenv("LOKI_URL")
 
 
 def custom_renderer(_, __, event_dict):
@@ -30,7 +34,7 @@ structlog.configure(
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 loki_handler = LokiHandler(
-    url="http://loki:3100/loki/api/v1/push",
+    url=f"{LOKI_URL}/loki/api/v1/push",
     tags={"application": "ej"},
     version="1",
 )
