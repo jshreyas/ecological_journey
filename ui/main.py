@@ -354,7 +354,7 @@ ui.run(
     storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
 )
 
-FRONTEND_URL = "http://localhost:8080"
+FRONTEND_URL = os.getenv("BASE_URL_SHARE")
 
 oauth = OAuth()
 
