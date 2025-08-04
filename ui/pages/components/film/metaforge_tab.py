@@ -130,13 +130,13 @@ class MetaforgeTab:
             editor = ui.json_editor(
                 {"content": {"json": self._extract_editable_video_data(video)}},
                 schema=json_schema,
-            ).classes("w-full h-full mt-0 mb-0")
+            ).classes("w-full h-full max-h-96 mt-0 mb-0")
 
             # Store editor reference
             self.editor_container["ref"] = editor
 
             # Action buttons
-            with ui.row().classes("w-full h-full justify-between items-center"):
+            with ui.row().classes("w-full justify-between"):
                 ui.button(icon="save", on_click=self._get_data)
                 ui.button(icon="add", on_click=self._add_clip)
 
@@ -501,43 +501,6 @@ class MetaforgeTab:
             ui.notify("➕ New clip added. Scroll down to see it.", type="positive")
 
         ui.timer(0.1, inject, once=True)
-
-    def handle_publish(self, video_metadata=None):
-        """Handle publish operation with custom callback"""
-        if self.on_publish:
-            self.on_publish(video_metadata)
-        else:
-            # Default publish behavior
-            token = self.user.token if self.user else None
-            if not token:
-                ui.notify("❌ Authentication required", type="negative")
-                return
-
-            try:
-                video = self.video_state.get_video()
-                if not video:
-                    ui.notify("❌ No video data available", type="negative")
-                    return
-
-                # Merge with required fields from the loaded video
-                for key in [
-                    "video_id",
-                    "youtube_url",
-                    "title",
-                    "date",
-                    "duration_seconds",
-                ]:
-                    video_metadata[key] = video.get(key)
-                # Preserve existing clips!
-                video_metadata["clips"] = video.get("clips", [])
-
-                success = save_video_metadata(video_metadata, token)
-                if success:
-                    ui.notify("✅ Metadata published", type="positive")
-                else:
-                    ui.notify("❌ Failed to publish metadata", type="negative")
-            except Exception as e:
-                ui.notify(f"❌ Error: {e}", type="negative")
 
     def get_video_data(self):
         """Get the current video data"""

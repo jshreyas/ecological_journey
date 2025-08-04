@@ -1,7 +1,8 @@
 from datetime import datetime
 
+from data.crud import load_cliplists
 from nicegui import ui
-from utils.utils_api import get_filtered_clips, load_cliplist
+from utils.utils_api import get_filtered_clips
 
 
 def cliplists_page():
@@ -21,7 +22,7 @@ def cliplists_page():
         video_grid = ui.grid().classes(
             "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full p-4 bg-white rounded-lg shadow-lg"
         )
-        saved_cliplists = load_cliplist()
+        saved_cliplists = load_cliplists()
         with video_grid:
             for cliplist in saved_cliplists:
                 with ui.card().classes("p-4 shadow-md bg-white rounded-lg border w-full"):

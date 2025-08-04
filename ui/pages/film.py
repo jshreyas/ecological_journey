@@ -1,28 +1,18 @@
 # film.py
 import os
-import uuid
 from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import ui
 from pages.components.film.clipboard_tab import ClipboardTab
-from pages.components.film.clipper_tab import ClipperTab
 from pages.components.film.filmboard_tab import FilmboardTab
-from pages.components.film.filmdata_tab import FilmdataTab
 from pages.components.film.metaforge_tab import MetaforgeTab
 from pages.components.film.navigation_tab import NavigationTab
 from pages.components.film.player_controls_tab import PlayerControlsTab
 from pages.components.film.share_dialog_tab import ShareDialogTab
 from pages.components.film.video_state import VideoState
-from utils.dialog_puns import caught_john_doe, generate_funny_title
 from utils.user_context import User, with_user_context
-from utils.utils_api import (
-    add_clip_to_video,
-    get_playlist_id_for_video,
-    load_video,
-    save_video_metadata,
-    update_clip_in_video,
-)
+from utils.utils_api import load_video
 
 load_dotenv()
 
@@ -35,9 +25,6 @@ BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 def film_page(user: User | None, video_id: str):
     # Initialize VideoState for centralized state management
     video_state = VideoState(video_id)
-
-    state = {"latest_cleaned": None}  # Will store cleaned copy for confirm step
-    confirm_dialog = None  # Will be bound to dialog
 
     query_params = ui.context.client.request.query_params
     clip_id = query_params.get("clip")
@@ -58,194 +45,15 @@ def film_page(user: User | None, video_id: str):
         if video_id != video_state.video_id:
             video_state = VideoState(video_id)
 
-    # State to track which clip is being edited (or None for new)
-    clip_form_state = {"clip": None, "is_new": True}
-    clip_form_container = {}
-
-    def finalize_save():
-        confirm_dialog.close()
-        print(f"Finalizing save...: {state['latest_cleaned']}")
-        success = save_video_metadata(state["latest_cleaned"], user.token if user else None)
-        if success:
-            ui.notify("\u2705 Filmdata published", type="positive")
-            state["latest_cleaned"] = None
-            video_state.refresh()
-        else:
-            ui.notify("❌ Failed to publish filmdata", type="negative")
-
-    confirm_dialog = ui.dialog()
-    with confirm_dialog:
-        with ui.card().classes("max-w-xl"):
-            ui.label("📝 Review Changes").classes("text-lg font-bold")
-            with ui.row().classes("justify-end w-full"):
-                ui.button(icon="close", on_click=confirm_dialog.close)
-                ui.button(icon="save", color="primary", on_click=lambda: finalize_save())
-
-    def show_clip_form(clip, is_new=False):
-        clip_form_container["container"].clear()
-        with clip_form_container["container"]:
-            video = video_state.get_video()
-            duration = video.get("duration_seconds", 0)
-            start_val = int(clip.get("start", 0))
-            end_val = clip.get("end")
-            if not end_val:
-                end_val = duration if duration > 0 else start_val + 10
-            end_val = int(min(end_val, duration))
-
-            def seconds_to_hms(seconds):
-                seconds = int(seconds)
-                h = seconds // 3600
-                m = (seconds % 3600) // 60
-                s = seconds % 60
-                return f"{h:02}:{m:02}:{s:02}" if h else f"{m:02}:{s:02}"
-
-            def hms_to_seconds(hms):
-                parts = [int(p) for p in hms.split(":")]
-                if len(parts) == 3:
-                    return parts[0] * 3600 + parts[1] * 60 + parts[2]
-                elif len(parts) == 2:
-                    return parts[0] * 60 + parts[1]
-                else:
-                    return 0
-
-            with ui.card().classes("w-full p-4 mt-2"):
-                with ui.splitter(horizontal=False, value=70).classes("w-full") as splitter:
-                    with splitter.before:
-                        title = ui.input("Title", value=clip.get("title", "")).classes("w-full")
-                    with splitter.after:
-                        # --- Speed input ---
-                        with ui.column().classes("w-full h-full justify-center items-center"):
-                            speed_knob = ui.knob(
-                                min=0.25,
-                                max=2.0,
-                                step=0.25,
-                                value=clip.get("speed", 1.0),
-                                track_color="grey-2",
-                                show_value=True,
-                            ).props("size=60")
-                            ui.label("Speed").classes("text-center text-xs w-full")
-
-                # Double-ended range slider
-                range_slider = ui.range(
-                    min=0,
-                    max=duration,
-                    value={"min": start_val, "max": end_val},
-                ).classes("w-full")
-
-                # Editable timestamp fields under the slider
-                with ui.row().classes("w-full justify-between items-center"):
-                    start_input = (
-                        ui.input(value=seconds_to_hms(start_val))
-                        .props("type=text")
-                        .props("dense")
-                        .classes("w-12 text-xs")
-                    )
-                    end_input = (
-                        ui.input(value=seconds_to_hms(end_val))
-                        .props("type=text")
-                        .props("dense")
-                        .classes("w-12 text-xs text-right")
-                    )
-
-                # --- Two-way binding logic ---
-                def update_inputs_from_slider():
-                    v = range_slider.value
-                    start_input.value = seconds_to_hms(int(v["min"]))
-                    end_input.value = seconds_to_hms(int(v["max"]))
-
-                def update_slider_from_inputs():
-                    try:
-                        s = max(0, min(duration, hms_to_seconds(start_input.value)))
-                        e = max(0, min(duration, hms_to_seconds(end_input.value)))
-                        # Ensure start <= end
-                        if s > e:
-                            s, e = e, s
-                        range_slider.value = {"min": s, "max": e}
-                    except Exception:
-                        pass  # Ignore invalid input
-
-                range_slider.on("update:model-value", lambda e: update_inputs_from_slider())
-                start_input.on("blur", lambda e: update_slider_from_inputs())
-                end_input.on("blur", lambda e: update_slider_from_inputs())
-                start_input.on("keydown.enter", lambda e: update_slider_from_inputs())
-                end_input.on("keydown.enter", lambda e: update_slider_from_inputs())
-                update_inputs_from_slider()
-
-                # --- Chips input for @partners and #labels ---
-                chips_input_ref, chips_list, chips_error, chips_container = chips_input_combined(
-                    [f"@{p}" for p in clip.get("partners", [])] + [f"#{label}" for label in clip.get("labels", [])]
-                )
-
-                # --- Notes textarea ---
-                notes_input = ui.textarea("Notes", value=clip.get("description", "")).props("rows=4").classes("w-full")
-
-                with ui.row().classes("justify-end gap-2 mt-4"):
-
-                    def save_clip():
-                        partners_list = [c[1:] for c in chips_list if c.startswith("@")]
-                        labels_list = [c[1:] for c in chips_list if c.startswith("#")]
-                        updated_clip = {
-                            "clip_id": clip.get("clip_id"),
-                            "title": title.value,
-                            "start": hms_to_seconds(start_input.value),
-                            "end": hms_to_seconds(end_input.value),
-                            "description": notes_input.value,
-                            "labels": labels_list,
-                            "partners": partners_list,
-                            "speed": speed_knob.value,  # <-- This now reads the current value
-                        }
-                        playlist_name = get_playlist_id_for_video(video_id)
-                        if not user:
-                            caught_john_doe()
-                            return
-                        try:
-                            if is_new:
-                                add_clip_to_video(playlist_name, video_id, updated_clip, user.token)
-                                ui.notify("✅ Clip created successfully", type="positive")
-                            else:
-                                update_clip_in_video(playlist_name, video_id, updated_clip, user.token)
-                                ui.notify("✅ Clip updated successfully", type="positive")
-                            video_state.refresh()
-                            reset_to_add_mode()
-                        except Exception as e:
-                            ui.notify(f"❌ Failed to save clip: {e}", type="negative")
-
-                    def reset_to_add_mode():
-                        # Reset to add mode after save/cancel
-                        clip_id = str(uuid.uuid4())
-                        funny_title = generate_funny_title()
-                        clip_form_state["clip"] = {
-                            "clip_id": clip_id,
-                            "title": funny_title,
-                            "start": 0,
-                            "end": 0,
-                            "description": "",
-                            "labels": [],
-                            "partners": [],
-                        }
-                        clip_form_state["is_new"] = True
-                        show_clip_form(clip_form_state["clip"], is_new=True)
-
-                    ui.button(icon="save", on_click=save_clip).props("color=primary")
-                    ui.button(icon="close", on_click=reset_to_add_mode).props("color=secondary")
-
     # Initialize components with user
     navigation_tab = NavigationTab(video_state)
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
-    filmdata_tab = FilmdataTab(video_state, user)
-    clipper_tab = ClipperTab(video_state, user)
     metaforge_tab = MetaforgeTab(video_state, user)
     filmboard_tab = FilmboardTab(video_state)
 
-    def on_edit_clip(clip):
-        tabs.value = tab_clipmaker  # Switch to Clip Maker tab
-        # Use a short timer to ensure the tab is visible before loading the clip
-        ui.timer(0.05, lambda: clipper_tab.edit_clip(clip), once=True)
-
     clipboard_tab = ClipboardTab(
         video_state,
-        on_edit_clip=on_edit_clip,
         on_play_clip=player_controls_tab.play_clip,
         on_share_clip=share_dialog_tab.share_clip,
     )
@@ -263,21 +71,8 @@ def film_page(user: User | None, video_id: str):
 
             with splitter.after:
                 video = load_video(video_id)
-                with ui.tabs().classes("w-full") as tabs:
-                    tab_videom = ui.tab("Filmdata").tooltip("Edit film metadata like title, date, partners, labels")
-                    tab_clipmaker = ui.tab("Clipper").tooltip("Create and edit clips from the film")
-                    tab_bulk = ui.tab("metaforge").tooltip("Bulk edit film and clip metadata in JSON format")
-                with ui.tab_panels(tabs, value=tab_bulk).classes("w-full h-full"):
-
-                    # Create tab panels using components
-                    with ui.tab_panel(tab_videom) as filmdata_container:
-                        filmdata_tab.create_tab(filmdata_container)
-
-                    with ui.tab_panel(tab_clipmaker) as clipper_container:
-                        clipper_tab.create_tab(clipper_container)
-
-                    with ui.tab_panel(tab_bulk).classes("w-full h-full mt-0") as metaforge_container:
-                        metaforge_tab.create_tab(metaforge_container)
+                with ui.column().classes("w-full h-full p-4 gap-4") as metaforge_container:
+                    metaforge_tab.create_tab(metaforge_container)
 
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")

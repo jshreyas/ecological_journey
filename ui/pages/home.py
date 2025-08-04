@@ -1,6 +1,7 @@
 from collections import Counter
 from datetime import datetime, timedelta
 
+from data.crud import load_playlists
 from nicegui import ui
 from pages.components.home.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
@@ -12,7 +13,6 @@ from utils.utils_api import (
     create_team,
     create_video,
     fetch_teams_for_user,
-    load_playlists,
     load_playlists_for_user,
     load_videos,
 )
@@ -90,8 +90,7 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
     parent.clear()
     if not user:
-        playlists = load_playlists()
-        for playlist in playlists:
+        for playlist in load_playlists():
             with parent:
                 with ui.column().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md"):
                     ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sd font-semibold")
@@ -467,7 +466,7 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
             return
 
         # Step 3: Append new videos
-        create_video(new_video_data, token, playlist_name)
+        create_video(new_video_data, token, play_id)
         ui.notify(f'✅ Synced {len(new_video_data)} new videos to "{playlist_name}".')
 
     except Exception as e:

@@ -1,5 +1,5 @@
+from data.crud import clear_cache
 from nicegui import ui
-from utils.utils_api import clear_cache
 
 
 def about_page():

@@ -1,9 +1,11 @@
 import os
 import sys
 
-import requests
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from data.crud import clear_cache, create_access_token, create_feedback, get_or_create_user, login_user
 from dotenv import load_dotenv
-from fastapi.responses import PlainTextResponse
+from fastapi import Request
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
 from pages.about import about_page
@@ -16,28 +18,11 @@ from pages.notion import notion_page
 from pages.partner import partner_page
 from pages.playlist import playlist_page
 from utils.dialog_puns import caught_john_doe, handle_backend_error
-from utils.utils_api import api_post as api_post_utils
-from utils.utils_api import clear_cache
 
 sys.stdout.reconfigure(line_buffering=True)
 
 load_dotenv()
-BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_REDIRECT_URL = os.getenv("BACKEND_REDIRECT_URL")
 # TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
-
-
-def api_post(endpoint: str, data: dict):
-    if "token" in endpoint:
-        return requests.post(f"{BACKEND_URL}{endpoint}", data=data, timeout=5)
-    else:
-        return requests.post(f"{BACKEND_URL}{endpoint}", json=data, timeout=5)
-
-
-def api_get(endpoint: str):
-    token = app.storage.user.get("token")
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    return requests.get(f"{BACKEND_URL}{endpoint}", headers=headers, timeout=5)
 
 
 def google_login_button():
@@ -82,8 +67,6 @@ def login_or_signup(mode="login"):
                 google_login_button()
 
         with ui.column().classes("gap-4 w-full"):
-            if mode != "login":
-                username = ui.input("Username").classes("w-full")
             email = ui.input("Email").classes("w-full")
             password = ui.input("Password", password=True).classes("w-full")
 
@@ -92,71 +75,24 @@ def login_or_signup(mode="login"):
             ui.button(icon="close", on_click=dialog.close)
 
         def submit():
-            endpoint = "/auth/token" if mode == "login" else "/auth/register"
-            if mode == "login":
-                data = {"username": email.value, "password": password.value}
-            else:
-                data = {"email": email.value, "password": password.value}
-                data["username"] = username.value
-
-            waiting_dialog = ui.dialog().props("persistent")
-            with waiting_dialog:
-                ui.spinner(size="lg")
-                ui.label("backend must be napping...").classes("text-lg mt-2")
-
-            waiting_dialog.open()
-            interval = 15  # TODO: make this configurable
-            retries = 10  # TODO: make this configurable
-
-            # TODO: remove complex retry logic as the backend is now always awake
-            def attempt_login(retries_left=retries):
-                print(f"Attempting login... Retries left: {retries_left}")  # Debug print
+            def attempt_login():
                 try:
-                    if retries_left == retries:
-                        ui.run_javascript(
-                            f"""
-                            fetch("{BACKEND_URL}/docs").then(r =>
-                            console.log('Backend wakeup ping sent'))
-                        """
-                        )
-                        print("wake API called in js")  # Debug print
-                    response = api_post(endpoint, data)
-                    print("API called, status:", response.status_code)  # Debug print
-
-                    if response.status_code == 200:
-                        # TODO: this is repeated code, refactor to a common function
-                        response_data = response.json()
-                        app.storage.user["token"] = response_data["access_token"]
-                        app.storage.user["user"] = response_data["username"]
-                        app.storage.user["id"] = response_data["id"]
-                        waiting_dialog.close()
+                    response = login_user(email.value, password.value)
+                    if not response:
+                        print("Login failed with given credentials")
+                        ui.notify("❌ Login failed with given credentials", type="negative")
+                        return
+                    else:
+                        app.storage.user["token"] = response["access_token"]
+                        app.storage.user["user"] = response["username"]
+                        app.storage.user["id"] = response["id"]
                         ui.notify("✅ Login successful", type="positive")
                         clear_cache()
-                        ui.navigate.reload()
                         ui.navigate.to(app.storage.user.get("post_login_path", "/"))
                         app.storage.user["post_login_path"] = "/"
-
-                    elif response.status_code == 503:
-                        if retries_left > 0:
-                            print("Backend waking up, retrying...")
-                            ui.timer(
-                                interval,
-                                lambda: attempt_login(retries_left - 1),
-                                once=True,
-                            )
-                        else:
-                            waiting_dialog.close()
-                            handle_backend_error()
-                    else:
-                        waiting_dialog.close()
-                        ui.notify(f"❌ {response.text or 'Login failed.'}", type="negative")
                 except Exception as e:
                     print("Exception during login:", e)  # Debug print
-                    if retries_left > 0:
-                        ui.timer(interval, lambda: attempt_login(retries_left - 1), once=True)
-                    else:
-                        waiting_dialog.close()
-                        handle_backend_error()
+                    handle_backend_error()
 
             attempt_login()
 
@@ -170,7 +106,7 @@ def logout():
 
 def open_feedback_dialog():
     def submit_feedback(feedback_text: str):
-        api_post_utils("/feedback", {"text": feedback_text}, token=app.storage.user.get("token"))
+        create_feedback(feedback_text)
         ui.notify("Thank you for your feedback!", type="positive")
         dialog.close()
 
@@ -187,9 +123,7 @@ def open_feedback_dialog():
 def open_google_login_dialog():
     # Store the current path in app.storage
     post_login_path = ui.context.client.request.url.path
-    ui.run_javascript(
-        f"window.location.href = '{BACKEND_REDIRECT_URL}/auth/google/login?post_login_path={post_login_path}'"
-    )
+    ui.navigate.to(f"/auth/google/login?post_login_path={post_login_path}")
 
 
 def open_login_dialog():
@@ -419,3 +353,45 @@ ui.run(
     reload=True,
     storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
 )
+
+FRONTEND_URL = os.getenv("BASE_URL_SHARE")
+
+oauth = OAuth()
+
+oauth.register(
+    name="google",
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    client_kwargs={"scope": "openid email profile"},
+    redirect_uri=f"{FRONTEND_URL}/auth/google/callback",
+)
+
+
+@app.get("/auth/google/login")
+async def google_login(request: Request):
+    post_login_path = request.query_params.get("post_login_path", "/")
+    redirect_uri = f"{FRONTEND_URL}/auth/google/callback"
+    return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
+
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        resp = await oauth.google.get("https://openidconnect.googleapis.com/v1/userinfo", token=token)
+        userinfo = resp.json()
+    except OAuthError:
+        return RedirectResponse(url=f"{FRONTEND_URL}/?error=oauth")
+
+    request.session["user"] = userinfo  # Or store in Redis/etc.
+
+    # Replace with your own logic
+    user = get_or_create_user(userinfo["email"], userinfo["name"], "google", userinfo["sub"])
+    jwt_token = create_access_token({"sub": str(user["_id"])})
+
+    post_login_path = request.query_params.get("state")
+    return RedirectResponse(
+        url=f'{FRONTEND_URL}/oauth?token={jwt_token}&username={userinfo["name"]}'
+        f'&id={str(user["_id"])}&post_login_path={post_login_path}'
+    )

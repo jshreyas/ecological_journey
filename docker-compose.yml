@@ -21,48 +21,6 @@ services:
     volumes:
       - redis_data:/data
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: ecological_api
-    volumes:
-      - ./api/app:/app/app
-    ports:
-      - "8000:8000"
-    depends_on:
-      - mongo
-    command:
-      [
-        "uvicorn",
-        "app.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-        "--reload",
-      ]
-    environment:
-      - MONGODB_URI=${MONGODB_URI}
-      - JWT_SECRET=${JWT_SECRET}
-      - BACKEND_REDIRECT_URL=${BACKEND_REDIRECT_URL}
-      - FRONTEND_URL=${FRONTEND_URL}
-      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - NOTION_TOKEN=${NOTION_TOKEN}
-    tty: true
-    stdin_open: true
-    networks:
-      - ecological-network
-    develop:
-      watch:
-        - action: sync
-          path: ./api
-          target: /app
-        - action: rebuild
-          path: ./requirements.txt
-
   ui:
     build:
       context: .
@@ -73,13 +31,15 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - api
       - redis
+      - mongo
     environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NOTION_TOKEN=${NOTION_TOKEN}
       - JWT_SECRET=${JWT_SECRET}
       - API_KEY=${API_KEY}
-      - BACKEND_URL=${BACKEND_URL}
-      - BACKEND_REDIRECT_URL=${BACKEND_REDIRECT_URL}
       - BASE_URL_SHARE=${BASE_URL_SHARE}
       # - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL} # only if testing Upstash Redis locally`
       # - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN} # only if testing Upstash Redis locally`

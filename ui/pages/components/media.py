@@ -190,15 +190,19 @@ def render_media_page(
                                 return
                             if not daterange_checkbox.value:
                                 filters_state["date_range"] = []
-                            save_cliplist(
+
+                            result = save_cliplist(
                                 name_input.value,
                                 filters_state,
                                 token=user.token,
                             )
-                            ui.notify(
-                                f"✅ Save successful with {name_input.value} and filters_state: {filters_state}",
-                                type="positive",
-                            )
+                            if result:
+                                ui.notify(
+                                    f"✅ Save successful with {name_input.value} and filters_state: {filters_state}",
+                                    type="positive",
+                                )
+                            else:
+                                ui.notify("Cliplist creation failed", type="negative")
                             dialog.close()
 
                         ui.button(icon="save", on_click=confirm_save)

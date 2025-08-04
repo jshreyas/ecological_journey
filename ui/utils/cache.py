@@ -1,5 +1,7 @@
 import json
 import os
+from functools import wraps
+from typing import Any, Callable, Dict, List
 
 import requests
 from dotenv import load_dotenv
@@ -93,20 +95,67 @@ cache_backend = get_cache_backend()
 def cache_get(key: str):
     value = cache_backend.get(key)
     if value:
-        print(f"cache hit for key: {key}")
         return value
     else:
-        print(f"cache miss for key: {key}")
         return None
 
 
 def cache_set(key: str, value, ex: int = None):
-    print(f"cache write: {key}")
     ttl = ex if ex is not None else CACHE_TTL
     cache_backend.set(key, value, ex=ttl)
 
 
 def cache_del(*keys):
-    for key in keys:
-        print(f"Deleted cache key: {key}")
     cache_backend.delete(*keys)
+
+
+_cache: Dict[str, Any] = {}
+
+
+def cache_result(cache_key: str, ttl_seconds: int = 3600):
+    def decorator(func: Callable):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Check in-memory cache
+            global _cache
+            if cache_key in _cache:
+                # print(f"Local cache hit for key: {cache_key}")
+                return _cache[cache_key]
+
+            # Check Redis cache
+            cached = cache_get(cache_key)
+            if cached:
+                print(f"Cache hit for key: {cache_key}")
+                _cache[cache_key] = cached
+                return cached
+            print(f"Cache miss for key: {cache_key}")
+
+            # Call actual function
+            data = func(*args, **kwargs)
+
+            print(f"Caching setting for key: {cache_key}")
+            # Set both caches
+            cache_set(cache_key, data, ttl_seconds)
+            _cache[cache_key] = data
+            return data
+
+        return wrapper
+
+    return decorator
+
+
+def invalidate_cache(keys: List[str]):
+    def decorator(func: Callable):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            global _cache
+            result = func(*args, **kwargs)
+            for key in keys:
+                _cache.pop(key, None)
+                cache_del(key)
+                print(f"Cache deleted for key: {key}")
+            return result
+
+        return wrapper
+
+    return decorator
