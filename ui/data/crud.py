@@ -2,14 +2,14 @@ from typing import Any
 
 from bson import ObjectId
 from bunnet import Document
-from data.models import Cliplist, Playlist
+from data.models import Cliplist, Notion, Playlist
 from utils.cache import cache_result
 
 
 def to_dicts(obj: Any) -> Any:
     # Case 1: Bunnet or Pydantic document
     if isinstance(obj, Document):
-        return to_dicts(obj.model_dump(by_alias=True))
+        return to_dicts(obj.model_dump(mode="json", by_alias=True))
 
     # Case 2: ObjectId
     elif isinstance(obj, ObjectId):
@@ -28,7 +28,23 @@ def to_dicts(obj: Any) -> Any:
         return obj
 
 
-@cache_result("playlists", ttl_seconds=3600)
+@cache_result("notion_tree", ttl_seconds=3600)
+def load_notion():
+    print("Loading Notion data from database...")
+    notion_data = Notion.find_all().run()
+    return to_dicts(notion_data)
+
+
+def load_notion_latest():
+    print("Selecting latest Notion entry from loaded data...")
+    all_notion = load_notion()
+    if not all_notion:
+        return None
+    latest = max(all_notion, key=lambda x: x.get("submitted_at", ""))
+    return latest
+
+
+@cache_result("playlists", ttl_seconds=3600)  # TODO: update ttl
 def load_playlists():
     print("Loading playlists from database...")
     playlists = Playlist.find_all().run()

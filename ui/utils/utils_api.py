@@ -3,7 +3,7 @@ import re
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-from data.crud import load_cliplist, load_playlists
+from data.crud import load_cliplist, load_notion_latest, load_playlists
 from dotenv import load_dotenv
 from utils.cache import cache_del, cache_get, cache_set
 from utils.utils import format_time, parse_query_expression
@@ -68,15 +68,7 @@ def trigger_fetch_notion() -> None:
 
 
 def get_notion_tree():
-    """Fetch the Notion tree structure from the cache or generate it if not cached."""
-    cached_tree = cache_get("notion_tree")
-    if cached_tree:
-        return cached_tree
-
-    tree = api_get("/notion")["tree"]
-
-    cache_set("notion_tree", tree, 300)
-    return tree
+    return load_notion_latest()["tree"]
 
 
 def create_team(name: str, token: str, user_id: str) -> Any:

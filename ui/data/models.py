@@ -1,9 +1,10 @@
+from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import uuid4
 
 from bson import ObjectId
 from bunnet import Document
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 
 class Clip(Document):
@@ -70,3 +71,21 @@ class Cliplist(Document):
         populate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
+
+
+class TreeNode(BaseModel):
+    id: str
+    title: str
+    embed_url: str
+    children: List["TreeNode"] = []  # Recursive typing
+
+
+TreeNode.model_rebuild()
+
+
+class Notion(Document):
+    tree: List[TreeNode]
+    submitted_at: datetime = datetime.utcnow()
+
+    class Settings:
+        name = "notion"
