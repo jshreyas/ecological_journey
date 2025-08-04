@@ -1,5 +1,4 @@
 import os
-import re
 from typing import Any, Dict, List, Optional, Union
 
 import requests
@@ -303,64 +302,6 @@ def parse_clip_line(line: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def parse_raw_text(raw_text: str) -> Dict[str, Any]:
-    video_data = {
-        "partners": [],
-        "labels": [],
-        "type": "",
-        "notes": "",
-        "clips": [],
-        "youtube_url": "",
-        "date": "",
-        "title": "",
-        "duration_seconds": 0.0,
-    }
-
-    for line in raw_text.strip().splitlines():
-        line = line.strip()
-        if not line:
-            continue
-
-        tokens = line.split()
-        if all(token.startswith("@") or token.startswith("#") for token in tokens):
-            for token in tokens:
-                if token.startswith("@"):
-                    video_data["partners"].append(token[1:].strip())
-                elif token.startswith("#"):
-                    video_data["labels"].append(token[1:].strip())
-        elif line.lower().startswith("type:"):
-            video_data["type"] = line.split(":", 1)[1].strip()
-        elif line.lower().startswith("notes:"):
-            video_data["notes"] = line.split(":", 1)[1].strip()
-        elif re.match(r"\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}", line):
-            clip = parse_clip_line(line)
-            if clip:
-                video_data["clips"].append(clip)
-
-    return video_data
-
-
-def save_video_data_clips(video_data: Dict[str, Any], token: str) -> bool:
-    playlist_name = get_playlist_id_for_video(video_data.get("video_id"))
-    if not playlist_name:
-        print(f"Could not find playlist for video_id: {video_data.get('video_id')}")
-        return False
-    try:
-        api_put(f"/playlists/{playlist_name}/videos", data=video_data, token=token)
-        _refresh_playlists_cache()
-        return True
-    except requests.HTTPError as e:
-        print(f"Failed to save video data: {e}")
-        # TODO: if not successful, display reason in ui?
-        return False
-
-
-def parse_and_save_clips(video_id: str, raw_text: str, token: str) -> bool:
-    video_data = parse_raw_text(raw_text)
-    video_data["video_id"] = video_id
-    return save_video_data_clips(video_data, token)
-
-
 def get_all_partners() -> List[str]:
     cache_key = "all_partners"
     cached = cache_get(cache_key)
@@ -398,22 +339,6 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
                     "labels": merged_labels,
                 }
                 result.append(combined)
-    return result
-
-
-def add_clip_to_video(playlist_name: str, video_id: str, clip: dict, token: str) -> Any:
-    """Add a single clip to a video in a playlist."""
-    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    result = api_post(endpoint, data=clip, token=token)
-    _refresh_playlists_cache()
-    return result
-
-
-def update_clip_in_video(playlist_name: str, video_id: str, clip: dict, token: str) -> Any:
-    """Update a single clip in a video in a playlist."""
-    endpoint = f"/playlists/{playlist_name}/videos/{video_id}/clips"
-    result = api_put(endpoint, data=clip, token=token)
-    _refresh_playlists_cache()
     return result
 
 

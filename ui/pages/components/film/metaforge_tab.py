@@ -130,13 +130,13 @@ class MetaforgeTab:
             editor = ui.json_editor(
                 {"content": {"json": self._extract_editable_video_data(video)}},
                 schema=json_schema,
-            ).classes("w-full h-full mt-0 mb-0")
+            ).classes("w-full h-full max-h-96 mt-0 mb-0")
 
             # Store editor reference
             self.editor_container["ref"] = editor
 
             # Action buttons
-            with ui.row().classes("w-full h-full justify-between items-center"):
+            with ui.row().classes("w-full justify-between"):
                 ui.button(icon="save", on_click=self._get_data)
                 ui.button(icon="add", on_click=self._add_clip)
 

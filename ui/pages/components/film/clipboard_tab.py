@@ -17,12 +17,10 @@ class ClipboardTab:
     def __init__(
         self,
         video_state: VideoState,
-        on_edit_clip: Callable = None,
         on_play_clip: Callable = None,
         on_share_clip: Callable = None,
     ):
         self.video_state = video_state
-        self.on_edit_clip = on_edit_clip
         self.on_play_clip = on_play_clip
         self.on_share_clip = on_share_clip
         self.container = None
@@ -122,7 +120,7 @@ class ClipboardTab:
                         "Play",
                         lambda: self._handle_play_clip(clip),
                     ),
-                    ("edit", "secondary", "Edit", lambda: self._handle_edit_clip(clip)),
+                    # ("edit", "secondary", "Edit", lambda: self._handle_edit_clip(clip)),
                     ("share", "accent", "Share", lambda: self._handle_share_clip(clip)),
                 ]:
                     ui.button(icon=icon, on_click=handler).props(f"flat dense color={color}").tooltip(tooltip).classes(
@@ -132,11 +130,6 @@ class ClipboardTab:
             # Optionally, auto-play the clip if requested
             if autoplay:
                 self._handle_play_clip(clip)
-
-    def _handle_edit_clip(self, clip):
-        """Handle edit clip action"""
-        if self.on_edit_clip:
-            self.on_edit_clip(clip)
 
     def _handle_play_clip(self, clip):
         """Handle play clip action"""
