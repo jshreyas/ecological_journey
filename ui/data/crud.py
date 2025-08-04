@@ -2,11 +2,12 @@ import os
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Dict, List
+from uuid import uuid4
 
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Cliplist, Feedback, Notion, Playlist, Team, User, Video
+from data.models import Clip, Cliplist, Feedback, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
 from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
@@ -135,6 +136,55 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
         raise ValueError("Playlist not found or access denied")
 
     playlist.videos.extend([Video(**video) for video in new_videos])
+    playlist.save()
+    return to_dicts(playlist)
+
+
+# TODO: updates can be done by team members, not just owner
+@with_user_from_token
+@invalidate_cache(keys=["playlists"])
+def edit_video_in_playlist(playlist_id: str, updated_video: Dict[str, Any], user=None, **kwargs):
+    playlist = Playlist.find_one(Playlist.playlist_id == playlist_id, Playlist.owner_id == user.id).run()
+
+    if not playlist:
+        raise ValueError("Playlist not found or access denied")
+
+    updated_video_obj = Video(**updated_video)
+    updated_video_id = updated_video_obj.video_id
+
+    updated = False
+    for i, video in enumerate(playlist.videos):
+        if video.video_id == updated_video_id:
+            # Step 1: Map existing clips by clip_id
+            existing_clips = {clip.clip_id: clip.dict() for clip in video.clips}
+            merged_clips = []
+
+            for clip in updated_video_obj.clips:
+                clip_dict = clip.dict()
+                clip_id = clip_dict.get("clip_id")
+
+                if clip_id and clip_id in existing_clips:
+                    merged = {**existing_clips[clip_id], **clip_dict}
+                else:
+                    if not clip_id:
+                        clip_dict["clip_id"] = str(uuid4())
+                    merged = clip_dict
+
+                merged_clips.append(Clip(**merged))
+
+            # Step 2: Merge all fields properly
+            updated_fields = video.dict()
+            updated_fields.update(updated_video)
+            updated_fields["clips"] = merged_clips
+
+            # Step 3: Replace the video
+            playlist.videos[i] = Video(**updated_fields)
+            updated = True
+            break
+
+    if not updated:
+        raise ValueError("Video not found in playlist")
+
     playlist.save()
     return to_dicts(playlist)
 

@@ -12,7 +12,7 @@ from pages.components.film.player_controls_tab import PlayerControlsTab
 from pages.components.film.share_dialog_tab import ShareDialogTab
 from pages.components.film.video_state import VideoState
 from utils.user_context import User, with_user_context
-from utils.utils_api import load_video, save_video_metadata
+from utils.utils_api import load_video
 
 load_dotenv()
 
@@ -25,9 +25,6 @@ BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 def film_page(user: User | None, video_id: str):
     # Initialize VideoState for centralized state management
     video_state = VideoState(video_id)
-
-    state = {"latest_cleaned": None}  # Will store cleaned copy for confirm step
-    confirm_dialog = None  # Will be bound to dialog
 
     query_params = ui.context.client.request.query_params
     clip_id = query_params.get("clip")
@@ -47,25 +44,6 @@ def film_page(user: User | None, video_id: str):
         # Reinitialize video_state if video_id changed
         if video_id != video_state.video_id:
             video_state = VideoState(video_id)
-
-    def finalize_save():
-        confirm_dialog.close()
-        print(f"Finalizing save...: {state['latest_cleaned']}")
-        success = save_video_metadata(state["latest_cleaned"], user.token if user else None)
-        if success:
-            ui.notify("\u2705 Filmdata published", type="positive")
-            state["latest_cleaned"] = None
-            video_state.refresh()
-        else:
-            ui.notify("❌ Failed to publish filmdata", type="negative")
-
-    confirm_dialog = ui.dialog()
-    with confirm_dialog:
-        with ui.card().classes("max-w-xl"):
-            ui.label("📝 Review Changes").classes("text-lg font-bold")
-            with ui.row().classes("justify-end w-full"):
-                ui.button(icon="close", on_click=confirm_dialog.close)
-                ui.button(icon="save", color="primary", on_click=lambda: finalize_save())
 
     # Initialize components with user
     navigation_tab = NavigationTab(video_state)

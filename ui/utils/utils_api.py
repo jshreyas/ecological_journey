@@ -5,10 +5,10 @@ import requests
 from data.crud import add_video_to_playlist, create_cliplist
 from data.crud import create_playlist as cp
 from data.crud import create_team as ct
-from data.crud import load_cliplist, load_notion_latest, load_playlists, load_teams
+from data.crud import edit_video_in_playlist, load_cliplist, load_notion_latest, load_playlists, load_teams
 from dotenv import load_dotenv
 from utils.cache import cache_del, cache_get, cache_set
-from utils.utils import format_time, parse_query_expression
+from utils.utils import parse_query_expression
 
 load_dotenv()
 
@@ -121,14 +121,6 @@ def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List
         return {"owned": owned, "member": filtered_member}
 
 
-def _refresh_playlists_cache() -> None:
-    """Force refresh playlists from backend and update both Redis and in-memory cache."""
-    global _playlists_cache
-    playlists = api_get("/playlists")
-    cache_set("playlists", playlists)
-    _playlists_cache = playlists
-
-
 def format_duration(seconds: int) -> str:
     """Convert seconds into a human-readable format (HH:MM:SS or MM:SS)."""
     hours, remainder = divmod(seconds, 3600)
@@ -169,7 +161,7 @@ def get_playlist_id_for_video(video_id: str) -> Optional[str]:
     for playlist in playlists:
         for video in playlist.get("videos", []):
             if video.get("video_id") == video_id:
-                return playlist.get("name")  # TODO: Fix usage of playlist name vs id
+                return playlist.get("playlist_id")
     return None
 
 
@@ -200,96 +192,6 @@ def load_clips() -> List[Dict[str, Any]]:
                     clips.append(clip_data)
     clips.sort(key=lambda x: x.get("date", ""), reverse=True)
     return clips
-
-
-def convert_clips_to_raw_text(video_id: str, video_duration: Optional[int] = None) -> str:
-    videos = load_videos()
-    video_metadata = next((v for v in videos if v["video_id"] == video_id), {})
-    clips = video_metadata.get("clips", [])
-    duration = video_duration or video_metadata.get("duration_seconds")
-
-    lines = []
-
-    has_metadata = any(video_metadata.get(k) for k in ["partners", "labels", "type", "notes"])
-    has_clips = bool(clips)
-
-    if has_metadata:
-        if video_metadata.get("partners"):
-            lines.append(" ".join(f"@{p}" for p in video_metadata["partners"]))
-        if video_metadata.get("labels"):
-            lines.append(" ".join(f"#{label}" for label in video_metadata["labels"]))
-        if video_metadata.get("type"):
-            lines.append(f"type: {video_metadata['type']}")
-        if video_metadata.get("notes"):
-            lines.append(f"notes: {video_metadata['notes']}")
-        lines.append("")
-    else:
-        lines += [
-            "@partner1 @partner2 #position1 #position2",
-            "type: positional/sparring/rolling/instructional",
-            "notes: optional general notes about this video",
-            "",
-        ]
-
-    if not has_clips and duration:
-        lines.append("00:00 - 00:30 | Clip Title Here | Optional description here @partner1 @partner2 #label1 #label2")
-        clips = [{"start": 0, "end": duration, "type": "autogen"}]
-
-    for clip in clips:
-        start = clip.get("start", 0)
-        end = clip.get("end", 0)
-        if duration and end > duration:
-            end = duration
-
-        if clip.get("type") != "clip":
-            lines.append(f"{format_time(start)} - {format_time(end)} | Full video | @autogen")
-            continue
-
-        title = clip.get("title", "")
-        description = clip.get("description", "")
-        partners = " ".join(f"@{p}" for p in clip.get("partners", []))
-        labels = " ".join(f"#{label}" for label in clip.get("labels", []))
-        full_desc = " ".join(part for part in [description, partners, labels] if part)
-
-        lines.append(f"{format_time(start)} - {format_time(end)} | {title} | {full_desc}")
-    return "\n".join(lines)
-
-
-def parse_clip_line(line: str) -> Optional[Dict[str, Any]]:
-    try:
-        if "Clip Title Here" in line or "@autogen" in line:
-            return None
-
-        import re
-
-        match = re.match(
-            r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s*\|\s*([^|]+)\s*(?:\|\s*(.*))?",
-            line,
-        )
-        if not match:
-            return None
-        start_str, end_str, title, full_desc = match.groups()
-
-        def to_seconds(t: str) -> int:
-            minutes, seconds = map(int, t.strip().split(":"))
-            return minutes * 60 + seconds
-
-        full_desc = full_desc or ""
-        partners = re.findall(r"@(\w+)", full_desc)
-        labels = re.findall(r"#(\w+)", full_desc)
-        description = re.sub(r"[@#]\w+", "", full_desc).strip()
-
-        return {
-            "start": to_seconds(start_str),
-            "end": to_seconds(end_str),
-            "title": title.strip(),
-            "description": description,
-            "type": "clip",
-            "partners": partners,
-            "labels": labels,
-        }
-    except Exception:
-        return None
 
 
 def get_all_partners() -> List[str]:
@@ -340,17 +242,8 @@ def convert_video_metadata_to_raw_text(video: dict) -> str:
 
 
 def save_video_metadata(video_metadata: dict, token: str) -> bool:
-    playlist_name = get_playlist_id_for_video(video_metadata.get("video_id"))
-    if not playlist_name:
-        print(f"Could not find playlist for video_id: {video_metadata.get('video_id')}")
-        return False
-    try:
-        api_put(f"/playlists/{playlist_name}/videos", data=video_metadata, token=token)
-        _refresh_playlists_cache()
-        return True
-    except Exception as e:
-        print(f"Failed to save video metadata: {e}")
-        return False
+    playlist_id = get_playlist_id_for_video(video_metadata.get("video_id"))
+    return edit_video_in_playlist(playlist_id=playlist_id, updated_video=video_metadata, token=token)
 
 
 def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optional[Dict[str, Any]]:
