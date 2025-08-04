@@ -26,7 +26,6 @@ sys.stdout.reconfigure(line_buffering=True)
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_REDIRECT_URL = os.getenv("BACKEND_REDIRECT_URL")
 # TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
 
 
