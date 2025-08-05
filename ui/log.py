@@ -15,6 +15,8 @@ resource = Resource(attributes={"service.name": "nicegui-app"})
 trace.set_tracer_provider(TracerProvider(resource=resource))
 FastAPIInstrumentor.instrument_app(app)
 LOKI_URL = os.getenv("LOKI_URL")
+LOKI_USER = os.getenv("LOKI_USER")
+LOKI_PASS = os.getenv("LOKI_PASS")
 
 
 def custom_renderer(_, __, event_dict):
@@ -34,9 +36,7 @@ structlog.configure(
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 loki_handler = LokiHandler(
-    url=f"{LOKI_URL}/loki/api/v1/push",
-    tags={"application": "ej"},
-    version="1",
+    url=f"{LOKI_URL}/loki/api/v1/push", tags={"application": "ej"}, version="1", auth=(LOKI_USER, LOKI_PASS)
 )
 loki_handler.setLevel(logging.INFO)
 

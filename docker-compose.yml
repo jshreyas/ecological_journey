@@ -26,6 +26,8 @@ services:
       context: .
       dockerfile: Dockerfile.ui
     container_name: ecological_ui
+    dns:
+      - 8.8.8.8
     volumes:
       - ./ui:/app/ui
     ports:
@@ -35,6 +37,8 @@ services:
       - mongo
     environment:
       - LOKI_URL=${LOKI_URL}
+      - LOKI_USER=${LOKI_USER}
+      - LOKI_PASS=${LOKI_PASS}
       - MONGODB_URI=${MONGODB_URI}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
