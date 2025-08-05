@@ -1,7 +1,7 @@
 services:
   mongo:
     image: mongo:6
-    container_name: ecological_mongo
+    container_name: mongo
     command: ["mongod", "--config", "/etc/mongod.conf"]
     ports:
       - "27017:27017"
@@ -13,7 +13,7 @@ services:
 
   redis:
     image: redis:7
-    container_name: ecological_redis
+    container_name: redis
     ports:
       - "6379:6379"
     networks:
@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ui
-    container_name: ecological_ui
+    container_name: ui
     dns:
       - 8.8.8.8
     volumes:
@@ -65,6 +65,7 @@ services:
 
   loki:
     image: grafana/loki:latest
+    container_name: loki
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
@@ -74,6 +75,7 @@ services:
       - observability
 
   promtail:
+    container_name: promtail
     image: grafana/promtail:latest
     volumes:
       - /var/log:/var/log
@@ -84,6 +86,7 @@ services:
       - observability
 
   grafana:
+    container_name: grafana
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
       - GF_AUTH_ANONYMOUS_ENABLED=true
