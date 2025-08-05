@@ -35,7 +35,22 @@ structlog.configure(
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
-loki_handler = LokiHandler(
+
+
+# Define a safer LokiHandler that doesn't raise on failure
+class SafeLokiHandler(LokiHandler):
+    _loki_failed = False
+
+    def emit(self, record):
+        try:
+            super().emit(record)
+        except Exception:
+            if not SafeLokiHandler._loki_failed:
+                SafeLokiHandler._loki_failed = True
+            self.handleError(record)
+
+
+loki_handler = SafeLokiHandler(
     url=f"{LOKI_URL}/loki/api/v1/push", tags={"application": "ej"}, version="1", auth=(LOKI_USER, LOKI_PASS)
 )
 loki_handler.setLevel(logging.INFO)
@@ -46,6 +61,8 @@ root_logger.handlers.clear()
 root_logger.setLevel(logging.INFO)
 root_logger.addHandler(console_handler)
 root_logger.addHandler(loki_handler)
+
+logging.raiseExceptions = False  # suppresses handler errors from printing to stderr
 
 log = structlog.get_logger()
 log.info("✅ Logging initialized with both Loki and console output")
