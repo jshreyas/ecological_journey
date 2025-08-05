@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List
 
 import requests
 from dotenv import load_dotenv
+from log import log
 
 load_dotenv()
 
@@ -119,21 +120,21 @@ def cache_result(cache_key: str, ttl_seconds: int = 3600):
             # Check in-memory cache
             global _cache
             if cache_key in _cache:
-                # print(f"Local cache hit for key: {cache_key}")
+                # log.info(f"Local cache hit for key: {cache_key}")
                 return _cache[cache_key]
 
             # Check Redis cache
             cached = cache_get(cache_key)
             if cached:
-                print(f"Cache hit for key: {cache_key}")
+                log.info(f"Cache hit for key: {cache_key}")
                 _cache[cache_key] = cached
                 return cached
-            print(f"Cache miss for key: {cache_key}")
+            log.info(f"Cache miss for key: {cache_key}")
 
             # Call actual function
             data = func(*args, **kwargs)
 
-            print(f"Caching setting for key: {cache_key}")
+            log.info(f"Caching setting for key: {cache_key}")
             # Set both caches
             cache_set(cache_key, data, ttl_seconds)
             _cache[cache_key] = data
@@ -153,7 +154,7 @@ def invalidate_cache(keys: List[str]):
             for key in keys:
                 _cache.pop(key, None)
                 cache_del(key)
-                print(f"Cache deleted for key: {key}")
+                log.info(f"Cache deleted for key: {key}")
             return result
 
         return wrapper

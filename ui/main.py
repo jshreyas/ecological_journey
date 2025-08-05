@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from log import log
 from nicegui import app, ui
 from pages.about import about_page
 from pages.cliplists import cliplists_page
@@ -79,7 +80,7 @@ def login_or_signup(mode="login"):
                 try:
                     response = login_user(email.value, password.value)
                     if not response:
-                        print("Login failed with given credentials")
+                        log.error("Login failed with given credentials")
                         ui.notify("❌ Login failed with given credentials", type="negative")
                         return
                     else:
@@ -91,7 +92,7 @@ def login_or_signup(mode="login"):
                         ui.navigate.to(app.storage.user.get("post_login_path", "/"))
                         app.storage.user["post_login_path"] = "/"
                 except Exception as e:
-                    print("Exception during login:", e)  # Debug print
+                    log.error("Exception during login:", e)
                     handle_backend_error()
 
             attempt_login()
@@ -105,6 +106,8 @@ def logout():
 
 
 def open_feedback_dialog():
+    log.info("Opening feedback dialog")
+
     def submit_feedback(feedback_text: str):
         create_feedback(feedback_text)
         ui.notify("Thank you for your feedback!", type="positive")

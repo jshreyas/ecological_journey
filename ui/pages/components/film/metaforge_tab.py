@@ -7,6 +7,7 @@ import json
 import uuid
 from typing import Callable
 
+from log import log
 from nicegui import ui
 from utils.dialog_puns import generate_funny_title
 from utils.user_context import User
@@ -464,7 +465,7 @@ class MetaforgeTab:
     def _finalize_save(self):
         """Finalize the save operation"""
         self.confirm_dialog.close()
-        print(f"Finalizing save...: {self.state['latest_cleaned']}")
+        log.info(f"Finalizing save...: {self.state['latest_cleaned']}")
         token = self.user.token if self.user else None
         success = save_video_metadata(self.state["latest_cleaned"], token)
         if success:

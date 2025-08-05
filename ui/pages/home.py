@@ -2,6 +2,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 
 from data.crud import load_playlists
+from log import log
 from nicegui import ui
 from pages.components.home.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
@@ -359,7 +360,7 @@ def open_add_user_modal(team):
             if not email:
                 ui.notify("⚠️ Please select a user.", type="warning")
                 return
-            print(f"Adding user {email} to team {team['_id']}")
+            log.info(f"Adding user {email} to team {team['_id']}")
             ui.notify(f"✅ Added {email} to {team['name']}")
             dialog.close()
 
@@ -388,7 +389,7 @@ def open_add_playlist_modal(team):
                 ui.notify("⚠️ Please select a playlist.", type="warning")
                 return
             selected = next(pl for pl in user_playlists if pl["name"] == selected_name)
-            print(f"Assigning playlist '{selected['_id']}' to team '{team['_id']}'")
+            log.info(f"Assigning playlist '{selected['_id']}' to team '{team['_id']}'")
             ui.notify(f"✅ Added '{selected_name}' to team {team['name']}")
             dialog.close()
 
@@ -470,13 +471,13 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
         ui.notify(f'✅ Synced {len(new_video_data)} new videos to "{playlist_name}".')
 
     except Exception as e:
-        print(f"❌ Sync failed: {str(e)}")
+        log.error(f"❌ Sync failed: {str(e)}")
         ui.notify(f"❌ Sync failed: {str(e)}")
 
 
 def create_team_modal():
-    print("Opening modal to create a new team")
+    log.info("Opening modal to create a new team")
 
 
 def view_playlist_videos(playlist):
-    print(f"Viewing videos for playlist: {playlist['title']}")
+    log.info(f"Viewing videos for playlist: {playlist['title']}")

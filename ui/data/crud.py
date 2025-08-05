@@ -10,6 +10,7 @@ from bson import ObjectId
 from bunnet import Document
 from data.models import Clip, Cliplist, Feedback, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
+from log import log
 from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
 from utils.cache import cache_result, invalidate_cache
@@ -38,7 +39,7 @@ def get_user_from_token(token: str):
             raise ValueError("User not found")
         return user
     except Exception as e:
-        print(f"Token error: {e}")
+        log.info(f"Token error: {e}")
         return None
 
 
@@ -84,7 +85,7 @@ def to_dicts(obj: Any) -> Any:
 
 @cache_result("teams", ttl_seconds=CACHE_TTL)
 def load_teams():
-    print("Loading teams from database...")
+    log.info("Loading teams from database...")
     teams = Team.find_all().run()
     return to_dicts(teams)
 
@@ -103,13 +104,13 @@ def create_team(name: str, user=None, **kwargs):
 
 @cache_result("notion_tree", ttl_seconds=CACHE_TTL)
 def load_notion():
-    print("Loading Notion data from database...")
+    log.info("Loading Notion data from database...")
     notion_data = Notion.find_all().run()
     return to_dicts(notion_data)
 
 
 def load_notion_latest():
-    print("Selecting latest Notion entry from loaded data...")
+    log.info("Selecting latest Notion entry from loaded data...")
     all_notion = load_notion()
     if not all_notion:
         return None
@@ -119,11 +120,11 @@ def load_notion_latest():
 
 @invalidate_cache(keys=["notion_tree"])
 def generate_and_store_notion_tree():
-    print("Generating Notion tree...")
+    log.info("Generating Notion tree...")
     tree = generate_tree()  # long-running blocking call
     notion = Notion(tree=tree)
     notion.insert()
-    print("Saved Notion tree to DB and cleared cache.")
+    log.info("Saved Notion tree to DB and cleared cache.")
 
 
 def trigger_notion_refresh():
@@ -136,7 +137,7 @@ def trigger_notion_refresh():
 
 @cache_result("playlists", ttl_seconds=CACHE_TTL)
 def load_playlists():
-    print("Loading playlists from database...")
+    log.info("Loading playlists from database...")
     playlists = Playlist.find_all().run()
     return to_dicts(playlists)
 
@@ -229,7 +230,7 @@ def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
 
 @cache_result("cliplists", ttl_seconds=CACHE_TTL)
 def load_cliplists():
-    print("Loading cliplists from database...")
+    log.info("Loading cliplists from database...")
     cliplists = Cliplist.find_all().run()
     return to_dicts(cliplists)
 
@@ -281,7 +282,7 @@ def create_access_token(data: dict):
 def login_user(email: str, password: str):
     user = load_user(email)
     if not user or not verify_password(password, user["hashed_password"]):
-        print("Incorrect email or password")
+        log.info("Incorrect email or password")
         return False
 
     token = create_access_token({"sub": str(user["_id"])})
@@ -294,7 +295,7 @@ def login_user(email: str, password: str):
 
 
 def load_feedback():
-    print("Loading feedback from database...")
+    log.info("Loading feedback from database...")
     feedbacks = Feedback.find_all().run()
     return to_dicts(feedbacks)
 
