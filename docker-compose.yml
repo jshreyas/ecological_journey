@@ -70,6 +70,8 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - ecological-network
+    profiles:
+      - observability
 
   promtail:
     image: grafana/promtail:latest
@@ -78,6 +80,8 @@ services:
     command: -config.file=/etc/promtail/config.yml
     networks:
       - ecological-network
+    profiles:
+      - observability
 
   grafana:
     environment:
@@ -109,6 +113,8 @@ services:
       - "3000:3000"
     networks:
       - ecological-network
+    profiles:
+      - observability
 
 volumes:
   mongo_data:
