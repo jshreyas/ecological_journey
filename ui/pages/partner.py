@@ -3,11 +3,10 @@ from collections import Counter, defaultdict
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse
-from nicegui import app, ui
+from nicegui import ui
 from utils.utils_api import load_clips, load_playlists, load_videos
 
 
-@app.get("/api/partner_details")
 async def partner_details(request: Request):
     params = dict(request.query_params)
     t = params.get("type")

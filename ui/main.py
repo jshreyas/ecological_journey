@@ -18,6 +18,7 @@ from pages.home import home_page
 from pages.notion import notion_page
 from pages.partner import partner_page
 from pages.playlist import playlist_page
+from structlog.contextvars import bind_contextvars
 from utils.dialog_puns import caught_john_doe, handle_backend_error
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -87,6 +88,7 @@ def login_or_signup(mode="login"):
                         app.storage.user["token"] = response["access_token"]
                         app.storage.user["user"] = response["username"]
                         app.storage.user["id"] = response["id"]
+                        bind_contextvars(user=response["username"])
                         ui.notify("✅ Login successful", type="positive")
                         clear_cache()
                         ui.navigate.to(app.storage.user.get("post_login_path", "/"))
@@ -200,6 +202,7 @@ def setup_navbar(title: str = "Ecological Journey"):
 
 
 def ecological_layout():
+    bind_contextvars(user="John Doe")  # Default user context
     setup_navbar()
     ui.run_javascript(
         """
@@ -275,6 +278,7 @@ def oauth_page(
         app.storage.user["user"] = username
         app.storage.user["id"] = id
         ui.notify("✅ Google login successful", type="positive")
+        bind_contextvars(user=username)
         clear_cache()
         ui.navigate.to(post_login_path or "/")
         app.storage.user["post_login_path"] = "/"

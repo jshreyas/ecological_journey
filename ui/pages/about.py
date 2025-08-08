@@ -1,8 +1,10 @@
 from data.crud import clear_cache
 from nicegui import ui
+from utils.user_context import User, with_user_context
 
 
-def about_page():
+@with_user_context
+def about_page(user: User | None):
     # TODO: make it available to other pages, can this be added as decorator?
     if ui.context.client.request.query_params.get("clear_cache", "") == "true":
         clear_cache()

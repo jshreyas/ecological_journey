@@ -2,10 +2,12 @@ from datetime import datetime
 
 from data.crud import load_cliplists
 from nicegui import ui
+from utils.user_context import User, with_user_context
 from utils.utils_api import get_filtered_clips
 
 
-def cliplists_page():
+@with_user_context
+def cliplists_page(user: User | None):
     ui.label("🎬 Clips, Lists, and Cliplists!").classes("text-2xl font-bold mb-4 text-center")
 
     def render_filters():
