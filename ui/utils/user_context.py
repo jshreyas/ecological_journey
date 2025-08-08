@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Callable
 
 from nicegui import app
+from structlog.contextvars import bind_contextvars
 
 
 @dataclass
@@ -23,6 +24,7 @@ def with_user_context(page_func: Callable):
                 token=user_data.get("token"),
                 id=user_data.get("id"),
             )
+            bind_contextvars(user=user_data.get("user"))
         return page_func(user, *args, **kwargs)
 
     return wrapper

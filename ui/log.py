@@ -9,6 +9,7 @@ from opentelemetry import trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
+from structlog.contextvars import merge_contextvars
 
 load_dotenv()
 resource = Resource(attributes={"service.name": "nicegui-app"})
@@ -21,12 +22,16 @@ LOKI_PASS = os.getenv("LOKI_PASS")
 
 def custom_renderer(_, __, event_dict):
     level = event_dict.pop("level", "INFO").upper()
+    user = event_dict.pop("user", "anonymous")
     msg = event_dict.pop("event", "")
-    return f"{level} | {msg}"
+    return f"{level} | 👤 {user} | {msg}"
 
 
 structlog.configure(
-    processors=[custom_renderer],
+    processors=[
+        merge_contextvars,
+        custom_renderer,
+    ],
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
     cache_logger_on_first_use=True,
