@@ -46,6 +46,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - API_KEY=${API_KEY}
       - BASE_URL_SHARE=${BASE_URL_SHARE}
+      - OBSERVABLE_URL=${OBSERVABLE_URL}
       # - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL} # only if testing Upstash Redis locally`
       # - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN} # only if testing Upstash Redis locally`
       - REDIS_HOST=redis

@@ -20,17 +20,28 @@ const teamData = await getTeams(API_BASE_URL);
 const playlistData = await getPlaylists(API_BASE_URL);
 
 // Flatten all videos from all playlists
-const videos = playlistData.flatMap(p => p.videos || []);
+const videos = playlistData.flatMap(p =>
+  (p.videos || []).map(v => ({
+    ...v,
+    playlist_name: p.name
+  }))
+);
 
-// Aggregate counts per day
+
+// Aggregate counts per day per playlist
 const counts = d3.rollups(
   videos,
   v => v.length,
-  d => d.date.slice(0, 10) // 'YYYY-MM-DD'
-).map(([date, count]) => ({
-  date: new Date(date),
-  count
-}));
+  d => d.date.slice(0, 10),
+  d => d.playlist_name
+).flatMap(([date, playlistCounts]) =>
+  playlistCounts.map(([playlist_name, count]) => ({
+    date: new Date(date),
+    playlist_name,
+    count
+  }))
+);
+
 
 function videoActivityTimeline(data, { width }) {
   return Plot.plot({
@@ -38,9 +49,10 @@ function videoActivityTimeline(data, { width }) {
     height: 300,
     x: { label: "Date" },
     y: { label: "Videos", grid: true },
+    color: { legend: true },
     marks: [
-      Plot.line(data, { x: "date", y: "count" }),
-      Plot.dot(data, { x: "date", y: "count" })
+      // Plot.line(data, { x: "date", y: "count" }),
+      Plot.rectY(data, { x: "date", interval: "month", y: "count", fill: "playlist_name", tip: true, })
     ]
   });
 }
