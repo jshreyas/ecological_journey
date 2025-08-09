@@ -2,9 +2,18 @@ import os
 import sys
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from data.crud import clear_cache, create_access_token, create_feedback, get_or_create_user, login_user
+from data.crud import (
+    clear_cache,
+    create_access_token,
+    create_feedback,
+    get_or_create_user,
+    load_playlists,
+    load_teams,
+    login_user,
+)
 from dotenv import load_dotenv
-from fastapi import Request
+from fastapi import APIRouter, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from log import log
@@ -350,6 +359,31 @@ def _(video_id: str):
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
 def root():
     return "Ecological Journey UI is alive"
+
+
+api_router = APIRouter()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@api_router.get("/teams")
+def get_teams():
+    return load_teams()
+
+
+@api_router.get("/playlists")
+def get_playlists():
+    return load_playlists()
+
+
+app.mount("/api", api_router)
 
 
 # Mount static files
