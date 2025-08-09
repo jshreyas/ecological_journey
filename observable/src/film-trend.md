@@ -7,7 +7,7 @@ toc: false
 # Film Trends Over Time
 
 ```js
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://ecological-journey.onrender.com";
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 
