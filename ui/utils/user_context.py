@@ -25,6 +25,8 @@ def with_user_context(page_func: Callable):
                 id=user_data.get("id"),
             )
             bind_contextvars(user=user_data.get("user"))
+        else:
+            bind_contextvars(user="John Doe")
         return page_func(user, *args, **kwargs)
 
     return wrapper
