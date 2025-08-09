@@ -177,7 +177,7 @@ def setup_navbar(title: str = "Ecological Journey"):
                 nav_button("Films", "/films")
                 nav_button("Clips", "/clips")
                 nav_button("Cliplists", "/cliplists")
-                nav_button("Partners", "/partners")
+                # nav_button("Partners", "/partners")
                 nav_button("About", "/about")
                 nav_button("Notion", "/notion")
 
@@ -354,6 +354,20 @@ def _(video_id: str):
     ecological_layout()
     film_page(video_id)
     setup_footer()
+
+
+OBSERVABLE_URL = os.getenv("OBSERVABLE_URL")
+
+
+@ui.page("/stories")
+def stories():
+    ecological_layout()
+    ui.html(
+        f"""
+        <iframe src="{OBSERVABLE_URL}"
+                style="width:100%; height:110vh; border:none;"></iframe>
+    """
+    ).classes("w-full h-full")
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
