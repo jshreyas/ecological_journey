@@ -35,3 +35,9 @@ TODOO.txt
 ZoomLevel.txt
 pytest.ini
 scripts/migrate_add_clip_id.py
+
+# Media
+*.zip
+*.md
+*.py
+*.yml
