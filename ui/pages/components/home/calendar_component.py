@@ -15,6 +15,9 @@ def calendar_container(grouped_videos_by_day):
         "Grappling Journal": "bg-green-400",
         "Left like Right": "bg-blue-400",
         "Samurai sparring": "bg-purple-400",
+        "Be Water Journal": "bg-yellow-400",
+        "Yin Yang Shenanigans": "bg-pink-400",
+        "Eastside sparring": "bg-teal-400",
     }
 
     def render_calendar():
