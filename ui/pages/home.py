@@ -220,7 +220,7 @@ def render_dashboard(parent):
 
 @with_user_context
 def home_page(user: User | None):
-    with ui.splitter(value=25).classes("w-full h-auto gap-4") as splitter:
+    with ui.splitter(value=25).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
                 tab_playlists = ui.tab("🎵 Playlists")
