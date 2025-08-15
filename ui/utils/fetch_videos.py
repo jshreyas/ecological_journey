@@ -113,8 +113,8 @@ def fetch_playlist_items(playlist_id, latest_saved_date=None, count=None):
             published_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
 
             if latest_saved_date and published_dt < latest_saved_date:
-                # Stop fetching as we've reached already-synced videos
-                return videos
+                # Ignore videos older than the latest saved date
+                continue
 
             if count and len(videos) >= count:
                 return videos
