@@ -45,6 +45,7 @@ class Playlist(Document):
     owner_id: Optional[ObjectId] = None
     team_id: Optional[ObjectId] = None
     playlist_id: Optional[str] = None
+    color: Optional[str] = "bg-gray-300"
 
     class Settings:
         name = "playlists"
