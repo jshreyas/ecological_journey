@@ -9,17 +9,6 @@ def calendar_container(grouped_videos_by_day):
     state = {"current_month": date.today().replace(day=1)}
     month_label = None  # Reference for the month label
 
-    # Dynamically create a mapping of playlist names to colors
-    playlist_colors = {
-        "Home Training Journal": "bg-red-400",
-        "Grappling Journal": "bg-green-400",
-        "Left like Right": "bg-blue-400",
-        "Samurai sparring": "bg-purple-400",
-        "Be Water Journal": "bg-yellow-400",
-        "Yin Yang Shenanigans": "bg-pink-400",
-        "Eastside sparring": "bg-teal-400",
-    }
-
     def render_calendar():
         calendar_grid.clear()  # Clear stale data
         current = state["current_month"]
@@ -53,9 +42,9 @@ def calendar_container(grouped_videos_by_day):
                         ui.label(str(day)).classes("text-sm font-bold text-gray-800")
                         if videos:
                             # Playlist color indicators
-                            playlist_set = set(v["playlist_name"] for v in videos)
+                            playlist_set = set((v["playlist_name"], v["playlist_color"]) for v in videos)
                             with ui.row().classes("gap-1 items-center"):
-                                for playlist in playlist_set:
+                                for playlist, color_class in playlist_set:
                                     # Get all videos from this playlist on this day
                                     playlist_videos = [v for v in videos if v["playlist_name"] == playlist]
 
@@ -65,7 +54,6 @@ def calendar_container(grouped_videos_by_day):
                                         for v in playlist_videos
                                     )
 
-                                    color_class = playlist_colors.get(playlist, "bg-gray-300")
                                     border_class = "border border-gray-800" if any_unreviewed else ""
 
                                     ui.element("div").classes(

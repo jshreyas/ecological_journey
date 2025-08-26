@@ -80,6 +80,7 @@ def load_videos(
             for video in playlist.get("videos", []):
                 video["playlist_id"] = playlist.get("_id")
                 video["playlist_name"] = playlist.get("name")
+                video["playlist_color"] = playlist.get("color")
                 # Add human-readable duration to each video
                 video["duration_human"] = format_duration(video.get("duration_seconds", 0))
                 videos.append(video)
