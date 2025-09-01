@@ -112,6 +112,10 @@ def fetch_playlist_items(playlist_id, latest_saved_date=None, count=None):
             published_at = snippet["publishedAt"]
             published_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
 
+            if snippet["title"].strip() == "Deleted video" and not snippet.get("thumbnails"):
+                # Skip unavailable/deleted videos
+                continue
+
             if latest_saved_date and published_dt < latest_saved_date:
                 # Ignore videos older than the latest saved date
                 continue
