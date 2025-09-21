@@ -16,7 +16,7 @@ class VideoPlayer:
         height: int = 400,
         on_end=None,
         parent=None,
-        tick_ms: int = 100,  # how often the fake-speed loop ticks (ms); lower = smoother but more CPU
+        tick_ms: int = 80,
     ):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
@@ -225,7 +225,7 @@ class VideoPlayer:
                     speed_knob = (
                         ui.slider(
                             min=0.5,
-                            max=8.0,
+                            max=6.0,
                             step=0.5,
                             value=self.speed,
                         )
