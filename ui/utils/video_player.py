@@ -15,7 +15,7 @@ class VideoPlayer:
         width: int = 700,
         height: int = 400,
         on_end=None,
-        parent=None,  # 👈 NEW
+        parent=None,
     ):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
@@ -43,7 +43,6 @@ class VideoPlayer:
 
         self.element_id = f"yt-player-{uuid.uuid4().hex[:8]}"
 
-        # 👇 Everything below happens in the right container
         context = self.parent if self.parent else ui
         with context:
 
@@ -70,13 +69,7 @@ class VideoPlayer:
                         self.on_end()
                     return {"status": "ok"}
 
-            js_on_end = (
-                f"""
-                fetch('/_nicegui_api/{self.element_id}_on_end', {{method: 'POST'}});
-            """
-                if self.on_end
-                else ""
-            )
+            js_on_end = f"fetch('/_nicegui_api/{self.element_id}_on_end', {{method: 'POST'}});" if self.on_end else ""
 
             ui.run_javascript(
                 f"""
@@ -89,6 +82,7 @@ class VideoPlayer:
 
                 let ytPlayer;
                 let ytEndInterval;
+                let fakeSpeedInterval;
 
                 window.onYouTubeIframeAPIReady = function() {{
                     ytPlayer = new YT.Player('{self.element_id}', {{
@@ -107,7 +101,7 @@ class VideoPlayer:
                 }};
 
                 function onPlayerReady(event) {{
-                    event.target.setPlaybackRate(window.ytConfig.speed);
+                    setYTSpeed(window.ytConfig.speed);
                     event.target.playVideo();
                     if (ytEndInterval) clearInterval(ytEndInterval);
                     ytEndInterval = setInterval(() => {{
@@ -140,8 +134,24 @@ class VideoPlayer:
 
                 window.setYTSpeed = function(speed) {{
                     window.ytConfig.speed = speed;
+
+                    // clear any old intervals
+                    if (fakeSpeedInterval) clearInterval(fakeSpeedInterval);
+
                     if (ytPlayer && ytPlayer.setPlaybackRate) {{
-                        ytPlayer.setPlaybackRate(speed);
+                        if (speed <= 2.0) {{
+                            ytPlayer.setPlaybackRate(speed);
+                        }} else {{
+                            ytPlayer.setPlaybackRate(2.0); // max native
+                            // simulate faster playback with seek hack
+                            const tick = 100; // ms
+                            fakeSpeedInterval = setInterval(() => {{
+                                if (ytPlayer && ytPlayer.getCurrentTime) {{
+                                    let cur = ytPlayer.getCurrentTime();
+                                    ytPlayer.seekTo(cur + (speed * tick / 1000), true);
+                                }}
+                            }}, tick);
+                        }}
                     }}
                 }};
 
@@ -161,7 +171,7 @@ class VideoPlayer:
                     speed_knob = (
                         ui.knob(
                             min=0.25,
-                            max=2.0,
+                            max=8.0,  # 👈 allow up to 8x
                             step=0.25,
                             value=self.speed,
                             track_color="grey-2",

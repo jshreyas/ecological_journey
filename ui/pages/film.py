@@ -109,35 +109,42 @@ def film_page(user: User | None, video_id: str):
                         ]
 
                         toolbar = [
-                            ["bold", "italic", "strike", "underline"],
-                            ["unordered", "ordered"],  # bullet and numbered lists
-                            ["quote"],  # blockquote and code
-                            ["undo", "redo"],
-                            ["removeFormat", "fullscreen"],
-                            ["viewsource"],
+                            [
+                                "bold",
+                                "italic",
+                                "strike",
+                                "underline",
+                                "unordered",
+                                "ordered",
+                                "quote",
+                                "undo",
+                                "redo",
+                                "removeFormat",
+                                "fullscreen",
+                                "viewsource",
+                            ],
                         ]
 
                         # --- UI ---
-                        with ui.column().classes("w-full h-full"):
-                            with ui.card().classes("w-full h-[400px] flex flex-col"):
-                                with ui.scroll_area().classes("w-full flex-1 overflow-y-auto"):
-                                    for msg in conversation:
-                                        ui.chat_message(
-                                            text=msg["text"],
-                                            name=msg["author_name"],
-                                            stamp=msg["stamp"],
-                                            sent=(msg["author_id"] == current_user["id"]),
-                                            text_html=True,
-                                        ).classes("w-full")
-                                    with ui.expansion("✍️").classes("w-full justify-end"):
-                                        with ui.row().classes("w-full border-t"):
-                                            text_input = ui.editor(placeholder="Type your learnings...").classes(
-                                                "flex-grow"
-                                            )
-                                            text_input.props["toolbar"] = toolbar
-                                            ui.button(icon="send", on_click=in_progress).classes(
-                                                "absolute bottom-0 right-0"
-                                            )
+                        with ui.card().classes("w-full h-[600px] flex flex-col"):
+                            with ui.scroll_area().classes("w-full flex-1 overflow-y-auto"):
+                                for msg in conversation:
+                                    ui.chat_message(
+                                        text=msg["text"],
+                                        name=msg["author_name"],
+                                        stamp=msg["stamp"],
+                                        sent=(msg["author_id"] == current_user["id"]),
+                                        text_html=True,
+                                    ).classes("w-full")
+                                with ui.expansion("✍️").classes("w-full"):
+                                    with ui.row().classes("w-full border-t"):
+                                        text_input = ui.editor(placeholder="Type your learnings...").classes(
+                                            "flex-grow"
+                                        )
+                                        text_input.props["toolbar"] = toolbar
+                                        ui.button(icon="send", on_click=in_progress).classes(
+                                            "absolute bottom-0 right-0"
+                                        )
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
 
