@@ -129,15 +129,15 @@ def film_page(user: User | None, video_id: str):
                                             sent=(msg["author_id"] == current_user["id"]),
                                             text_html=True,
                                         ).classes("w-full")
-                                with ui.expansion(icon="create").classes("w-full justify-end"):
-                                    with ui.row().classes("w-full border-t"):
-                                        text_input = ui.editor(placeholder="Type your learnings...").classes(
-                                            "flex-grow"
-                                        )
-                                        text_input.props["toolbar"] = toolbar
-                                        ui.button(icon="send", on_click=in_progress).classes(
-                                            "absolute bottom-0 right-0"
-                                        )
+                                    with ui.expansion("✍️").classes("w-full justify-end"):
+                                        with ui.row().classes("w-full border-t"):
+                                            text_input = ui.editor(placeholder="Type your learnings...").classes(
+                                                "flex-grow"
+                                            )
+                                            text_input.props["toolbar"] = toolbar
+                                            ui.button(icon="send", on_click=in_progress).classes(
+                                                "absolute bottom-0 right-0"
+                                            )
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
 
