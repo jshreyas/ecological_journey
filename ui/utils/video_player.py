@@ -87,6 +87,7 @@ class VideoPlayer:
                 let ytEndInterval = null;
                 let fakeSpeedInterval = null;
                 let isFakeSpeed = false;
+                let endTimeReached = false; // NEW: track if end already handled
 
                 window.onYouTubeIframeAPIReady = function() {{
                     ytPlayer = new YT.Player('{self.element_id}', {{
@@ -111,6 +112,7 @@ class VideoPlayer:
                         isFakeSpeed = false;
                         if (ytPlayer && ytPlayer.pauseVideo) {{ ytPlayer.pauseVideo(); }}
                         if (ytPlayer && ytPlayer.seekTo) {{ ytPlayer.seekTo(window.ytConfig.end, true); }}
+                        endTimeReached = true; // mark end as reached
                         {js_on_end}
                     }} catch (e) {{
                         console.warn('handleEnd error', e);
@@ -120,13 +122,12 @@ class VideoPlayer:
                 function startEndMonitor() {{
                     try {{
                         if (ytEndInterval) {{ clearInterval(ytEndInterval); }}
-                        // check end reasonably frequently (bounded by tick); don't go too small to avoid perf hits
                         const endCheckTick = Math.max(100, Math.floor(window.ytConfig.tick));
                         ytEndInterval = setInterval(() => {{
                             try {{
                                 if (!(ytPlayer && ytPlayer.getCurrentTime)) return;
                                 const current = ytPlayer.getCurrentTime();
-                                if (current >= window.ytConfig.end) {{
+                                if (!endTimeReached && current >= window.ytConfig.end) {{
                                     handleEnd();
                                 }}
                             }} catch (e) {{
@@ -139,22 +140,19 @@ class VideoPlayer:
                 }}
 
                 function onPlayerReady(event) {{
-                    // ensure monitoring is active
                     startEndMonitor();
-                    // ensure initial speed applied
                     window.setYTSpeed(window.ytConfig.speed);
-                    // start playing
                     try {{ event.target.playVideo(); }} catch(e) {{ /* ignore */ }}
                 }}
 
                 function onPlayerStateChange(event) {{
-                    // fakeSpeedInterval checks player state before seeking,
-                    // but keep end monitor running so end always honoured.
+                    // no-op; fakeSpeed handles checking
                 }}
 
                 window.setYTClip = function(start, end) {{
                     window.ytConfig.start = start;
                     window.ytConfig.end = end;
+                    endTimeReached = false; // reset when clip changes
                     if (ytPlayer && ytPlayer.seekTo) {{
                         try {{ ytPlayer.seekTo(start, true); }} catch(e) {{ /* ignore */ }}
                     }}
@@ -164,33 +162,28 @@ class VideoPlayer:
                 window.setYTSpeed = function(speed) {{
                     window.ytConfig.speed = speed;
 
-                    // clear any old fake interval
                     if (fakeSpeedInterval) {{ clearInterval(fakeSpeedInterval); fakeSpeedInterval = null; }}
                     isFakeSpeed = false;
 
-                    // apply native playback rate where possible (caps at 2x)
                     if (ytPlayer && ytPlayer.setPlaybackRate) {{
                         try {{
                             if (speed <= 2.0) {{
                                 ytPlayer.setPlaybackRate(speed);
                             }} else {{
-                                // keep native at 2x to reduce audio/visual mismatch
                                 ytPlayer.setPlaybackRate(2.0);
                             }}
                         }} catch (e) {{
-                            // ignore if player not ready
+                            // ignore
                         }}
                     }}
 
                     if (speed > 2.0) {{
-                        // start fake speed simulation (only advances while actual player state is PLAYING)
                         isFakeSpeed = true;
-                        const tick = Math.max(50, Math.floor(window.ytConfig.tick)); // don't go below 50ms
+                        const tick = Math.max(50, Math.floor(window.ytConfig.tick));
                         fakeSpeedInterval = setInterval(() => {{
                             try {{
                                 if (!(ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getPlayerState)) return;
                                 const state = ytPlayer.getPlayerState();
-                                // YT.PlayerState.PLAYING === 1; be robust if YT.PlayerState is unavailable
                                 if (typeof YT !== 'undefined' && YT && typeof YT.PlayerState !== 'undefined') {{
                                     if (state !== YT.PlayerState.PLAYING) return;
                                 }} else {{
@@ -198,16 +191,14 @@ class VideoPlayer:
                                 }}
 
                                 const cur = ytPlayer.getCurrentTime();
-                                const increment = speed * (tick / 1000); // seconds to jump per tick
+                                const increment = speed * (tick / 1000);
                                 const next = cur + increment;
 
-                                // if next is beyond clip end, fire handleEnd immediately
-                                if (next >= window.ytConfig.end) {{
+                                if (!endTimeReached && next >= window.ytConfig.end) {{
                                     handleEnd();
                                     return;
                                 }}
 
-                                // perform seek forward
                                 ytPlayer.seekTo(next, true);
                             }} catch (e) {{
                                 console.warn('fakeSpeedInterval error', e);
@@ -215,7 +206,6 @@ class VideoPlayer:
                         }}, tick);
                     }}
 
-                    // ensure end monitor running
                     startEndMonitor();
                 }};
 
