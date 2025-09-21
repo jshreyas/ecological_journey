@@ -11,6 +11,7 @@ from pages.components.film.navigation_tab import NavigationTab
 from pages.components.film.player_controls_tab import PlayerControlsTab
 from pages.components.film.share_dialog_tab import ShareDialogTab
 from pages.components.film.video_state import VideoState
+from utils.dialog_puns import in_progress
 from utils.user_context import User, with_user_context
 from utils.utils_api import load_video
 
@@ -66,14 +67,77 @@ def film_page(user: User | None, video_id: str):
 
         with ui.splitter(horizontal=False, value=70).classes("w-full h-[70vh] rounded shadow") as splitter:
             with splitter.before:
-                with ui.column().classes("w-full h-full p-4 gap-4") as player_container_ref:
+                with ui.column().classes("w-full h-full") as player_container_ref:
                     player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
-
             with splitter.after:
-                video = load_video(video_id)
-                with ui.column().classes("w-full h-full p-4 gap-4") as metaforge_container:
-                    metaforge_tab.create_tab(metaforge_container)
+                with ui.tabs().classes("w-full") as tabs:
+                    one = ui.tab("Metadata").classes("w-full")
+                    two = ui.tab("Learnings").classes("w-full")
+                with ui.tab_panels(tabs, value=one).classes("w-full"):
+                    with ui.tab_panel(one):
+                        with ui.column().classes("w-full h-full") as metaforge_container:
+                            metaforge_tab.create_tab(metaforge_container)
+                    with ui.tab_panel(two):
+                        # --- Fake stub conversation ---
+                        current_user = {"id": "u1", "name": "You"}
 
+                        conversation = [
+                            {
+                                "author_id": "u1",
+                                "author_name": "You",
+                                "text": "Hey team, let's review today's clips.",
+                                "stamp": "10:00",
+                            },
+                            {
+                                "author_id": "u2",
+                                "author_name": "Alice",
+                                "text": "Sounds good, I’ll upload mine soon.",
+                                "stamp": "10:02",
+                            },
+                            {
+                                "author_id": "u3",
+                                "author_name": "Bob",
+                                "text": "I clipped yesterday’s sparring, check it out!",
+                                "stamp": "10:05",
+                            },
+                            {
+                                "author_id": "u1",
+                                "author_name": "You",
+                                "text": "Nice — I’ll add some comments there.",
+                                "stamp": "10:06",
+                            },
+                        ]
+
+                        toolbar = [
+                            ["bold", "italic", "strike", "underline"],
+                            ["unordered", "ordered"],  # bullet and numbered lists
+                            ["quote"],  # blockquote and code
+                            ["undo", "redo"],
+                            ["removeFormat", "fullscreen"],
+                            ["viewsource"],
+                        ]
+
+                        # --- UI ---
+                        with ui.column().classes("w-full h-full"):
+                            with ui.card().classes("w-full h-[400px] flex flex-col"):
+                                with ui.scroll_area().classes("w-full flex-1 overflow-y-auto"):
+                                    for msg in conversation:
+                                        ui.chat_message(
+                                            text=msg["text"],
+                                            name=msg["author_name"],
+                                            stamp=msg["stamp"],
+                                            sent=(msg["author_id"] == current_user["id"]),
+                                            text_html=True,
+                                        ).classes("w-full")
+                                with ui.expansion(icon="create").classes("w-full justify-end"):
+                                    with ui.row().classes("w-full border-t"):
+                                        text_input = ui.editor(placeholder="Type your learnings...").classes(
+                                            "flex-grow"
+                                        )
+                                        text_input.props["toolbar"] = toolbar
+                                        ui.button(icon="send", on_click=in_progress).classes(
+                                            "absolute bottom-0 right-0"
+                                        )
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
 
