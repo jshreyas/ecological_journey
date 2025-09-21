@@ -87,7 +87,9 @@ class VideoPlayer:
                 let ytEndInterval = null;
                 let fakeSpeedInterval = null;
                 let isFakeSpeed = false;
-                let endTimeReached = false; // NEW: track if end already handled
+                let endTimeReached = false; // track if end already handled
+                let lastRealTime = null;    // NEW: wall-time tracking
+                let baseVideoTime = null;   // NEW: anchor for expected video time
 
                 window.onYouTubeIframeAPIReady = function() {{
                     ytPlayer = new YT.Player('{self.element_id}', {{
@@ -112,7 +114,7 @@ class VideoPlayer:
                         isFakeSpeed = false;
                         if (ytPlayer && ytPlayer.pauseVideo) {{ ytPlayer.pauseVideo(); }}
                         if (ytPlayer && ytPlayer.seekTo) {{ ytPlayer.seekTo(window.ytConfig.end, true); }}
-                        endTimeReached = true; // mark end as reached
+                        endTimeReached = true;
                         {js_on_end}
                     }} catch (e) {{
                         console.warn('handleEnd error', e);
@@ -152,7 +154,7 @@ class VideoPlayer:
                 window.setYTClip = function(start, end) {{
                     window.ytConfig.start = start;
                     window.ytConfig.end = end;
-                    endTimeReached = false; // reset when clip changes
+                    endTimeReached = false;
                     if (ytPlayer && ytPlayer.seekTo) {{
                         try {{ ytPlayer.seekTo(start, true); }} catch(e) {{ /* ignore */ }}
                     }}
@@ -164,6 +166,8 @@ class VideoPlayer:
 
                     if (fakeSpeedInterval) {{ clearInterval(fakeSpeedInterval); fakeSpeedInterval = null; }}
                     isFakeSpeed = false;
+                    lastRealTime = null;
+                    baseVideoTime = null;
 
                     if (ytPlayer && ytPlayer.setPlaybackRate) {{
                         try {{
@@ -180,6 +184,7 @@ class VideoPlayer:
                     if (speed > 2.0) {{
                         isFakeSpeed = true;
                         const tick = Math.max(50, Math.floor(window.ytConfig.tick));
+
                         fakeSpeedInterval = setInterval(() => {{
                             try {{
                                 if (!(ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getPlayerState)) return;
@@ -190,16 +195,23 @@ class VideoPlayer:
                                     if (state !== 1) return;
                                 }}
 
-                                const cur = ytPlayer.getCurrentTime();
-                                const increment = speed * (tick / 1000);
-                                const next = cur + increment;
+                                const now = Date.now();
 
-                                if (!endTimeReached && next >= window.ytConfig.end) {{
+                                if (lastRealTime === null) {{
+                                    lastRealTime = now;
+                                    baseVideoTime = ytPlayer.getCurrentTime();
+                                    return;
+                                }}
+
+                                const elapsed = (now - lastRealTime) / 1000.0;
+                                const expectedTime = baseVideoTime + elapsed * speed;
+
+                                if (!endTimeReached && expectedTime >= window.ytConfig.end) {{
                                     handleEnd();
                                     return;
                                 }}
 
-                                ytPlayer.seekTo(next, true);
+                                ytPlayer.seekTo(expectedTime, true);
                             }} catch (e) {{
                                 console.warn('fakeSpeedInterval error', e);
                             }}
