@@ -14,6 +14,7 @@ class VideoState:
         self.video_id = video_id
         self._video_data: Optional[Dict[str, Any]] = None
         self._refresh_callbacks: List[Callable] = []
+        self.conversation: List[Dict[str, Any]] = []
 
     def get_video(self) -> Optional[Dict[str, Any]]:
         """Get video data, loading from API if not cached"""
