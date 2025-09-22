@@ -6,12 +6,12 @@ from dotenv import load_dotenv
 from nicegui import ui
 from pages.components.film.clipboard_tab import ClipboardTab
 from pages.components.film.filmboard_tab import FilmboardTab
+from pages.components.film.learnings_tab import LearningsTab
 from pages.components.film.metaforge_tab import MetaforgeTab
 from pages.components.film.navigation_tab import NavigationTab
 from pages.components.film.player_controls_tab import PlayerControlsTab
 from pages.components.film.share_dialog_tab import ShareDialogTab
 from pages.components.film.video_state import VideoState
-from utils.dialog_puns import in_progress
 from utils.user_context import User, with_user_context
 from utils.utils_api import load_video
 
@@ -78,10 +78,8 @@ def film_page(user: User | None, video_id: str):
                         with ui.column().classes("w-full h-full") as metaforge_container:
                             metaforge_tab.create_tab(metaforge_container)
                     with ui.tab_panel(two):
-                        # --- Fake stub conversation ---
-                        current_user = {"id": "u1", "name": "You"}
-
-                        conversation = [
+                        # --- Shared conversation state for this video ---
+                        video_state.conversation = [
                             {
                                 "author_id": "u1",
                                 "author_name": "You",
@@ -108,36 +106,11 @@ def film_page(user: User | None, video_id: str):
                             },
                         ]
 
-                        toolbar = [
-                            ["bold", "italic", "strike", "underline"],
-                            ["unordered", "ordered"],  # bullet and numbered lists
-                            ["quote"],  # blockquote and code
-                            ["undo", "redo"],
-                            ["removeFormat", "fullscreen"],
-                            ["viewsource"],
-                        ]
+                        current_user = {"id": "u1", "name": "You"}
+                        learnings_tab = LearningsTab(video_state, current_user)
+                        chat_container = ui.column().classes("w-full")
+                        learnings_tab.create_tab(chat_container)
 
-                        # --- UI ---
-                        with ui.column().classes("w-full h-full"):
-                            with ui.card().classes("w-full h-[400px] flex flex-col"):
-                                with ui.scroll_area().classes("w-full flex-1 overflow-y-auto"):
-                                    for msg in conversation:
-                                        ui.chat_message(
-                                            text=msg["text"],
-                                            name=msg["author_name"],
-                                            stamp=msg["stamp"],
-                                            sent=(msg["author_id"] == current_user["id"]),
-                                            text_html=True,
-                                        ).classes("w-full")
-                                    with ui.expansion("✍️").classes("w-full justify-end"):
-                                        with ui.row().classes("w-full border-t"):
-                                            text_input = ui.editor(placeholder="Type your learnings...").classes(
-                                                "flex-grow"
-                                            )
-                                            text_input.props["toolbar"] = toolbar
-                                            ui.button(icon="send", on_click=in_progress).classes(
-                                                "absolute bottom-0 right-0"
-                                            )
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
 
@@ -168,47 +141,3 @@ def film_page(user: User | None, video_id: str):
                         "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg"
                     ) as clipboard_container:
                         clipboard_tab.create_tab(clipboard_container, clip_id)
-
-
-def chips_input_combined(initial=None):
-    """Single chips input for both partners (@) and labels (#)."""
-    initial = initial or []
-    chips_list = initial.copy()
-    container = ui.row().classes("gap-2")
-    input_ref = ui.input("Add @partner or #label").classes("w-full").props("dense")
-    error_label = ui.label().classes("text-red-500 text-xs")
-
-    def add_chip():
-        val = input_ref.value.strip()
-        if not val:
-            return
-        if not (val.startswith("@") or val.startswith("#")):
-            error_label.text = "Start with @ for partners or # for labels"
-            return
-        if val in chips_list:
-            error_label.text = "Already added"
-            return
-        error_label.text = ""
-        chips_list.append(val)
-        with container:
-            ui.chip(
-                val,
-                icon="person" if val.startswith("@") else "label",
-                color="secondary" if val.startswith("@") else "primary",
-                removable=True,
-            ).on("remove", lambda e, v=val: chips_list.remove(v))
-        input_ref.value = ""
-
-    input_ref.on("keydown.enter", add_chip)
-    with input_ref.add_slot("append"):
-        ui.button(icon="add", on_click=add_chip).props("round dense flat")
-    # Render initial chips
-    with container:
-        for val in chips_list:
-            ui.chip(
-                val,
-                icon="person" if val.startswith("@") else "label",
-                color="secondary" if val.startswith("@") else "primary",
-                removable=True,
-            ).on("remove", lambda e, v=val: chips_list.remove(v))
-    return input_ref, chips_list, error_label, container
