@@ -8,7 +8,7 @@ from uuid import uuid4
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Clip, Cliplist, Feedback, Notion, Playlist, Team, User, Video
+from data.models import Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
 from log import log
 from nicegui import ui  # TODO: remove or use your own alert/logger
@@ -306,3 +306,28 @@ def create_feedback(feedback: str):
     )
     feedb.insert()
     return to_dicts(feedb)
+
+
+def _load_learnings():
+    log.info("Loading learnings from database...")
+    learnings = Learnings.find_all().run()
+    return to_dicts(learnings)
+
+
+def load_learnings(video_id: str):
+    learnings = []
+    for learning in _load_learnings():
+        if learning.get("video_id") == video_id:
+            learnings.append(learning)
+    return learnings
+
+
+def create_learning(author_id: str, text: str, video_id: str = None, clip_id: str = None):
+    learning = Learnings(
+        author_id=ObjectId(author_id),
+        text=text,
+        video_id=video_id,
+        clip_id=clip_id,
+    )
+    learning.insert()
+    return to_dicts(learning)

@@ -25,6 +25,30 @@ class LearningsTab:
                 "viewsource",
             ],
         ]
+        ui.add_head_html(
+            """
+            <style>
+            .q-message-text-content ul {
+                list-style-type: disc;
+                margin-left: 1.5em;
+            }
+            .q-message-text-content ol {
+                list-style-type: decimal;
+                margin-left: 1.5em;
+            }
+            .q-message-text-content li {
+                margin: 0.25em 0;
+            }
+            .q-message-text-content blockquote {
+                border-left: 3px solid #ccc;
+                margin: 0.5em 1em;
+                padding-left: 1em;
+                color: #555;
+                font-style: italic;
+            }
+            </style>
+            """
+        )
 
     def create_tab(self, container):
         self.container = container
