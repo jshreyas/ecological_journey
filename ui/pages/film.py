@@ -74,7 +74,7 @@ def film_page(user: User | None, video_id: str):
                 with ui.tabs().classes("w-full") as tabs:
                     one = ui.tab("Metadata").classes("w-full")
                     two = ui.tab("Learnings").classes("w-full")
-                with ui.tab_panels(tabs, value=two).classes("w-full h-full"):
+                with ui.tab_panels(tabs, value=one).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         metaforge_tab.create_tab(metaforge_container)
