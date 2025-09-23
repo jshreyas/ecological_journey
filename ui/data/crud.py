@@ -321,7 +321,7 @@ def load_learnings(video_id: str):
     # TODO: refctor this logic as a decorator or utility function of adding user info
     # collect unique author_ids (stored as strings)
     author_ids = {_["author_id"] for _ in filtered if _.get("author_id")}
-    print("Author IDs:", author_ids)
+
     # convert to ObjectIds
     object_ids = []
     for a in author_ids:
@@ -332,16 +332,14 @@ def load_learnings(video_id: str):
 
     # fetch all users at once
     users = User.find({"_id": {"$in": object_ids}}).run()
-    print("Fetched Users:", users)
+
     user_map = {str(u.id): u for u in users}
-    print("User Map:", user_map)
+
     # enrich
     for learning in filtered:
         user = user_map.get(learning["author_id"])
         if user:
             learning["author_name"] = user.username
-            # learning["user_avatar"] = getattr(user, "avatar_url", None)
-    print("Enriched Learnings:", filtered)
     return filtered
 
 
