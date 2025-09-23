@@ -126,17 +126,17 @@ class MetaforgeTab:
             "required": ["description", "labels", "partners", "clips"],
         }
 
-        with ui.column().classes("w-full h-full mt-0"):
-            # Create JSON editor
-            editor = ui.json_editor(
-                {"content": {"json": self._extract_editable_video_data(video)}},
-                schema=json_schema,
-            ).classes("w-full h-full max-h-96 mt-0 mb-0")
+        # Create JSON editor
+        editor = ui.json_editor(
+            {"content": {"json": self._extract_editable_video_data(video)}},
+            schema=json_schema,
+        ).classes("w-full h-full mt-0 mb-0")
 
-            # Store editor reference
-            self.editor_container["ref"] = editor
+        # Store editor reference
+        self.editor_container["ref"] = editor
 
-            # Action buttons
+        # Action buttons
+        if self.user:
             ui.button(icon="save", on_click=self._get_data).classes("absolute bottom-0 right-0")
             ui.button(icon="add", on_click=self._add_clip).classes("absolute bottom-0 left-0")
 
@@ -498,7 +498,7 @@ class MetaforgeTab:
             content = json.loads(current.get("text")) if isinstance(current.get("text"), str) else current.get("json")
             content.setdefault("clips", []).append(new_clip)
             await editor.run_editor_method("set", {"json": content})
-            ui.notify("➕ New clip added. Scroll down to see it.", type="positive")
+            self.container.scroll_to(percent=100)
 
         ui.timer(0.1, inject, once=True)
 
