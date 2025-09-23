@@ -76,10 +76,10 @@ def film_page(user: User | None, video_id: str):
                     two = ui.tab("Learnings").classes("w-full")
                 with ui.tab_panels(tabs, value=one).classes("w-full h-full"):
                     with ui.tab_panel(one):
-                        with ui.column().classes("w-full h-full") as metaforge_container:
-                            metaforge_tab.create_tab(metaforge_container)
+                        metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
+                        metaforge_tab.create_tab(metaforge_container)
                     with ui.tab_panel(two):
-                        chat_container = ui.scroll_area().classes("w-full h-full")
+                        chat_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         learnings_tab.create_tab(chat_container)
 
             with splitter.separator:

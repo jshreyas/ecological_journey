@@ -130,7 +130,14 @@ class LearningsTab:
                                     "flat dense round icon=edit color=white size=xs"
                                 ).tooltip("Edit")
             else:
-                ui.label("No learnings added yet!").classes("mx-auto")
+                if self.user:
+                    label = "Add your insights! 😀"
+                else:
+                    label = "Log in to add your insights! 😀"
+                ui.chat_message(
+                    label=label,
+                ).classes("w-full text-center text-bold text-secondary")
+
             if self.user:
                 self.text_input = ui.editor(placeholder="Type your learnings...").classes("flex-grow w-full")
                 self.text_input.props["toolbar"] = self.toolbar
