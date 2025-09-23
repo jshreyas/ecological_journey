@@ -137,9 +137,8 @@ class MetaforgeTab:
             self.editor_container["ref"] = editor
 
             # Action buttons
-            with ui.row().classes("w-full justify-between"):
-                ui.button(icon="save", on_click=self._get_data)
-                ui.button(icon="add", on_click=self._add_clip)
+            ui.button(icon="save", on_click=self._get_data).classes("absolute bottom-0 left-0")
+            ui.button(icon="add", on_click=self._add_clip).classes("absolute bottom-0 right-0")
 
     def _extract_editable_video_data(self, full_video: dict) -> dict:
         """Extract editable video data for the JSON editor"""
