@@ -315,16 +315,40 @@ def _load_learnings():
 
 
 def load_learnings(video_id: str):
-    learnings = []
-    for learning in _load_learnings():
-        if learning.get("video_id") == video_id:
-            learnings.append(learning)
-    return learnings
+    # filter first
+    filtered = [_ for _ in _load_learnings() if _.get("video_id") == video_id]
+
+    # TODO: refctor this logic as a decorator or utility function of adding user info
+    # collect unique author_ids (stored as strings)
+    author_ids = {_["author_id"] for _ in filtered if _.get("author_id")}
+    print("Author IDs:", author_ids)
+    # convert to ObjectIds
+    object_ids = []
+    for a in author_ids:
+        try:
+            object_ids.append(ObjectId(a))
+        except Exception:
+            pass  # skip invalid ids
+
+    # fetch all users at once
+    users = User.find({"_id": {"$in": object_ids}}).run()
+    print("Fetched Users:", users)
+    user_map = {str(u.id): u for u in users}
+    print("User Map:", user_map)
+    # enrich
+    for learning in filtered:
+        user = user_map.get(learning["author_id"])
+        if user:
+            learning["author_name"] = user.username
+            # learning["user_avatar"] = getattr(user, "avatar_url", None)
+    print("Enriched Learnings:", filtered)
+    return filtered
 
 
-def create_learning(author_id: str, text: str, video_id: str = None, clip_id: str = None):
+@with_user_from_token
+def create_learning(author_id: str, text: str, video_id: str = None, clip_id: str = None, user=None, **kwargs):
     learning = Learnings(
-        author_id=ObjectId(author_id),
+        author_id=user.id,
         text=text,
         video_id=video_id,
         clip_id=clip_id,

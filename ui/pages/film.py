@@ -52,6 +52,7 @@ def film_page(user: User | None, video_id: str):
     share_dialog_tab = ShareDialogTab(video_state)
     metaforge_tab = MetaforgeTab(video_state, user)
     filmboard_tab = FilmboardTab(video_state)
+    learnings_tab = LearningsTab(video_state, user)
 
     clipboard_tab = ClipboardTab(
         video_state,
@@ -79,35 +80,32 @@ def film_page(user: User | None, video_id: str):
                             metaforge_tab.create_tab(metaforge_container)
                     with ui.tab_panel(two):
                         # --- Shared conversation state for this video ---
-                        video_state.conversation = [
-                            {
-                                "author_id": "u1",
-                                "author_name": "You",
-                                "text": "Hey team, let's review today's clips.",
-                                "stamp": "10:00",
-                            },
-                            {
-                                "author_id": "u2",
-                                "author_name": "Alice",
-                                "text": "Sounds good, I’ll upload mine soon.",
-                                "stamp": "10:02",
-                            },
-                            {
-                                "author_id": "u3",
-                                "author_name": "Bob",
-                                "text": "I clipped yesterday’s sparring, check it out!",
-                                "stamp": "10:05",
-                            },
-                            {
-                                "author_id": "u1",
-                                "author_name": "You",
-                                "text": "Nice — I’ll add some comments there.",
-                                "stamp": "10:06",
-                            },
-                        ]
-
-                        current_user = {"id": "u1", "name": "You"}
-                        learnings_tab = LearningsTab(video_state, current_user)
+                        # video_state.conversation = [
+                        #     {
+                        #         "author_id": "u1",
+                        #         "author_name": "You",
+                        #         "text": "Hey team, let's review today's clips.",
+                        #         "stamp": "10:00",
+                        #     },
+                        #     {
+                        #         "author_id": "u2",
+                        #         "author_name": "Alice",
+                        #         "text": "Sounds good, I’ll upload mine soon.",
+                        #         "stamp": "10:02",
+                        #     },
+                        #     {
+                        #         "author_id": "u3",
+                        #         "author_name": "Bob",
+                        #         "text": "I clipped yesterday’s sparring, check it out!",
+                        #         "stamp": "10:05",
+                        #     },
+                        #     {
+                        #         "author_id": "u1",
+                        #         "author_name": "You",
+                        #         "text": "Nice — I’ll add some comments there.",
+                        #         "stamp": "10:06",
+                        #     },
+                        # ]
                         chat_container = ui.column().classes("w-full")
                         learnings_tab.create_tab(chat_container)
 

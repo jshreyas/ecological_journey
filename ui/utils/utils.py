@@ -110,3 +110,8 @@ def parse_query_expression(tokens):
         return evaluate_ast(ast, clip_labels)
 
     return evaluate
+
+
+def human_stamp(ts: str) -> str:
+    dt = datetime.fromisoformat(ts)
+    return dt.strftime("%b %d, %I:%M %p")  # e.g. "Sep 23, 12:29 AM"
