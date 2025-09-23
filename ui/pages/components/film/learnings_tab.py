@@ -75,13 +75,23 @@ class LearningsTab:
             with ui.scroll_area().classes("w-full flex-1 overflow-y-auto"):
                 if self.video_state.conversation:
                     for msg in self.video_state.conversation:
-                        ui.chat_message(
-                            text=msg["text"],
-                            name=msg.get("alias") if msg.get("alias") else msg.get("author_name"),
-                            stamp=human_stamp(msg.get("created_at")),
-                            sent=(msg["author_id"] == self.user.id if self.user else False),
-                            text_html=True,
-                        ).classes("w-full")
+                        with ui.card().classes("relative w-full p-0 shadow-none bg-transparent"):
+                            # Chat bubble
+                            sent = msg["author_id"] == self.user.id if self.user else False
+                            ui.chat_message(
+                                text=msg["text"],
+                                name=msg.get("alias") if msg.get("alias") else msg.get("author_name"),
+                                stamp=human_stamp(msg.get("created_at")),
+                                sent=sent,
+                                text_html=True,
+                            ).classes("w-full").props(f"{'text-color=white bg-color=primary' if sent else ''}")
+
+                            # Floating action buttons (top-right corner)
+                            if self.user and msg["author_id"] == self.user.id:
+                                with ui.row().classes("absolute top-0 right-0 gap-0 pt-5"):
+                                    ui.button(on_click=lambda m=msg: self.on_edit(m)).props(
+                                        "flat dense round icon=edit color=white size=xs"
+                                    ).tooltip("Edit")
                 else:
                     ui.label("No learnings added yet!").classes("mx-auto")
                 if self.user:
