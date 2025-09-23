@@ -352,3 +352,23 @@ def create_learning(author_id: str, text: str, video_id: str = None, clip_id: st
     )
     learning.insert()
     return to_dicts(learning)
+
+
+@with_user_from_token
+def update_learning(learning_id: str, text: str, user=None, **kwargs):
+    learning = Learnings.find_one(Learnings.id == ObjectId(learning_id), Learnings.author_id == user.id).run()
+    if not learning:
+        raise ValueError("Learning not found or access denied")
+    learning.text = text
+    learning.updated_at = datetime.utcnow()
+    learning.save()
+    return to_dicts(learning)
+
+
+@with_user_from_token
+def delete_learning(learning_id: str, user=None, **kwargs):
+    learning = Learnings.find_one(Learnings.id == ObjectId(learning_id), Learnings.author_id == user.id).run()
+    if not learning:
+        raise ValueError("Learning not found or access denied")
+    learning.delete()
+    return True
