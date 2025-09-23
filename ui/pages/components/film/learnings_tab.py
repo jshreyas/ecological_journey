@@ -77,7 +77,7 @@ class LearningsTab:
                     for msg in self.video_state.conversation:
                         ui.chat_message(
                             text=msg["text"],
-                            name=msg.get("author_name"),
+                            name=msg.get("alias") if msg.get("alias") else msg.get("author_name"),
                             stamp=human_stamp(msg.get("created_at")),
                             sent=(msg["author_id"] == self.user.id if self.user else False),
                             text_html=True,

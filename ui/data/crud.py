@@ -332,7 +332,6 @@ def load_learnings(video_id: str):
 
     # fetch all users at once
     users = User.find({"_id": {"$in": object_ids}}).run()
-
     user_map = {str(u.id): u for u in users}
 
     # enrich

@@ -137,10 +137,10 @@ class Learnings(Document):
     id: Optional[ObjectId] = Field(default_factory=ObjectId, alias="_id")
     author_id: ObjectId
     video_id: Optional[str] = None  # link to Video.video_id
-    clip_id: Optional[str] = None  # link to Clip.clip_id
     text: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
+    alias: Optional[str] = None  # on behalf of someone else
 
     class Settings:
         name = "learnings"

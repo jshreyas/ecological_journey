@@ -79,33 +79,6 @@ def film_page(user: User | None, video_id: str):
                         with ui.column().classes("w-full h-full") as metaforge_container:
                             metaforge_tab.create_tab(metaforge_container)
                     with ui.tab_panel(two):
-                        # --- Shared conversation state for this video ---
-                        # video_state.conversation = [
-                        #     {
-                        #         "author_id": "u1",
-                        #         "author_name": "You",
-                        #         "text": "Hey team, let's review today's clips.",
-                        #         "stamp": "10:00",
-                        #     },
-                        #     {
-                        #         "author_id": "u2",
-                        #         "author_name": "Alice",
-                        #         "text": "Sounds good, I’ll upload mine soon.",
-                        #         "stamp": "10:02",
-                        #     },
-                        #     {
-                        #         "author_id": "u3",
-                        #         "author_name": "Bob",
-                        #         "text": "I clipped yesterday’s sparring, check it out!",
-                        #         "stamp": "10:05",
-                        #     },
-                        #     {
-                        #         "author_id": "u1",
-                        #         "author_name": "You",
-                        #         "text": "Nice — I’ll add some comments there.",
-                        #         "stamp": "10:06",
-                        #     },
-                        # ]
                         chat_container = ui.column().classes("w-full")
                         learnings_tab.create_tab(chat_container)
 
