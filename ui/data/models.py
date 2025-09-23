@@ -131,3 +131,21 @@ class Feedback(Document):
 
     class Settings:
         name = "feedback"
+
+
+class Learnings(Document):
+    id: Optional[ObjectId] = Field(default_factory=ObjectId, alias="_id")
+    author_id: ObjectId
+    video_id: Optional[str] = None  # link to Video.video_id
+    text: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+    alias: Optional[str] = None  # on behalf of someone else
+
+    class Settings:
+        name = "learnings"
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}

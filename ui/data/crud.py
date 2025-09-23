@@ -8,7 +8,7 @@ from uuid import uuid4
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Clip, Cliplist, Feedback, Notion, Playlist, Team, User, Video
+from data.models import Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
 from log import log
 from nicegui import ui  # TODO: remove or use your own alert/logger
@@ -306,3 +306,49 @@ def create_feedback(feedback: str):
     )
     feedb.insert()
     return to_dicts(feedb)
+
+
+def _load_learnings():
+    log.info("Loading learnings from database...")
+    learnings = Learnings.find_all().run()
+    return to_dicts(learnings)
+
+
+def load_learnings(video_id: str):
+    # filter first
+    filtered = [_ for _ in _load_learnings() if _.get("video_id") == video_id]
+
+    # TODO: refctor this logic as a decorator or utility function of adding user info
+    # collect unique author_ids (stored as strings)
+    author_ids = {_["author_id"] for _ in filtered if _.get("author_id")}
+
+    # convert to ObjectIds
+    object_ids = []
+    for a in author_ids:
+        try:
+            object_ids.append(ObjectId(a))
+        except Exception:
+            pass  # skip invalid ids
+
+    # fetch all users at once
+    users = User.find({"_id": {"$in": object_ids}}).run()
+    user_map = {str(u.id): u for u in users}
+
+    # enrich
+    for learning in filtered:
+        user = user_map.get(learning["author_id"])
+        if user:
+            learning["author_name"] = user.username
+    return filtered
+
+
+@with_user_from_token
+def create_learning(author_id: str, text: str, video_id: str = None, clip_id: str = None, user=None, **kwargs):
+    learning = Learnings(
+        author_id=user.id,
+        text=text,
+        video_id=video_id,
+        clip_id=clip_id,
+    )
+    learning.insert()
+    return to_dicts(learning)
