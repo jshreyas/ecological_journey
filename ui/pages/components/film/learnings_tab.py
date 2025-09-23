@@ -134,7 +134,6 @@ class LearningsTab:
             if self.user:
                 self.text_input = ui.editor(placeholder="Type your learnings...").classes("flex-grow w-full")
                 self.text_input.props["toolbar"] = self.toolbar
-                # with ui.row().classes("justify-end"):
                 ui.button(
                     icon="send",
                     on_click=self.on_send,
