@@ -22,10 +22,42 @@ def about_page(user: User | None):
     with ui.card().classes("w-full"):  # as hls_card:
 
         async def handle_upload(e):
-            await client.upload_resumable(e.content, name="Test Upload from NiceGUI againo", file_input_name=e.name)
-            ui.notify(f"Uploaded {e.name}")
+            # Create per-upload UI container
+            # container = ui.card().classes("p-4 my-2 w-full max-w-lg shadow-md")
+            ui.label(f"📁 {e.name}").classes("text-md font-medium")
+            progress = ui.linear_progress(value=0).props("rounded striped").classes("w-full my-2")
+            status_label = ui.label("Preparing upload...").classes("text-sm text-gray-500")
 
-        ui.upload(on_upload=handle_upload, auto_upload=True).classes("max-w-full")
+            async def update_progress(uploaded, total):
+                progress.value = uploaded / total
+                percent = int((uploaded / total) * 100)
+                status_label.text = f"Uploading... {percent}%"
+
+            try:
+                # Start upload (streaming directly from memory)
+                response = await client.upload_resumable(
+                    e.content,
+                    name=f"Upload from NiceGUI: {e.name}",
+                    file_input_name=e.name,
+                    on_progress=update_progress,
+                )
+
+                progress.value = 1.0
+                status_label.text = f'✅ Completed: {response.get("name", e.name)}'
+                ui.notify(f"Uploaded {e.name}")
+
+            except Exception as ex:
+                status_label.text = f"❌ Failed: {ex}"
+                progress.props("color=red")
+                ui.notify(f"Upload failed: {ex}")
+
+        ui.upload(on_upload=handle_upload, auto_upload=True, multiple=True).classes("max-w-full")
+
+        # async def handle_upload(e):
+        #     await client.upload_resumable(e.content, name="Test Upload from NiceGUI againo", file_input_name=e.name)
+        #     ui.notify(f"Uploaded {e.name}")
+
+        # ui.upload(on_upload=handle_upload, auto_upload=True).classes("max-w-full")
 
         # HLSPlayer(
         #     hls_url=video_hls,

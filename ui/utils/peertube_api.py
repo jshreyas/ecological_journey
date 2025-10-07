@@ -63,7 +63,12 @@ class PeerTubeClient:
                 return r.json()
 
     async def upload_resumable(
-        self, file_input, name: str, channel_id: int = 12177, file_input_name: str = "uploaded_file.mp4"
+        self,
+        file_input,
+        name: str,
+        channel_id: int = 12177,
+        file_input_name: str = "uploaded_file.mp4",
+        on_progress=None,  # NEW
     ):
         import math
         import os
@@ -121,8 +126,11 @@ class PeerTubeClient:
                 }
 
                 res = await client.put(chunk_url, headers=put_headers, content=chunk)
-
                 uploaded_bytes += len(chunk)
+
+                # 🔁 Report progress if callback provided
+                if on_progress:
+                    await on_progress(uploaded_bytes, file_size)
 
                 if res.status_code == 308:
                     print(f"📦 Chunk {i+1}/{num_chunks} accepted ({uploaded_bytes/file_size*100:.1f}%)")
