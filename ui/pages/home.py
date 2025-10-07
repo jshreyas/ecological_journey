@@ -6,7 +6,7 @@ from log import log
 from nicegui import events, ui
 from pages.components.home.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
-from utils.fetch_videos import fetch_playlist_items  # , fetch_playlist_metadata
+from utils.fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils.peertube_api import PeerTubeClient
 from utils.user_context import User, with_user_context
 from utils.utils import group_videos_by_day, parse_flexible_datetime
@@ -24,23 +24,43 @@ client = PeerTubeClient()
 
 def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
     with parent:
+        is_youtube = True
         with ui.card().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3"):
-            ui.label("➕ Playlist by ID").classes("text-md font-bold")
+            with ui.row().classes("w-full justify-between items-center"):
+
+                def on_input_change(e):
+                    global is_youtube
+                    is_youtube = e.value
+                    if is_youtube:
+                        # ui.notify(f"Playlist type changed to Youtube", type="info")
+                        playlist_id_input.label = "YouTube Playlist ID"
+                    else:
+                        # ui.notify(f"Playlist type changed to PeerTube", type="info")
+                        playlist_id_input.label = "PeerTube Playlist ID"
+
+                ui.label("➕ Playlist by ID").classes("text-md font-bold")
+                ui.toggle({True: "YT", False: "PT"}, value=True, on_change=on_input_change)
             playlist_verified = {"status": False}
             playlist_id_input = ui.input("YouTube Playlist ID").classes("w-full text-sm")
 
             async def verify_playlist():
+                global is_youtube
                 playlist_id = playlist_id_input.value.strip()
                 if not playlist_id:
                     ui.notify("❌ Please enter a Playlist ID.", type="warning")
                     fetch_button.disable()
                     playlist_verified["status"] = False
                     return
-                # metadata = fetch_playlist_metadata(playlist_id)
-                metadata = await client.get_playlist(playlist_id)
-                # import pdb; pdb.set_trace()
-                if metadata and "displayName" in metadata:
-                    ui.notify(f'✅ Playlist verified: {metadata["displayName"]}', type="success")
+                if is_youtube:
+                    metadata = fetch_playlist_metadata(playlist_id)
+                else:
+                    metadata = await client.get_playlist(playlist_id)
+                if metadata:
+                    if is_youtube:
+                        playlist_name = metadata.get("title")
+                    else:
+                        playlist_name = metadata.get("displayName")
+                    ui.notify(f"✅ Playlist verified: {playlist_name}", type="success")
                     fetch_button.enable()
                     playlist_verified["status"] = True
                 else:
@@ -53,21 +73,34 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 playlist_verified["status"] = False
 
             async def fetch_playlist_videos():
+                global is_youtube
                 if not playlist_verified["status"]:
                     ui.notify("❌ Please verify the playlist first.", type="warning")
                     return
                 playlist_id = playlist_id_input.value.strip()
-                # metadata = fetch_playlist_metadata(playlist_id)
-                metadata = await client.get_playlist(playlist_id)
-                playlist_name = metadata.get("displayName", playlist_id)
+                if is_youtube:
+                    metadata = fetch_playlist_metadata(playlist_id)
+                    playlist_name = metadata.get("title", playlist_id)
+                else:
+                    metadata = await client.get_playlist(playlist_id)
+                    playlist_name = metadata.get("displayName", playlist_id)
                 ui.notify(f"Fetching videos for playlist: {playlist_name}")
                 spinner = ui.spinner(size="lg").props("color=primary")
                 ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
 
                 async def task():
+                    if is_youtube:
+                        video_data = fetch_playlist_items(playlist_id)
+                        # import pdb; pdb.set_trace()
+                        ui.notify(f"Fetched {len(video_data)} videos from YouTube playlist.")
+                        return
+                    else:
+                        video_data = await client.get_playlist_videos(playlist_id)
+                        # import pdb; pdb.set_trace()
+                        ui.notify(f"Fetched {len(video_data)} videos from PeerTube playlist.")
+                        return
                     create_playlist(
-                        await client.get_playlist_videos(playlist_id),
-                        # fetch_playlist_items(playlist_id),
+                        video_data,
                         user.token if user else None,
                         playlist_name,
                         playlist_id,
@@ -122,7 +155,8 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
         for playlist in load_playlists():
             with parent:
                 with ui.column().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md"):
-                    ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sd font-semibold")
+                    with ui.row().classes("w-full justify-between items-center"):
+                        ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sd font-semibold")
                     with ui.row().classes("w-full justify-between items-center"):
                         ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-xs text-gray-600")
                         ui.button(
