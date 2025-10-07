@@ -1,6 +1,3 @@
-import tempfile
-from pathlib import Path
-
 from data.crud import clear_cache
 from nicegui import ui
 from starlette.formparsers import MultiPartParser
@@ -25,13 +22,7 @@ def about_page(user: User | None):
     with ui.card().classes("w-full"):  # as hls_card:
 
         async def handle_upload(e):
-            temp_path = Path(tempfile.gettempdir()) / e.name
-
-            # Save the uploaded content to a temporary file
-            with open(temp_path, "wb") as f:
-                f.write(e.content.read())
-
-            await client.upload_resumable(temp_path, name="Test Upload from NiceGUI")
+            await client.upload_resumable(e.content, name="Test Upload from NiceGUI againo", file_input_name=e.name)
             ui.notify(f"Uploaded {e.name}")
 
         ui.upload(on_upload=handle_upload, auto_upload=True).classes("max-w-full")

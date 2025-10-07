@@ -62,7 +62,78 @@ class PeerTubeClient:
                 r.raise_for_status()
                 return r.json()
 
-    async def upload_resumable(self, file_path: Path, name: str, channel_id: int = 12177):
+    async def upload_resumable(
+        self, file_input, name: str, channel_id: int = 12177, file_input_name: str = "uploaded_file.mp4"
+    ):
+        import math
+        import os
+
+        import httpx
+
+        # Determine if we got a path or file-like object
+        if hasattr(file_input, "read"):  # file-like (streaming)
+            file_obj = file_input
+            file_obj.seek(0, os.SEEK_END)
+            file_size = file_obj.tell()
+            file_obj.seek(0)
+            file_name = file_input_name
+        else:  # Path
+            file_obj = open(file_input, "rb")
+            file_size = os.path.getsize(file_input)
+            file_name = os.path.basename(file_input)
+
+        chunk_size = CHUNK_SIZE_MB * 1024 * 1024
+        num_chunks = math.ceil(file_size / chunk_size)
+        headers = {"Authorization": f"Bearer {self.token}"}
+        timeout = httpx.Timeout(600.0, read=600.0)
+
+        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
+            # 1️⃣ Initialize resumable upload
+            init_headers = {
+                **headers,
+                "X-Upload-Content-Length": str(file_size),
+                "X-Upload-Content-Type": "video/mp4",
+            }
+            init_body = {"channelId": channel_id, "filename": file_name, "name": name, "privacy": "1"}
+
+            print("DEBUG: Initializing upload with init_body:", init_body)
+            init_resp = await client.post(
+                f"{self.base_url}/api/v1/videos/upload-resumable",
+                headers=init_headers,
+                data=init_body,
+            )
+            init_resp.raise_for_status()
+            chunk_url = init_resp.headers["location"]
+            print(f"✅ Initialized upload: {chunk_url}")
+
+            # 2️⃣ Upload chunks
+            uploaded_bytes = 0
+            for i in range(num_chunks):
+                chunk = file_obj.read(chunk_size)
+                start = uploaded_bytes
+                end = min(start + len(chunk), file_size) - 1
+
+                put_headers = {
+                    **headers,
+                    "Content-Length": str(len(chunk)),
+                    "Content-Range": f"bytes {start}-{end}/{file_size}",
+                    "Content-Type": "application/octet-stream",
+                }
+
+                res = await client.put(chunk_url, headers=put_headers, content=chunk)
+
+                uploaded_bytes += len(chunk)
+
+                if res.status_code == 308:
+                    print(f"📦 Chunk {i+1}/{num_chunks} accepted ({uploaded_bytes/file_size*100:.1f}%)")
+                    continue
+                elif res.status_code in (200, 201):
+                    print("🎉 Upload complete!")
+                    return res.json()
+                else:
+                    res.raise_for_status()
+
+    async def _upload_resumable(self, file_path: Path, name: str, channel_id: int = 12177):
         file_size = os.path.getsize(file_path)
         chunk_size = CHUNK_SIZE_MB * 1024 * 1024
         num_chunks = math.ceil(file_size / chunk_size)
@@ -87,9 +158,7 @@ class PeerTubeClient:
                 headers=init_headers,
                 data=init_body,
             )
-            # import pdb; pdb.set_trace()
             init_resp.raise_for_status()
-            # upload_id = init_resp.json()["upload_id"]
             chunk_url = init_resp.headers["location"]
             print(f"✅ Initialized upload: {chunk_url}")
 
@@ -119,7 +188,6 @@ class PeerTubeClient:
                         continue
                     elif res.status_code in (200, 201):
                         print("🎉 Upload complete!")
-                        # import pdb; pdb.set_trace()
                         return res.json()
                     else:
                         res.raise_for_status()
