@@ -28,7 +28,6 @@ class PeerTubeClient:
     async def list_channels(self):
         async with httpx.AsyncClient() as client:
             request = await client.get(f"{self.base_url}/api/v1/video-channels", headers=self.headers)
-            # import pdb; pdb.set_trace()
             request.raise_for_status()
             return request.json()
 
@@ -247,26 +246,3 @@ class PeerTubeClient:
             )
             finish_resp.raise_for_status()
             return finish_resp.json()
-
-    # async def upload_chunked(self, file_path: Path, name: str, channel_id: Optional[str] = 12177):
-    #     """Chunked upload for large files (>2GB)."""
-
-    #     file_size = os.path.getsize(file_path)
-    #     chunk_size = CHUNK_SIZE_MB * 1024 * 1024
-    #     num_chunks = math.ceil(file_size / chunk_size)
-
-    #     async with httpx.AsyncClient() as client:
-    #         with open(file_path, "rb") as f:
-    #             for i in range(num_chunks):
-    #                 chunk = f.read(chunk_size)
-    #                 headers = {**self.headers,
-    #                            "Content-Range": f"bytes {i*chunk_size}-{(i+1)*chunk_size-1}/{file_size}",
-    #                            }
-    #                 data = {"name": name}
-    #                 if channel_id:
-    #                     data["channelId"] = channel_id
-    #                 files = {"videofile": (file_path.name, chunk, "video/mp4")}
-    #                 r = await client.post(f"{self.base_url}/api/v1/videos/upload-resumable",
-    #                                       headers=headers, data=data, files=files)
-    #                 r.raise_for_status()
-    #         return {"status": "uploaded", "name": name, "chunks": num_chunks}
