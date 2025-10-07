@@ -1,6 +1,15 @@
+import tempfile
+from pathlib import Path
+
 from data.crud import clear_cache
 from nicegui import ui
+from starlette.formparsers import MultiPartParser
+
+# from utils.hls_player import HLSPlayer
+from utils.peertube_api import PeerTubeClient
 from utils.user_context import User, with_user_context
+
+MultiPartParser.spool_max_size = 1024 * 1024 * 5  # 5 MB
 
 
 @with_user_context
@@ -8,6 +17,33 @@ def about_page(user: User | None):
     # TODO: make it available to other pages, can this be added as decorator?
     if ui.context.client.request.query_params.get("clear_cache", "") == "true":
         clear_cache()
+
+    client = PeerTubeClient()
+    # video_hls = "https://makertube01.fsn1.your-objectstorage.com/streaming-playlists/hls/68f6adfe-402c-4254-a846-1f1f011a9940/3dc5fbc8-ffb1-436d-a21c-e2a8d5bf6373-master.m3u8"
+    # video_hls = "https://makertube01.fsn1.your-objectstorage.com/streaming-playlists/hls/301d79c9-6a39-4d9e-8676-3e994a22d44d/9152a582-6d86-4a6d-95d3-0b91a2feded0-master.m3u8"
+
+    with ui.card().classes("w-full"):  # as hls_card:
+
+        async def handle_upload(e):
+            temp_path = Path(tempfile.gettempdir()) / e.name
+
+            # Save the uploaded content to a temporary file
+            with open(temp_path, "wb") as f:
+                f.write(e.content.read())
+
+            await client.upload_resumable(temp_path, name="Test Upload from NiceGUI")
+            ui.notify(f"Uploaded {e.name}")
+
+        ui.upload(on_upload=handle_upload, auto_upload=True).classes("max-w-full")
+
+        # HLSPlayer(
+        #     hls_url=video_hls,
+        #     speed=6.0,
+        #     show_speed_slider=True,
+        #     on_end=lambda: print("✅ Video finished!"),
+        #     parent=hls_card,
+        # )
+
     with ui.column().classes("w-full max-w-4xl mx-auto p-6"):
 
         ui.label("🥋 About This Platform").classes("text-3xl font-bold mb-4")
