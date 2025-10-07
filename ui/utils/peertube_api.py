@@ -6,8 +6,8 @@ from typing import Optional
 import httpx
 
 PEERTUBE_URL: str = "https://makertube.net"
-PEERTUBE_TOKEN: str = "be1d26c1147580eab185d328d879b808cef4b1f8"
-CHUNK_SIZE_MB: int = 1  # 8MB per chunk
+PEERTUBE_TOKEN: str = "08d80740687e374e4b9184605115785211ed9a29"
+CHUNK_SIZE_MB: int = 80  # 80MB per chunk
 
 
 class PeerTubeClient:
@@ -60,6 +60,40 @@ class PeerTubeClient:
         video_id = video_info["video"]["uuid"]
         await self.add_video_to_playlist(playlist_id, video_id)
         return video_info
+
+    async def get_playlist(self, playlist_id: str):
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{self.base_url}/api/v1/video-playlists/{playlist_id}", headers=self.headers)
+            r.raise_for_status()
+            return r.json()
+
+    async def _get_playlist_videos(self, playlist_id: str):
+        async with httpx.AsyncClient() as client:
+            res = await client.get(f"{self.base_url}/api/v1/video-playlists/{playlist_id}/videos", headers=self.headers)
+            res.raise_for_status()
+            return res.json()
+
+    async def get_playlist_videos(self, playlist_id: str):
+        videos = []
+        playlist_videos = await self._get_playlist_videos(playlist_id)
+        for each in playlist_videos["data"]:
+            # import pdb; pdb.set_trace()
+            video_data = {
+                "title": each["video"]["name"],
+                "video_id": f'{each["video"]["id"]}',
+                "youtube_url": each["video"]["url"],
+                "date": each["video"]["publishedAt"].replace("Z", "+00:00"),
+                "type": "",
+                "partners": [],
+                "positions": [],
+                "notes": "",
+                "labels": [],
+                "clips": [],
+                "duration_seconds": each["video"]["duration"],
+            }
+            # Fetch and replace youtube url with hls url
+            videos.append(video_data)
+        return videos
 
     async def add_video_to_playlist(self, playlist_id: str, video_id: str, position: Optional[int] = None):
         """

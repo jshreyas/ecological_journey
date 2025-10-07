@@ -3,12 +3,13 @@ from datetime import datetime, timedelta
 
 from data.crud import load_playlists
 from log import log
-from nicegui import ui
+from nicegui import events, ui
 from pages.components.home.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
-from utils.fetch_videos import fetch_playlist_items, fetch_playlist_metadata
+from utils.fetch_videos import fetch_playlist_items  # , fetch_playlist_metadata
+from utils.peertube_api import PeerTubeClient
 from utils.user_context import User, with_user_context
-from utils.utils import group_videos_by_day
+from utils.utils import group_videos_by_day, parse_flexible_datetime
 from utils.utils_api import (
     create_playlist,
     create_team,
@@ -18,6 +19,8 @@ from utils.utils_api import (
     load_videos,
 )
 
+client = PeerTubeClient()
+
 
 def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
     with parent:
@@ -26,16 +29,18 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
             playlist_verified = {"status": False}
             playlist_id_input = ui.input("YouTube Playlist ID").classes("w-full text-sm")
 
-            def verify_playlist():
+            async def verify_playlist():
                 playlist_id = playlist_id_input.value.strip()
                 if not playlist_id:
                     ui.notify("❌ Please enter a Playlist ID.", type="warning")
                     fetch_button.disable()
                     playlist_verified["status"] = False
                     return
-                metadata = fetch_playlist_metadata(playlist_id)
-                if metadata and "title" in metadata:
-                    ui.notify(f'✅ Playlist verified: {metadata["title"]}', type="success")
+                # metadata = fetch_playlist_metadata(playlist_id)
+                metadata = await client.get_playlist(playlist_id)
+                # import pdb; pdb.set_trace()
+                if metadata and "displayName" in metadata:
+                    ui.notify(f'✅ Playlist verified: {metadata["displayName"]}', type="success")
                     fetch_button.enable()
                     playlist_verified["status"] = True
                 else:
@@ -47,20 +52,22 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 fetch_button.disable()
                 playlist_verified["status"] = False
 
-            def fetch_playlist_videos():
+            async def fetch_playlist_videos():
                 if not playlist_verified["status"]:
                     ui.notify("❌ Please verify the playlist first.", type="warning")
                     return
                 playlist_id = playlist_id_input.value.strip()
-                metadata = fetch_playlist_metadata(playlist_id)
-                playlist_name = metadata.get("title", playlist_id)
+                # metadata = fetch_playlist_metadata(playlist_id)
+                metadata = await client.get_playlist(playlist_id)
+                playlist_name = metadata.get("displayName", playlist_id)
                 ui.notify(f"Fetching videos for playlist: {playlist_name}")
                 spinner = ui.spinner(size="lg").props("color=primary")
                 ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
 
-                def task():
+                async def task():
                     create_playlist(
-                        fetch_playlist_items(playlist_id),
+                        await client.get_playlist_videos(playlist_id),
+                        # fetch_playlist_items(playlist_id),
                         user.token if user else None,
                         playlist_name,
                         playlist_id,
@@ -90,6 +97,27 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
 
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
     parent.clear()
+
+    def blah():
+        with ui.dialog() as dialog:
+            with ui.card():
+
+                async def handle_upload(e: events.UploadEventArguments):
+                    try:
+                        # Step 2: perform backend → PeerTube upload
+                        response = await client.upload_and_attach_to_playlist(
+                            e.content,
+                            name=f"Upload {e.name}",
+                            file_input_name=e.name,
+                        )
+                        print("DEBUG: PeerTube upload response:", response)
+                        ui.notify(f"🎉 PeerTube upload complete for {e.name}: {response}", color="green")
+                    except Exception as ex:
+                        ui.notify(f"Error uploading {e.name}: {ex}", color="red")
+
+                ui.upload(on_upload=handle_upload, auto_upload=True, multiple=True).classes("max-w-full")
+        dialog.open()
+
     if not user:
         for playlist in load_playlists():
             with parent:
@@ -97,6 +125,12 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                     ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sd font-semibold")
                     with ui.row().classes("w-full justify-between items-center"):
                         ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-xs text-gray-600")
+                        ui.button(
+                            icon="upload",
+                            on_click=lambda: blah(),
+                        ).props(
+                            "flat dense round color=primary"
+                        ).tooltip("Upload")
                         ui.button(
                             icon="sync",
                             on_click=lambda: caught_john_doe(),
@@ -154,7 +188,8 @@ def render_dashboard(parent):
                 ui.label("⚠️ No videos found! Start by adding a playlist.").classes("text-md")
         return
     grouped_videos_by_day = group_videos_by_day(videos)
-    dates = [datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ") for v in videos]
+    # dates = [datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ") for v in videos]
+    dates = [parse_flexible_datetime(v["date"]) for v in videos]
     with parent:
         calendar_container(grouped_videos_by_day)
         ui.separator().classes("my-4 w-full")

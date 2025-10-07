@@ -18,14 +18,49 @@ def format_time(seconds):
     return f"{int(minutes):02}:{int(sec):02}"
 
 
-# --- Helper: Group videos by YYYY-MM-DD ---
+def parse_flexible_datetime(ts: str) -> datetime:
+    """Parse a timestamp that may have Z, fractional seconds, or timezone info."""
+    for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%d %H:%M:%S.%f%z"):
+        try:
+            return datetime.strptime(ts, fmt)
+        except ValueError:
+            continue
+
+    # Fallback: ISO parser (handles most variations)
+    try:
+        return datetime.fromisoformat(ts)
+    except Exception:
+        raise ValueError(f"Unrecognized timestamp format: {ts}")
+
+
 def group_videos_by_day(videos):
-    """Group videos by date (YYYY-MM-DD) extracted from the timestamp."""
+    """Group videos by date (YYYY-MM-DD) extracted from timestamp.
+    Supports timestamps with or without milliseconds and with timezone info.
+    """
     grouped = {}
     for v in videos:
-        # Extract the date portion from the timestamp
-        video_date = datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ").date().isoformat()
+        ts = v["date"]
+        dt = None
+
+        # Try multiple timestamp formats
+        for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%d %H:%M:%S.%f%z"):
+            try:
+                dt = datetime.strptime(ts, fmt)
+                break
+            except ValueError:
+                continue
+
+        # Fallback: try Python’s built-in ISO parser (handles most edge cases)
+        if dt is None:
+            try:
+                dt = datetime.fromisoformat(ts)
+            except Exception:
+                print(f"⚠️ Skipping unrecognized timestamp format: {ts}")
+                continue
+
+        video_date = dt.date().isoformat()
         grouped.setdefault(video_date, []).append(v)
+
     return grouped
 
 
