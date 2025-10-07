@@ -43,6 +43,44 @@ class PeerTubeClient:
             r.raise_for_status()
             return r.json()
 
+    async def upload_and_attach_to_playlist(
+        self,
+        file_input: Path,
+        name: str,
+        channel_id: int = 12187,
+        file_input_name: str = "uploaded_file.mp4",
+        playlist_id: int = 37814,
+    ):
+        """
+        Upload a video to the specified channel, then attach it to a playlist.
+        """
+        video_info = await self.upload_resumable(
+            file_input, channel_id=channel_id, name=name, file_input_name=file_input_name
+        )
+        video_id = video_info["video"]["uuid"]
+        await self.add_video_to_playlist(playlist_id, video_id)
+        return video_info
+
+    async def add_video_to_playlist(self, playlist_id: str, video_id: str, position: Optional[int] = None):
+        """
+        Add a video to a given playlist.
+
+        Args:
+            playlist_id: The PeerTube playlist ID.
+            video_id: The PeerTube video UUID or numeric ID.
+            position: Optional numeric position within the playlist.
+        """
+        data = {"videoId": video_id}
+        if position is not None:
+            data["position"] = position
+
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                f"{self.base_url}/api/v1/video-playlists/{playlist_id}/videos", headers=self.headers, data=data
+            )
+            r.raise_for_status()
+            return r.json()
+
     async def upload_video(self, file_path: Path, name: str, channel_id: Optional[str] = 12177):
         """Simple full upload (non-chunked)"""
         data = {"name": name}
@@ -65,7 +103,7 @@ class PeerTubeClient:
         self,
         file_input,
         name: str,
-        channel_id: int = 12177,
+        channel_id: int = 12187,  # 12177,
         file_input_name: str = "uploaded_file.mp4",
         on_progress=None,  # NEW
     ):

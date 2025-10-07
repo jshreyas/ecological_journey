@@ -24,11 +24,12 @@ def about_page(user: User | None):
         async def handle_upload(e: events.UploadEventArguments):
             try:
                 # Step 2: perform backend → PeerTube upload
-                response = await client.upload_resumable(
+                response = await client.upload_and_attach_to_playlist(
                     e.content,
                     name=f"Upload {e.name}",
                     file_input_name=e.name,
                 )
+                print("DEBUG: PeerTube upload response:", response)
                 ui.notify(f"🎉 PeerTube upload complete for {e.name}: {response}", color="green")
             except Exception as ex:
                 ui.notify(f"Error uploading {e.name}: {ex}", color="red")
