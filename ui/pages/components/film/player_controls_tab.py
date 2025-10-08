@@ -6,6 +6,7 @@ Handles the video player controls and playlist mode
 from typing import Callable
 
 from nicegui import ui
+from utils.hls_player import HLSPlayer
 from utils.utils_api import load_video
 from utils.video_player import VideoPlayer
 
@@ -38,18 +39,24 @@ class PlayerControlsTab:
             player_container_classes = "w-full h-full p-4 gap-4"
             with ui.column().classes(player_container_classes) as player_container_ref:
                 self.player_container["ref"] = player_container_ref
-
+                video_hls = "https://makertube01.fsn1.your-objectstorage.com/streaming-playlists/hls/301d79c9-6a39-4d9e-8676-3e994a22d44d/9152a582-6d86-4a6d-95d3-0b91a2feded0-master.m3u8"
                 if play_clips_playlist:
                     with player_container_ref:
                         self.play_clips_playlist_mode()
                 elif autoplay_clip:
                     self.play_clip(autoplay_clip)
                 else:
-                    VideoPlayer(
-                        self.video_state.video_id,
-                        speed=self.player_speed["value"],
-                        parent=player_container_ref,
-                    )
+                    if self.video_state.is_peertube():
+                        HLSPlayer(
+                            hls_url=video_hls,
+                            parent=player_container_ref,
+                        )
+                    else:
+                        VideoPlayer(
+                            self.video_state.video_id,
+                            speed=self.player_speed["value"],
+                            parent=player_container_ref,
+                        )
 
     def play_clip(self, clip):
         """Play a specific clip"""

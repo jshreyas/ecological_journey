@@ -77,7 +77,6 @@ class PeerTubeClient:
         videos = []
         playlist_videos = await self._get_playlist_videos(playlist_id)
         for each in playlist_videos["data"]:
-            # import pdb; pdb.set_trace()
             video_data = {
                 "title": each["video"]["name"],
                 "video_id": f'{each["video"]["id"]}',

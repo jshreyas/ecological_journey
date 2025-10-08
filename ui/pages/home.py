@@ -35,7 +35,9 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                         playlist_id_input.label = "PeerTube Playlist ID"
 
                 ui.label("➕ Playlist by ID").classes("text-md font-bold")
-                youtube_toggle = ui.toggle({True: "YT", False: "PT"}, value=True, on_change=on_input_change)
+                youtube_toggle = ui.toggle({True: "YT", False: "PT"}, value=True, on_change=on_input_change).props(
+                    "size=xs"
+                )
 
             playlist_verified = {"status": False}
             playlist_id_input = ui.input("YouTube Playlist ID").classes("w-full text-sm")
@@ -48,7 +50,6 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                     playlist_verified["status"] = False
                     return
 
-                # ✅ Use youtube_toggle.value instead of global is_youtube
                 if youtube_toggle.value:
                     metadata = fetch_playlist_metadata(playlist_id)
                 else:
@@ -75,7 +76,6 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
 
                 playlist_id = playlist_id_input.value.strip()
 
-                # ✅ Use youtube_toggle.value instead of global is_youtube
                 if youtube_toggle.value:
                     metadata = fetch_playlist_metadata(playlist_id)
                     playlist_name = metadata.get("title", playlist_id)
@@ -92,6 +92,7 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                         video_data = fetch_playlist_items(playlist_id)
                         ui.notify(f"Fetched {len(video_data)} videos from YouTube playlist.")
                     else:
+                        # TODO: handle negative cases
                         video_data = await client.get_playlist_videos(playlist_id)
                         ui.notify(f"Fetched {len(video_data)} videos from PeerTube playlist.")
 
@@ -100,6 +101,7 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                         user.token if user else None,
                         playlist_name,
                         playlist_id,
+                        source="youtube" if youtube_toggle.value else "peertube",
                     )
                     spinner.set_visibility(False)
                     ui.notify("✅ Playlist fetched and added successfully!")
@@ -156,12 +158,6 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                     with ui.row().classes("w-full justify-between items-center"):
                         ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-xs text-gray-600")
                         ui.button(
-                            icon="upload",
-                            on_click=lambda: blah(),
-                        ).props(
-                            "flat dense round color=primary"
-                        ).tooltip("Upload")
-                        ui.button(
                             icon="sync",
                             on_click=lambda: caught_john_doe(),
                         ).props(
@@ -198,13 +194,21 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                     ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-md font-semibold")
                     with ui.row().classes("w-full justify-between items-center"):
                         ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-sm text-gray-600")
-                        if playlist["_id"] in owned_ids:
-                            ui.button(
-                                icon="sync",
-                                on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
-                                    "playlist_id"
-                                ]: on_sync_click(pid, user.token, name, play_id),
-                            ).props("flat dense round color=primary").tooltip("Sync")
+                        with ui.row().classes("justify-end items-center"):
+                            if playlist["_id"] in owned_ids:
+                                if playlist.get("source") == "peertube":
+                                    ui.button(
+                                        icon="upload",
+                                        on_click=lambda: blah(),
+                                    ).props(
+                                        "flat dense round color=primary"
+                                    ).tooltip("Upload")
+                                ui.button(
+                                    icon="sync",
+                                    on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
+                                        "playlist_id"
+                                    ]: on_sync_click(pid, user.token, name, play_id),
+                                ).props("flat dense round color=primary").tooltip("Sync")
     # Always render the add playlist card at the end
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
 

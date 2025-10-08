@@ -46,6 +46,7 @@ class Playlist(Document):
     team_id: Optional[ObjectId] = None
     playlist_id: Optional[str] = None
     color: Optional[str] = "bg-gray-300"
+    source: Optional[str] = "youtube"  # e.g., "youtube", "peertube", etc.
 
     class Settings:
         name = "playlists"

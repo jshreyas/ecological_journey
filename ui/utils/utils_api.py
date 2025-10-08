@@ -26,9 +26,11 @@ def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
     return response
 
 
-def create_playlist(video_data: List[Dict[str, Any]], token: str, name: str, playlist_id: str) -> Any:
+def create_playlist(
+    video_data: List[Dict[str, Any]], token: str, name: str, playlist_id: str, source: str = "youtube"
+) -> Any:
     """Create a new playlist with videos."""
-    return cp(name=name, playlist_id=playlist_id, videos=video_data, token=token)
+    return cp(name=name, playlist_id=playlist_id, videos=video_data, token=token, source=source)
 
 
 def create_video(video_data: List[Dict[str, Any]], token: str, playlist_id: str) -> None:
@@ -81,6 +83,7 @@ def load_videos(
                 video["playlist_id"] = playlist.get("_id")
                 video["playlist_name"] = playlist.get("name")
                 video["playlist_color"] = playlist.get("color")
+                video["playlist_source"] = playlist.get("source")
                 # Add human-readable duration to each video
                 video["duration_human"] = format_duration(video.get("duration_seconds", 0))
                 videos.append(video)

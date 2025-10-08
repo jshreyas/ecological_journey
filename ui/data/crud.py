@@ -144,12 +144,13 @@ def load_playlists():
 
 @with_user_from_token
 @invalidate_cache(keys=["playlists"])
-def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], user=None, **kwargs):
+def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], source: str, user=None, **kwargs):
     playlist = Playlist(
         name=name,
         playlist_id=playlist_id,
         videos=videos,
         owner_id=user.id,  # inject user id
+        source=source,  # e.g., "youtube" or "peertube"
     )
     playlist.insert()
     return to_dicts(playlist)
