@@ -209,12 +209,13 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                                             "playlist_id"
                                         ]: upload_and_sync_videos(pid, user.token, name, play_id),
                                     ).props("flat dense round color=primary").tooltip("Upload")
-                                ui.button(
-                                    icon="sync",
-                                    on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
-                                        "playlist_id"
-                                    ]: on_sync_click(pid, user.token, name, play_id),
-                                ).props("flat dense round color=primary").tooltip("Sync")
+                                else:
+                                    ui.button(
+                                        icon="sync",
+                                        on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
+                                            "playlist_id"
+                                        ]: on_sync_click(pid, user.token, name, play_id),
+                                    ).props("flat dense round color=primary").tooltip("Sync")
     # Always render the add playlist card at the end
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
 
