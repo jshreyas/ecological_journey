@@ -1,10 +1,6 @@
 from data.crud import clear_cache
-from nicegui import events, ui
-from starlette.formparsers import MultiPartParser
-from utils.peertube_api import PeerTubeClient
+from nicegui import ui
 from utils.user_context import User, with_user_context
-
-MultiPartParser.spool_max_size = 1024 * 1024 * 5  # 5 MB
 
 
 @with_user_context
@@ -12,24 +8,6 @@ def about_page(user: User | None):
     # TODO: make it available to other pages, can this be added as decorator?
     if ui.context.client.request.query_params.get("clear_cache", "") == "true":
         clear_cache()
-
-    with ui.card().classes("w-full"):
-
-        async def handle_upload(e: events.UploadEventArguments):
-            try:
-                # Step 2: perform backend → PeerTube upload
-                client = PeerTubeClient()
-                response = await client.upload_and_attach_to_playlist(
-                    e.content,
-                    name=f"Upload {e.name}",
-                    file_input_name=e.name,
-                )
-                print("DEBUG: PeerTube upload response:", response)
-                ui.notify(f"🎉 PeerTube upload complete for {e.name}: {response}", color="green")
-            except Exception as ex:
-                ui.notify(f"Error uploading {e.name}: {ex}", color="red")
-
-        ui.upload(on_upload=handle_upload, auto_upload=True, multiple=True).classes("max-w-full")
 
     with ui.column().classes("w-full max-w-4xl mx-auto p-6"):
 

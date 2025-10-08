@@ -5,6 +5,7 @@ from data.crud import load_playlists
 from log import log
 from nicegui import events, ui
 from pages.components.home.calendar_component import calendar_container
+from starlette.formparsers import MultiPartParser
 from utils.dialog_puns import caught_john_doe
 from utils.fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils.peertube_api import PeerTubeClient
@@ -19,6 +20,8 @@ from utils.utils_api import (
     load_videos,
 )
 
+# TODO: verify its usage and purpose
+MultiPartParser.spool_max_size = 1024 * 1024 * 5  # 5 MB
 client = PeerTubeClient()
 
 
@@ -129,7 +132,7 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
     parent.clear()
 
-    def blah():
+    def upload_and_sync_videos(playlist_id, token, playlist_name, play_id):
         with ui.dialog() as dialog:
             with ui.card():
 
@@ -138,11 +141,14 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                         # Step 2: perform backend → PeerTube upload
                         response = await client.upload_and_attach_to_playlist(
                             e.content,
-                            name=f"Upload {e.name}",
+                            name=f"{e.name}",
                             file_input_name=e.name,
                         )
                         print("DEBUG: PeerTube upload response:", response)
                         ui.notify(f"🎉 PeerTube upload complete for {e.name}: {response}", color="green")
+                        await sync_playlist(playlist_id, token, playlist_name, play_id, "peertube")
+                        refresh_playlists()
+                        render_dashboard()
                     except Exception as ex:
                         ui.notify(f"Error uploading {e.name}: {ex}", color="red")
 
@@ -174,9 +180,9 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                 spinner = ui.spinner(size="lg").props("color=primary")
                 spinner.set_visibility(True)
 
-                def do_sync():
+                async def do_sync():
                     try:
-                        sync_playlist(playlist_id, token, playlist_name, play_id)
+                        await sync_playlist(playlist_id, token, playlist_name, play_id)
                     except Exception as e:
                         ui.notify(f"❌ Sync failed: {str(e)}")
                     finally:
@@ -199,10 +205,10 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                                 if playlist.get("source") == "peertube":
                                     ui.button(
                                         icon="upload",
-                                        on_click=lambda: blah(),
-                                    ).props(
-                                        "flat dense round color=primary"
-                                    ).tooltip("Upload")
+                                        on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
+                                            "playlist_id"
+                                        ]: upload_and_sync_videos(pid, user.token, name, play_id),
+                                    ).props("flat dense round color=primary").tooltip("Upload")
                                 ui.button(
                                     icon="sync",
                                     on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
@@ -515,7 +521,7 @@ def open_team_modal(team):
     dialog.open()
 
 
-def sync_playlist(playlist_id, token, playlist_name, play_id):
+async def sync_playlist(playlist_id, token, playlist_name, play_id, source="youtube"):
     try:
         # Step 1: Fetch existing videos from DB
         existing_videos = load_videos(playlist_id)
@@ -528,9 +534,11 @@ def sync_playlist(playlist_id, token, playlist_name, play_id):
             existing_video_ids = set()
 
         # Step 2: Fetch only new videos from YouTube
-        latest_video_data = fetch_playlist_items(play_id, latest_saved_date)
+        if source == "youtube":
+            latest_video_data = fetch_playlist_items(play_id, latest_saved_date)
+        else:
+            latest_video_data = await client.get_playlist_videos(play_id)
         new_video_data = [video for video in latest_video_data if video["video_id"] not in existing_video_ids]
-
         if not new_video_data:
             ui.notify("✅ Playlist is already up to date!")
             return
