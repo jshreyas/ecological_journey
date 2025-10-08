@@ -1,8 +1,6 @@
 from data.crud import clear_cache
 from nicegui import events, ui
 from starlette.formparsers import MultiPartParser
-
-# from utils.hls_player import HLSPlayer
 from utils.peertube_api import PeerTubeClient
 from utils.user_context import User, with_user_context
 
@@ -15,15 +13,12 @@ def about_page(user: User | None):
     if ui.context.client.request.query_params.get("clear_cache", "") == "true":
         clear_cache()
 
-    client = PeerTubeClient()
-    # video_hls = "https://makertube01.fsn1.your-objectstorage.com/streaming-playlists/hls/68f6adfe-402c-4254-a846-1f1f011a9940/3dc5fbc8-ffb1-436d-a21c-e2a8d5bf6373-master.m3u8"
-    # video_hls = "https://makertube01.fsn1.your-objectstorage.com/streaming-playlists/hls/301d79c9-6a39-4d9e-8676-3e994a22d44d/9152a582-6d86-4a6d-95d3-0b91a2feded0-master.m3u8"
-
-    with ui.card().classes("w-full"):  # as hls_card:
+    with ui.card().classes("w-full"):
 
         async def handle_upload(e: events.UploadEventArguments):
             try:
                 # Step 2: perform backend → PeerTube upload
+                client = PeerTubeClient()
                 response = await client.upload_and_attach_to_playlist(
                     e.content,
                     name=f"Upload {e.name}",
@@ -35,14 +30,6 @@ def about_page(user: User | None):
                 ui.notify(f"Error uploading {e.name}: {ex}", color="red")
 
         ui.upload(on_upload=handle_upload, auto_upload=True, multiple=True).classes("max-w-full")
-
-        # HLSPlayer(
-        #     hls_url=video_hls,
-        #     speed=6.0,
-        #     show_speed_slider=True,
-        #     on_end=lambda: print("✅ Video finished!"),
-        #     parent=hls_card,
-        # )
 
     with ui.column().classes("w-full max-w-4xl mx-auto p-6"):
 
