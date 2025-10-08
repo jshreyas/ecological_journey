@@ -74,8 +74,8 @@ class HLSPlayer:
                     hls.loadSource("{self.hls_url}");
                     hls.attachMedia(video);
                     hls.on(Hls.Events.MANIFEST_PARSED, function() {{
-                        video.playbackRate = speed;
                         video.currentTime = start;
+                        video.playbackRate = speed;
                         video.play();
                     }});
                 }} else if (video.canPlayType('application/vnd.apple.mpegurl')) {{

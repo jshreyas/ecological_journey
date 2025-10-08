@@ -75,13 +75,30 @@ class PlayerControlsTab:
             if ref:
                 ref.clear()
                 with ref:
-                    VideoPlayer(
-                        self.video_state.video_id,
-                        start=start_time,
-                        end=clip.get("end"),
-                        speed=speed,
-                        parent=ref,
-                    )
+                    if self.video_state.is_peertube():
+                        # Avoid reloading the same page if already showing this clip
+                        request = ui.context.client.request
+                        if request.query_params.get("clip") != clip.get("clip_id"):
+                            ui.navigate.to(f"/film/{self.video_state.video_id}?clip={clip.get('clip_id')}")
+                        else:
+                            # TODO: BUG: this scenario does not work, displays a greyed out smaller size HLS player
+                            with ui.column().classes("w-full h-full") as player_ref:
+                                video_hls = "https://makertube01.fsn1.your-objectstorage.com/streaming-playlists/hls/301d79c9-6a39-4d9e-8676-3e994a22d44d/9152a582-6d86-4a6d-95d3-0b91a2feded0-master.m3u8"
+                                HLSPlayer(
+                                    hls_url=video_hls,
+                                    start=start_time,
+                                    end=clip.get("end"),
+                                    speed=speed,
+                                    parent=player_ref,
+                                )
+                    else:
+                        VideoPlayer(
+                            self.video_state.video_id,
+                            start=start_time,
+                            end=clip.get("end"),
+                            speed=speed,
+                            parent=ref,
+                        )
 
     def play_clips_playlist_mode(self):
         """Play all clips in sequence"""
