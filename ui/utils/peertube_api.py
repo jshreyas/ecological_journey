@@ -1,5 +1,7 @@
+import asyncio
 import math
 import os
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -73,25 +75,50 @@ class PeerTubeClient:
             res.raise_for_status()
             return res.json()
 
-    async def get_playlist_videos(self, playlist_id: str):
+    async def get_playlist_videos(self, playlist_id: str, max_wait: int = 30, poll_interval: float = 2.0):
+        """
+        Fetch videos from a playlist and wait for HLS URL if not immediately available.
+
+        :param playlist_id: PeerTube playlist ID
+        :param max_wait: maximum seconds to wait for HLS playlist to appear
+        :param poll_interval: seconds to wait between polls
+        """
         videos = []
         playlist_videos = await self._get_playlist_videos(playlist_id)
+
         for each in playlist_videos["data"]:
-            video_data = {
-                "title": each["video"]["name"],
-                "video_id": f'{each["video"]["id"]}',
-                "youtube_url": each["video"]["url"],
-                "date": each["video"]["publishedAt"].replace("Z", "+00:00"),
-                "type": "",
-                "partners": [],
-                "positions": [],
-                "notes": "",
-                "labels": [],
-                "clips": [],
-                "duration_seconds": each["video"]["duration"],
-            }
-            # Fetch and replace youtube url with hls url
-            videos.append(video_data)
+            start_time = time.time()
+            hls = await self.get_video(each["video"]["uuid"])
+
+            # Keep trying until streamingPlaylists is non-empty or timeout is reached
+            while not hls.get("streamingPlaylists"):
+                elapsed = time.time() - start_time
+                if elapsed > max_wait:
+                    print(f"⚠️ Timeout waiting for HLS for video {each['video']['uuid']}")
+                    break
+                await asyncio.sleep(poll_interval)
+                hls = await self.get_video(each["video"]["uuid"])
+
+            try:
+                hls_url = hls["streamingPlaylists"][0]["playlistUrl"] if hls.get("streamingPlaylists") else None
+                print("HLS URL:", hls_url)
+                video_data = {
+                    "title": each["video"]["name"],
+                    "video_id": f'{each["video"]["id"]}',
+                    "youtube_url": hls_url,  # misnamed field, but kept for backward compatibility
+                    "date": each["video"]["publishedAt"].replace("Z", "+00:00"),
+                    "type": "",
+                    "partners": [],
+                    "positions": [],
+                    "notes": "",
+                    "labels": [],
+                    "clips": [],
+                    "duration_seconds": each["video"]["duration"],
+                }
+                videos.append(video_data)
+            except Exception as exc:
+                print(f"❌ Error processing video {each['video']['uuid']}: {exc}")
+
         return videos
 
     async def add_video_to_playlist(self, playlist_id: str, video_id: str, position: Optional[int] = None):

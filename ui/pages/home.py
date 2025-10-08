@@ -175,14 +175,14 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
         owned_ids = {pl["_id"] for pl in owned}
         all_playlists = owned + [p for p in member if p["_id"] not in owned_ids]
 
-        def on_sync_click(playlist_id, token, playlist_name, play_id):
+        def on_sync_click(playlist_id, token, playlist_name, play_id, sourcee):
             def task():
                 spinner = ui.spinner(size="lg").props("color=primary")
                 spinner.set_visibility(True)
 
                 async def do_sync():
                     try:
-                        await sync_playlist(playlist_id, token, playlist_name, play_id)
+                        await sync_playlist(playlist_id, token, playlist_name, play_id, sourcee)
                     except Exception as e:
                         ui.notify(f"❌ Sync failed: {str(e)}")
                     finally:
@@ -209,13 +209,12 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                                             "playlist_id"
                                         ]: upload_and_sync_videos(pid, user.token, name, play_id),
                                     ).props("flat dense round color=primary").tooltip("Upload")
-                                else:
-                                    ui.button(
-                                        icon="sync",
-                                        on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
-                                            "playlist_id"
-                                        ]: on_sync_click(pid, user.token, name, play_id),
-                                    ).props("flat dense round color=primary").tooltip("Sync")
+                                ui.button(
+                                    icon="sync",
+                                    on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
+                                        "playlist_id"
+                                    ]: on_sync_click(pid, user.token, name, play_id, playlist.get("source", "youtube")),
+                                ).props("flat dense round color=primary").tooltip("Sync")
     # Always render the add playlist card at the end
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
 
@@ -522,7 +521,7 @@ def open_team_modal(team):
     dialog.open()
 
 
-async def sync_playlist(playlist_id, token, playlist_name, play_id, source="youtube"):
+async def sync_playlist(playlist_id, token, playlist_name, play_id, sources="youtube"):
     try:
         # Step 1: Fetch existing videos from DB
         existing_videos = load_videos(playlist_id)
@@ -535,7 +534,7 @@ async def sync_playlist(playlist_id, token, playlist_name, play_id, source="yout
             existing_video_ids = set()
 
         # Step 2: Fetch only new videos from YouTube
-        if source == "youtube":
+        if sources == "youtube":
             latest_video_data = fetch_playlist_items(play_id, latest_saved_date)
         else:
             latest_video_data = await client.get_playlist_videos(play_id)
@@ -548,9 +547,9 @@ async def sync_playlist(playlist_id, token, playlist_name, play_id, source="yout
         create_video(new_video_data, token, play_id)
         ui.notify(f'✅ Synced {len(new_video_data)} new videos to "{playlist_name}".')
 
-    except Exception as e:
-        log.error(f"❌ Sync failed: {str(e)}")
-        ui.notify(f"❌ Sync failed: {str(e)}")
+    except Exception as exc:
+        log.error(f"❌ Sync failed: {str(exc)}")
+        ui.notify(f"❌ Sync failed: {str(exc)}")
 
 
 def create_team_modal():
