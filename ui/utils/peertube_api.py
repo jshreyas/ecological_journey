@@ -1,7 +1,5 @@
-import asyncio
 import math
 import os
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -75,37 +73,36 @@ class PeerTubeClient:
             res.raise_for_status()
             return res.json()
 
-    async def get_playlist_videos(self, playlist_id: str, max_wait: int = 30, poll_interval: float = 2.0):
+    async def get_playlist_videos(self, playlist_id: str):
         """
-        Fetch videos from a playlist and wait for HLS URL if not immediately available.
+        Fetch videos from a playlist.
 
-        :param playlist_id: PeerTube playlist ID
-        :param max_wait: maximum seconds to wait for HLS playlist to appear
-        :param poll_interval: seconds to wait between polls
+        If a video is still transcoding, it will return None for the HLS URL.
+        Final URL can be fetched later in a sync step.
         """
         videos = []
         playlist_videos = await self._get_playlist_videos(playlist_id)
 
         for each in playlist_videos["data"]:
-            start_time = time.time()
-            hls = await self.get_video(each["video"]["uuid"])
+            # TODO: dont fetch for videos which are already published
+            hls_info = await self.get_video(each["video"]["uuid"])
+            video_state = hls_info.get("state", {}).get("label", "").lower()
+            streaming_playlists = hls_info.get("streamingPlaylists", [])
 
-            # Keep trying until streamingPlaylists is non-empty or timeout is reached
-            while not hls.get("streamingPlaylists"):
-                elapsed = time.time() - start_time
-                if elapsed > max_wait:
-                    print(f"⚠️ Timeout waiting for HLS for video {each['video']['uuid']}")
-                    break
-                await asyncio.sleep(poll_interval)
-                hls = await self.get_video(each["video"]["uuid"])
+            if video_state == "published" and streaming_playlists:
+                hls_url = streaming_playlists[0].get("playlistUrl")  # latest playlist
+            else:
+                hls_url = None  # transcoding not finished
+                print(f"⚠️ Video {each['video']['uuid']} is still {video_state}, HLS URL not ready yet.")
+                break
+
+            print(f"Video {each['video']['uuid']} state: {video_state}, HLS URL: {hls_url}")
 
             try:
-                hls_url = hls["streamingPlaylists"][0]["playlistUrl"] if hls.get("streamingPlaylists") else None
-                print("HLS URL:", hls_url)
                 video_data = {
                     "title": each["video"]["name"],
                     "video_id": f'{each["video"]["id"]}',
-                    "youtube_url": hls_url,  # misnamed field, but kept for backward compatibility
+                    "youtube_url": hls_url,  # will be None if not ready
                     "date": each["video"]["publishedAt"].replace("Z", "+00:00"),
                     "type": "",
                     "partners": [],
