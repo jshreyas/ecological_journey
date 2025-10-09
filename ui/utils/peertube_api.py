@@ -1,13 +1,15 @@
 import math
-import os
+import re
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urljoin
 
 import httpx
+import requests
 
 PEERTUBE_URL: str = "https://makertube.net"
-PEERTUBE_TOKEN: str = "08d80740687e374e4b9184605115785211ed9a29"
-CHUNK_SIZE_MB: int = 80  # 80MB per chunk
+PEERTUBE_TOKEN: str = "38f7bea99592e0425be05086988b9c20a412e22c"
+CHUNK_SIZE_MB: int = 50  # 50MB per chunk
 
 
 class PeerTubeClient:
@@ -68,6 +70,8 @@ class PeerTubeClient:
             return r.json()
 
     async def _get_playlist_videos(self, playlist_id: str):
+        # TODO: handle pagination
+        # TODO: handle 429 rate limits
         async with httpx.AsyncClient() as client:
             res = await client.get(f"{self.base_url}/api/v1/video-playlists/{playlist_id}/videos", headers=self.headers)
             res.raise_for_status()
@@ -169,106 +173,49 @@ class PeerTubeClient:
 
         import httpx
 
-        # Determine if we got a path or file-like object
-        if hasattr(file_input, "read"):  # file-like (streaming)
-            file_obj = file_input
-            file_obj.seek(0, os.SEEK_END)
-            file_size = file_obj.tell()
-            file_obj.seek(0)
-            file_name = file_input_name
-        else:  # Path
-            file_obj = open(file_input, "rb")
-            file_size = os.path.getsize(file_input)
-            file_name = os.path.basename(file_input)
+        try:
+            # Determine if we got a path or file-like object
+            if hasattr(file_input, "read"):  # file-like (streaming)
+                file_obj = file_input
+                file_obj.seek(0, os.SEEK_END)
+                file_size = file_obj.tell()
+                file_obj.seek(0)
+                file_name = file_input_name
+            else:  # Path
+                file_obj = open(file_input, "rb")
+                file_size = os.path.getsize(file_input)
+                file_name = os.path.basename(file_input)
 
-        chunk_size = CHUNK_SIZE_MB * 1024 * 1024
-        num_chunks = math.ceil(file_size / chunk_size)
-        headers = {"Authorization": f"Bearer {self.token}"}
-        timeout = httpx.Timeout(600.0, read=600.0)
+            chunk_size = CHUNK_SIZE_MB * 1024 * 1024
+            num_chunks = math.ceil(file_size / chunk_size)
+            headers = {"Authorization": f"Bearer {self.token}"}
+            timeout = httpx.Timeout(800.0, read=800.0, write=800.0)
 
-        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
-            # 1️⃣ Initialize resumable upload
-            init_headers = {
-                **headers,
-                "X-Upload-Content-Length": str(file_size),
-                "X-Upload-Content-Type": "video/mp4",
-            }
-            init_body = {"channelId": channel_id, "filename": file_name, "name": name, "privacy": "1"}
-
-            print("DEBUG: Initializing upload with init_body:", init_body)
-            init_resp = await client.post(
-                f"{self.base_url}/api/v1/videos/upload-resumable",
-                headers=init_headers,
-                data=init_body,
-            )
-            init_resp.raise_for_status()
-            chunk_url = init_resp.headers["location"]
-            print(f"✅ Initialized upload: {chunk_url}")
-
-            # 2️⃣ Upload chunks
-            uploaded_bytes = 0
-            for i in range(num_chunks):
-                chunk = file_obj.read(chunk_size)
-                start = uploaded_bytes
-                end = min(start + len(chunk), file_size) - 1
-
-                put_headers = {
+            async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
+                print("Resolved timeouts:", client.timeout)
+                # 1️⃣ Initialize resumable upload
+                init_headers = {
                     **headers,
-                    "Content-Length": str(len(chunk)),
-                    "Content-Range": f"bytes {start}-{end}/{file_size}",
-                    "Content-Type": "application/octet-stream",
+                    "X-Upload-Content-Length": str(file_size),
+                    "X-Upload-Content-Type": "video/mp4",
                 }
+                init_body = {"channelId": channel_id, "filename": file_name, "name": name, "privacy": "1"}
 
-                res = await client.put(chunk_url, headers=put_headers, content=chunk)
-                uploaded_bytes += len(chunk)
+                print("DEBUG: Initializing upload with init_body:", init_body)
+                init_resp = await client.post(
+                    f"{self.base_url}/api/v1/videos/upload-resumable",
+                    headers=init_headers,
+                    data=init_body,
+                )
+                init_resp.raise_for_status()
+                chunk_url = init_resp.headers["location"]
+                print(f"✅ Initialized upload: {chunk_url}")
 
-                # 🔁 Report progress if callback provided
-                if on_progress:
-                    await on_progress(uploaded_bytes, file_size)
-
-                if res.status_code == 308:
-                    print(f"📦 Chunk {i+1}/{num_chunks} accepted ({uploaded_bytes/file_size*100:.1f}%)")
-                    continue
-                elif res.status_code in (200, 201):
-                    print("🎉 Upload complete!")
-                    return res.json()
-                else:
-                    res.raise_for_status()
-
-    async def _upload_resumable(self, file_path: Path, name: str, channel_id: int = 12177):
-        file_size = os.path.getsize(file_path)
-        chunk_size = CHUNK_SIZE_MB * 1024 * 1024
-        num_chunks = math.ceil(file_size / chunk_size)
-        headers = {"Authorization": f"Bearer {self.token}"}
-        timeout = httpx.Timeout(600.0, read=600.0)
-
-        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
-            # 1️⃣ Initialize resumable upload
-            init_headers = {
-                **headers,
-                "X-Upload-Content-Length": str(file_size),
-                "X-Upload-Content-Type": "video/mp4",
-            }
-            init_body = {
-                "channelId": channel_id,
-                "filename": file_path.name,
-                "name": name,
-            }
-
-            init_resp = await client.post(
-                f"{self.base_url}/api/v1/videos/upload-resumable",
-                headers=init_headers,
-                data=init_body,
-            )
-            init_resp.raise_for_status()
-            chunk_url = init_resp.headers["location"]
-            print(f"✅ Initialized upload: {chunk_url}")
-
-            # 2️⃣ Upload chunks
-            with open(file_path, "rb") as f:
+                # 2️⃣ Upload chunks
+                uploaded_bytes = 0
                 for i in range(num_chunks):
-                    chunk = f.read(chunk_size)
-                    start = i * chunk_size
+                    chunk = file_obj.read(chunk_size)
+                    start = uploaded_bytes
                     end = min(start + len(chunk), file_size) - 1
 
                     put_headers = {
@@ -277,67 +224,182 @@ class PeerTubeClient:
                         "Content-Range": f"bytes {start}-{end}/{file_size}",
                         "Content-Type": "application/octet-stream",
                     }
+                    import asyncio
+                    import time
 
-                    res = await client.put(
-                        chunk_url,
-                        headers=put_headers,
-                        content=chunk,
-                    )
+                    for attempt in range(10):
+                        try:
+                            start = time.monotonic()
+                            res = await client.put(chunk_url, headers=put_headers, content=chunk)
+                            print(f"Chunk upload took {time.monotonic() - start:.2f}s")
+                            if res.status_code in (200, 201, 308):
+                                break
+                            else:
+                                print(f"Chunk upload failed ({res.status_code}), retrying...")
+                        except httpx.ReadError:
+                            print(f"Chunk upload failed {time.monotonic() - start:.2f}s")
+                            print("Network read error, retrying...")
+                        await asyncio.sleep(2**attempt)
+                    else:
+                        raise RuntimeError("Chunk upload failed after 10 retries")
 
-                    # ✅ DO NOT raise on 308
+                    uploaded_bytes += len(chunk)
+
+                    # 🔁 Report progress if callback provided
+                    if on_progress:
+                        await on_progress(uploaded_bytes, file_size)
+
                     if res.status_code == 308:
-                        print(f"📦 Chunk {i+1}/{num_chunks} accepted ({res.headers.get('Range')})")
+                        print(f"📦 Chunk {i+1}/{num_chunks} accepted ({uploaded_bytes/file_size*100:.1f}%)")
                         continue
                     elif res.status_code in (200, 201):
                         print("🎉 Upload complete!")
                         return res.json()
                     else:
                         res.raise_for_status()
+        except Exception as exc:
+            print(f"❌ Upload failed: {exc}")
+            raise
 
-    async def upload_chunked(self, file_path: Path, name: str, channel_id: int = 12177):
-        """Proper resumable upload for large files (>2GB)."""
-        timeout = httpx.Timeout(600.0, read=600.0)
+    async def get_hls_clip(
+        self,
+        start_sec: float = 20.0,
+        end_sec: float = 30.0,
+        prefer_resolution: str | None = None,
+        timeout: int = 10,
+        debug: bool = True,
+    ):
+        """
+        Build a valid mini HLS variant playlist containing only the segments
+        that cover [start_sec, end_sec).
+        Returns a single HLS playlist string (for direct playback).
+        """
 
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            # 1️⃣ Init the resumable upload
-            init_data = {"name": name, "channelId": str(channel_id)}
-            init_resp = await client.post(
-                f"{self.base_url}/api/v1/videos/upload-resumable/init",
-                headers=self.headers,
-                data=init_data,
+        master_or_variant_url = (
+            "https://makertube01.fsn1.your-objectstorage.com/"
+            "streaming-playlists/hls/301d79c9-6a39-4d9e-8676-3e994a22d44d/"
+            "9152a582-6d86-4a6d-95d3-0b91a2feded0-master.m3u8"
+        )
+
+        if end_sec <= start_sec:
+            raise ValueError("end_sec must be > start_sec")
+
+        def log(*a):
+            if debug:
+                print("[get_hls_clip]", *a)
+
+        # --- Fetch master or variant ---
+        log(f"Fetching: {master_or_variant_url}")
+        r = requests.get(master_or_variant_url, timeout=timeout)
+        r.raise_for_status()
+        lines = [ln.strip() for ln in r.text.splitlines() if ln.strip()]
+
+        # --- If master, choose one variant ---
+        if any("#EXT-X-STREAM-INF" in ln for ln in lines):
+            variants = []
+            for i, ln in enumerate(lines):
+                if ln.startswith("#EXT-X-STREAM-INF"):
+                    m_res = re.search(r"RESOLUTION=(\d+x\d+)", ln)
+                    m_bw = re.search(r"BANDWIDTH=(\d+)", ln)
+                    if i + 1 < len(lines):
+                        variants.append(
+                            {
+                                "uri": lines[i + 1],
+                                "res": m_res.group(1) if m_res else None,
+                                "bw": int(m_bw.group(1)) if m_bw else None,
+                            }
+                        )
+            if not variants:
+                raise RuntimeError("No variants found")
+
+            chosen = None
+            if prefer_resolution:
+                for v in variants:
+                    if prefer_resolution in (v["res"] or ""):
+                        chosen = v
+                        break
+            if not chosen:
+                chosen = max(variants, key=lambda v: v["bw"] or 0)
+
+            variant_url = (
+                chosen["uri"] if chosen["uri"].startswith("http") else urljoin(master_or_variant_url, chosen["uri"])
             )
-            init_resp.raise_for_status()
-            upload_id = init_resp.json()["uploadId"]
 
-            # 2️⃣ Upload chunks
-            file_size = os.path.getsize(file_path)
-            chunk_size = CHUNK_SIZE_MB * 1024 * 1024
-            num_chunks = math.ceil(file_size / chunk_size)
+            log(f"Chosen variant: {variant_url}")
+            vr = requests.get(variant_url, timeout=timeout)
+            vr.raise_for_status()
+            lines = [ln.strip() for ln in vr.text.splitlines() if ln.strip()]
+            base_url = variant_url.rsplit("/", 1)[0] + "/"
+        else:
+            base_url = master_or_variant_url.rsplit("/", 1)[0] + "/"
 
-            with open(file_path, "rb") as f:
-                for i in range(num_chunks):
-                    chunk = f.read(chunk_size)
-                    start = i * chunk_size
-                    end = min(start + len(chunk), file_size) - 1
-                    headers = {
-                        **self.headers,
-                        "Content-Range": f"bytes {start}-{end}/{file_size}",
-                        "Upload-Id": upload_id,
+        # --- Parse variant ---
+        ext_x_map = None
+        segments = []
+        seq = 0
+        total = 0.0
+        # _current_range = None
+
+        for i, ln in enumerate(lines):
+            if ln.startswith("#EXT-X-MAP"):
+                m = re.search(r'URI="([^"]+)"', ln)
+                if m:
+                    ext_x_map = urljoin(base_url, m.group(1))
+            elif ln.startswith("#EXT-X-BYTERANGE"):
+                _ = ln.split(":", 1)[1].strip()
+            elif ln.startswith("#EXTINF"):
+                try:
+                    dur = float(ln.split(":")[1].split(",")[0])
+                except Exception:
+                    dur = 0
+                byterange = None
+                if i + 1 < len(lines) and lines[i + 1].startswith("#EXT-X-BYTERANGE"):
+                    byterange = lines[i + 1].split(":")[1].strip()
+                    uri = lines[i + 2]
+                    # skip = 2
+                else:
+                    uri = lines[i + 1]
+                    # skip = 1
+                segments.append(
+                    {
+                        "uri": urljoin(base_url, uri),
+                        "duration": dur,
+                        "index": seq,
+                        "start": total,
+                        "end": total + dur,
+                        "byterange": byterange,
                     }
-                    files = {"videofile": (file_path.name, chunk, "video/mp4")}
-                    r = await client.post(
-                        f"{self.base_url}/api/v1/videos/upload-resumable",
-                        headers=headers,
-                        files=files,
-                    )
-                    r.raise_for_status()
-                    print(f"Uploaded chunk {i+1}/{num_chunks}")
+                )
+                seq += 1
+                total += dur
 
-            # 3️⃣ Finalize upload
-            finish_resp = await client.post(
-                f"{self.base_url}/api/v1/videos/upload-resumable/finish",
-                headers=self.headers,
-                data={"uploadId": upload_id},
-            )
-            finish_resp.raise_for_status()
-            return finish_resp.json()
+        if not segments:
+            raise RuntimeError("No media segments found")
+
+        # --- Select relevant segments ---
+        chosen = [s for s in segments if s["end"] > start_sec and s["start"] < end_sec]
+        if not chosen:
+            raise RuntimeError("No overlapping segments")
+
+        # --- Build final HLS playlist ---
+        new_pl = [
+            "#EXTM3U",
+            "#EXT-X-VERSION:3",
+            f"#EXT-X-TARGETDURATION:{math.ceil(max(s['duration'] for s in chosen))}",
+            f"#EXT-X-MEDIA-SEQUENCE:{chosen[0]['index']}",
+        ]
+
+        if ext_x_map:
+            new_pl.append(f'#EXT-X-MAP:URI="{ext_x_map}"')
+
+        for seg in chosen:
+            new_pl.append(f"#EXTINF:{seg['duration']:.3f},")
+            if "byterange" in seg and seg["byterange"]:
+                new_pl.append(f"#EXT-X-BYTERANGE:{seg['byterange']}")
+            new_pl.append(seg["uri"])
+
+        new_pl.append("#EXT-X-ENDLIST")
+
+        log(f"Built playlist with {len(chosen)} segments ({chosen[0]['start']:.1f}s → {chosen[-1]['end']:.1f}s)")
+        log(new_pl)
+        return "\n".join(new_pl)

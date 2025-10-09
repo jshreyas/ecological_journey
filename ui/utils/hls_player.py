@@ -4,7 +4,6 @@ from nicegui import app, ui
 
 
 class HLSPlayer:
-
     def __init__(
         self,
         hls_url: str,
@@ -29,18 +28,23 @@ class HLSPlayer:
         self._render()
 
     def _render(self):
-        self.element_id = f"hls-player-{uuid.uuid4().hex[:8]}"
-
+        safe_id = uuid.uuid4().hex[:8]
+        self.element_id = f"hls_player_{safe_id}"  # JS var-safe ID
+        wrapper_id = f"hls_wrapper_{safe_id}"
         context = self.parent if self.parent else ui
+
         with context:
+            # --- HTML container ---
             ui.html(
                 f"""
-                    <div id="hls-player-wrapper" style="width: 100%; height: 100%; position: relative; overflow: hidden;">
-                        <video id="{self.element_id}" controls style="border-radius: 12px; background: #000;"></video>
-                    </div>"""
+                <div id="{wrapper_id}" style="width:{self.width}px;height:{self.height}px;position:relative;">
+                    <video id="{self.element_id}" controls style="width:100%;height:100%;background:#000;border-radius:12px;"></video>
+                </div>
+            """
             )
 
-            # 👇 Optional endpoint callback for on_end
+            # --- End callback ---
+            js_on_end = ""
             if self.on_end:
                 endpoint = f"/_nicegui_api/{self.element_id}_on_end"
 
@@ -50,75 +54,101 @@ class HLSPlayer:
                         self.on_end()
                     return {"status": "ok"}
 
-                js_on_end = f"""
-                    fetch('/_nicegui_api/{self.element_id}_on_end', {{method: 'POST'}});
-                """
-            else:
-                js_on_end = ""
+                js_on_end = f"fetch('{endpoint}',{{method:'POST'}});"
 
+            # --- HLS JS ---
             ui.add_body_html(
                 f"""
-            <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {{
-                const video = document.getElementById('{self.element_id}');
-                const speed = {self.speed};
-                const start = {self.start};
-                const end = {self.end};
-                if (!video) {{
-                    console.error('Video element not found');
-                    return;
-                }}
-                if (Hls.isSupported()) {{
-                    const hls = new Hls();
-                    hls.loadSource("{self.hls_url}");
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {{
-                        video.currentTime = start;
-                        video.playbackRate = speed;
-                        video.play();
-                    }});
-                }} else if (video.canPlayType('application/vnd.apple.mpegurl')) {{
-                    video.src = "{self.hls_url}";
-                    video.playbackRate = speed;
-                    video.currentTime = start;
-                    video.play();
-                }}
-                // ⏱ End detection
-                const interval = setInterval(() => {{
-                    if (video.currentTime >= end) {{
-                        video.pause();
-                        clearInterval(interval);
-                        {js_on_end}
-                    }}
-                }}, 500);
+                <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {{
+                    const video = document.getElementById('{self.element_id}');
+                    const url = "{self.hls_url}?start={self.start}&end={self.end}&_=" + Date.now();
+                    console.log("[HLSPlayer] Loading:", url);
 
-                // global speed setter
-                window.setHLSSpeed = function(newSpeed) {{
-                    video.playbackRate = newSpeed;
-                }};
-            }});
-            </script>
+                    const hlsVarName = "__currentHLS_{safe_id}";
+                    if (window[hlsVarName]) {{
+                        try {{
+                            window[hlsVarName].stopLoad();
+                            window[hlsVarName].detachMedia();
+                            window[hlsVarName].destroy();
+                            console.log("[HLSPlayer] Destroyed old HLS instance");
+                        }} catch(e) {{
+                            console.warn("[HLSPlayer] destroy() error:", e);
+                        }}
+                        delete window[hlsVarName];
+                    }}
+
+                    if (Hls.isSupported()) {{
+                        const hls = new Hls({{
+                            maxBufferLength: 5,
+                            maxMaxBufferLength: 6,
+                            maxBufferSize: 10*1000*1000,
+                            maxBufferHole: 0.5,
+                            autoStartLoad: true,
+                            startPosition: 0,
+                            enableWorker: false,
+                            autoRecoverError: true,
+                            fragLoadTimeout: 240000,       // 4 minutes per fragment
+                            manifestLoadingTimeOut: 60000, // 1 min for manifest
+                            levelLoadingTimeOut: 60000,    // 1 min per level
+                        }});
+                        window[hlsVarName] = hls;
+                        hls.attachMedia(video);
+
+                        hls.on(Hls.Events.MEDIA_ATTACHED, () => {{
+                            console.log("[HLSPlayer] MEDIA_ATTACHED → load source");
+                            hls.loadSource(url);
+                        }});
+
+                        hls.on(Hls.Events.MANIFEST_PARSED, () => {{
+                            console.log("[HLSPlayer] MANIFEST_PARSED → play");
+                            video.playbackRate = {self.speed};
+                            video.play().catch(err => console.warn("[HLSPlayer] play() error:", err));
+                        }});
+
+                        hls.on(Hls.Events.ERROR, (evt, data) => {{
+                            console.error("[HLSPlayer] HLS error:", data);
+                            if (data.fatal) {{
+                                try {{ hls.destroy(); }} catch(e) {{ console.warn("[HLSPlayer] destroy() error:", e); }}
+                            }} else {{
+                                // retry non-fatal network errors
+                                if (data.type === 'networkError') {{
+                                    console.log("[HLSPlayer] Retrying fragment:", data.frag ? data.frag.url : '');
+                                    hls.startLoad();
+                                }}
+                            }}
+                        }});
+                    }} else if (video.canPlayType('application/vnd.apple.mpegurl')) {{
+                        video.src = url;
+                        video.playbackRate = {self.speed};
+                        video.play().catch(err => console.warn("[HLSPlayer] native play error:", err));
+                    }}
+
+                    video.addEventListener('ended', function() {{
+                        console.log("[HLSPlayer] Clip ended");
+                        {js_on_end}
+                    }});
+
+                    window['setHLSSpeed_{safe_id}'] = (s) => {{
+                        video.playbackRate = s;
+                        console.log("[HLSPlayer] Speed set to", s);
+                    }};
+                }});
+                </script>
             """
             )
 
-            # 👇 Optional speed control knob
+            # --- Speed Slider ---
             if self.show_speed_slider:
 
                 def on_speed_change(_):
-                    self.speed = speed_knob.value
-                    ui.run_javascript(f"window.setHLSSpeed({speed_knob.value});")
+                    self.speed = knob.value
+                    ui.run_javascript(f"window.setHLSSpeed_{safe_id}({self.speed});")
 
                 with ui.row().classes("items-center justify-center mt-2 mx-6"):
-                    speed_knob = (
-                        ui.knob(
-                            min=0.25,
-                            max=8.0,
-                            step=0.25,
-                            value=self.speed,
-                            track_color="grey-2",
-                            show_value=True,
-                        )
+                    knob = (
+                        ui.knob(min=0.25, max=8.0, step=0.25, value=self.speed, show_value=True)
                         .props("size=60")
                         .on("change", on_speed_change)
                     )

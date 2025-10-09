@@ -21,7 +21,7 @@ from utils.utils_api import (
 )
 
 # TODO: verify its usage and purpose
-MultiPartParser.spool_max_size = 1024 * 1024 * 5  # 5 MB
+MultiPartParser.spool_max_size = 1024 * 1024 * 50  # 50 MB
 client = PeerTubeClient()
 
 
