@@ -99,7 +99,7 @@ class NavigationTab:
 
                 # Center label
                 with ui.row().classes("justify-center"):
-                    ui.label(f'🔍 🎬 {video.get("title", "Untitled Video")}').classes("text-2xl font-bold")
+                    ui.label(f'{video.get("title", "Untitled Video")}').classes("text-2xl font-bold")
 
                 # Next
                 if self.next_video:

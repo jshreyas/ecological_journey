@@ -81,43 +81,51 @@ class HLSPlayer:
 
                     if (Hls.isSupported()) {{
                         const hls = new Hls({{
-                            maxBufferLength: 5,
-                            maxMaxBufferLength: 6,
-                            maxBufferSize: 10*1000*1000,
-                            maxBufferHole: 0.5,
+                            startFragPrefetch: true,
+                            maxBufferLength: 20,
+                            maxMaxBufferLength: 60,
+                            maxBufferSize: 60 * 1000 * 1000,
+                            maxBufferHole: 1.5,
+                            liveSyncDurationCount: 3,
+                            enableWorker: true,
+                            lowLatencyMode: false,
                             autoStartLoad: true,
-                            startPosition: 0,
-                            enableWorker: false,
-                            autoRecoverError: true,
-                            fragLoadTimeout: 240000,       // 4 minutes per fragment
-                            manifestLoadingTimeOut: 60000, // 1 min for manifest
-                            levelLoadingTimeOut: 60000,    // 1 min per level
+                            fragLoadTimeout: 300000,
+                            manifestLoadingTimeOut: 90000,
+                            levelLoadingTimeOut: 90000,
                         }});
                         window[hlsVarName] = hls;
-                        hls.attachMedia(video);
 
+                        hls.attachMedia(video);
                         hls.on(Hls.Events.MEDIA_ATTACHED, () => {{
                             console.log("[HLSPlayer] MEDIA_ATTACHED → load source");
                             hls.loadSource(url);
                         }});
 
-                        hls.on(Hls.Events.MANIFEST_PARSED, () => {{
-                            console.log("[HLSPlayer] MANIFEST_PARSED → play");
-                            video.playbackRate = {self.speed};
-                            video.play().catch(err => console.warn("[HLSPlayer] play() error:", err));
+                        // Play only after buffered enough
+                        hls.on(Hls.Events.BUFFER_APPENDED, () => {{
+                            if (video.buffered.length && video.buffered.end(0) > 5 && video.paused) {{
+                                console.log("[HLSPlayer] Enough buffer → start playback");
+                                video.playbackRate = {self.speed};
+                                video.play().catch(err => console.warn("[HLSPlayer] play() error:", err));
+                            }}
                         }});
 
                         hls.on(Hls.Events.ERROR, (evt, data) => {{
-                            console.error("[HLSPlayer] HLS error:", data);
-                            if (data.fatal) {{
-                                try {{ hls.destroy(); }} catch(e) {{ console.warn("[HLSPlayer] destroy() error:", e); }}
-                            }} else {{
-                                // retry non-fatal network errors
-                                if (data.type === 'networkError') {{
-                                    console.log("[HLSPlayer] Retrying fragment:", data.frag ? data.frag.url : '');
-                                    hls.startLoad();
-                                }}
+                            console.warn("[HLSPlayer] HLS error:", data.details);
+                            if (data.type === 'mediaError' && data.details === 'bufferStalledError') {{
+                                console.log("[HLSPlayer] Recovering from stall...");
+                                video.play().catch(()=>{{}});
+                                hls.startLoad();
                             }}
+                            if (data.fatal) {{
+                                console.error("[HLSPlayer] Fatal error, destroying HLS instance");
+                                try {{ hls.destroy(); }} catch(e) {{}}
+                            }}
+                        }});
+
+                        hls.on(Hls.Events.MANIFEST_PARSED, () => {{
+                            console.log("[HLSPlayer] MANIFEST_PARSED");
                         }});
                     }} else if (video.canPlayType('application/vnd.apple.mpegurl')) {{
                         video.src = url;
