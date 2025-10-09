@@ -107,6 +107,7 @@ class HLSPlayer:
                             if (video.buffered.length && video.buffered.end(0) > 5 && video.paused) {{
                                 console.log("[HLSPlayer] Enough buffer → start playback");
                                 video.playbackRate = {self.speed};
+                                video.currentTime = {self.start};
                                 video.play().catch(err => console.warn("[HLSPlayer] play() error:", err));
                             }}
                         }});
@@ -132,6 +133,15 @@ class HLSPlayer:
                         video.playbackRate = {self.speed};
                         video.play().catch(err => console.warn("[HLSPlayer] native play error:", err));
                     }}
+
+                    // ⏱ End detection
+                    const interval = setInterval(() => {{
+                        if (video.currentTime >= {self.end}) {{
+                            video.pause();
+                            clearInterval(interval);
+                            {js_on_end}
+                        }}
+                    }}, 500);
 
                     video.addEventListener('ended', function() {{
                         console.log("[HLSPlayer] Clip ended");
