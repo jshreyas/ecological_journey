@@ -6,9 +6,10 @@ from urllib.parse import urljoin
 
 import httpx
 import requests
+from nicegui import ui
 
 PEERTUBE_URL: str = "https://makertube.net"
-PEERTUBE_TOKEN: str = "38f7bea99592e0425be05086988b9c20a412e22c"
+PEERTUBE_TOKEN: str = "67ee8bd680cab0b36c09be3b52bfa9c75172b422"
 CHUNK_SIZE_MB: int = 50  # 50MB per chunk
 
 
@@ -19,6 +20,7 @@ class PeerTubeClient:
         self.base_url = base_url or PEERTUBE_URL.rstrip("/")
         self.token = token or PEERTUBE_TOKEN
         self.headers = {"Authorization": f"Bearer {self.token}"}
+        self.log = None
 
     async def create_channel(self, name: str, display_name: Optional[str] = None):
         data = {"name": name, "displayName": display_name or name}
@@ -164,24 +166,31 @@ class PeerTubeClient:
         self,
         file_input,
         name: str,
-        channel_id: int = 12187,  # 12177,
+        channel_id: int = 12187,
         file_input_name: str = "uploaded_file.mp4",
-        on_progress=None,  # NEW
+        on_progress=None,
     ):
+        import asyncio
         import math
         import os
+        import time
 
         import httpx
 
+        # 🌱 Create a live upload log UI
+        if not self.log:
+            self.log = ui.log().classes("w-full h-64 bg-black text-primary p-2 font-mono text-xs overflow-y-auto")
+        self.log.push(f"🚀 Starting upload: {name}")
+
         try:
-            # Determine if we got a path or file-like object
-            if hasattr(file_input, "read"):  # file-like (streaming)
+            # Determine file details
+            if hasattr(file_input, "read"):
                 file_obj = file_input
                 file_obj.seek(0, os.SEEK_END)
                 file_size = file_obj.tell()
                 file_obj.seek(0)
                 file_name = file_input_name
-            else:  # Path
+            else:
                 file_obj = open(file_input, "rb")
                 file_size = os.path.getsize(file_input)
                 file_name = os.path.basename(file_input)
@@ -192,16 +201,14 @@ class PeerTubeClient:
             timeout = httpx.Timeout(800.0, read=800.0, write=800.0)
 
             async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
-                print("Resolved timeouts:", client.timeout)
-                # 1️⃣ Initialize resumable upload
+                self.log.push(f"Initializing upload for {file_name} ({file_size/1024/1024:.2f} MB)...")
+                init_body = {"channelId": channel_id, "filename": file_name, "name": name, "privacy": "1"}
                 init_headers = {
                     **headers,
                     "X-Upload-Content-Length": str(file_size),
                     "X-Upload-Content-Type": "video/mp4",
                 }
-                init_body = {"channelId": channel_id, "filename": file_name, "name": name, "privacy": "1"}
 
-                print("DEBUG: Initializing upload with init_body:", init_body)
                 init_resp = await client.post(
                     f"{self.base_url}/api/v1/videos/upload-resumable",
                     headers=init_headers,
@@ -209,9 +216,8 @@ class PeerTubeClient:
                 )
                 init_resp.raise_for_status()
                 chunk_url = init_resp.headers["location"]
-                print(f"✅ Initialized upload: {chunk_url}")
+                self.log.push(f"✅ Initialized upload: {chunk_url}")
 
-                # 2️⃣ Upload chunks
                 uploaded_bytes = 0
                 for i in range(num_chunks):
                     chunk = file_obj.read(chunk_size)
@@ -224,41 +230,37 @@ class PeerTubeClient:
                         "Content-Range": f"bytes {start}-{end}/{file_size}",
                         "Content-Type": "application/octet-stream",
                     }
-                    import asyncio
-                    import time
 
                     for attempt in range(10):
                         try:
-                            start = time.monotonic()
+                            t0 = time.monotonic()
                             res = await client.put(chunk_url, headers=put_headers, content=chunk)
-                            print(f"Chunk upload took {time.monotonic() - start:.2f}s")
+                            elapsed = time.monotonic() - t0
                             if res.status_code in (200, 201, 308):
+                                self.log.push(
+                                    f"📦 Chunk {i+1}/{num_chunks} accepted ({uploaded_bytes/file_size*100:.1f}%) [{elapsed:.2f}s]"
+                                )
                                 break
                             else:
-                                print(f"Chunk upload failed ({res.status_code}), retrying...")
+                                self.log.push(f"⚠️ Chunk {i+1} failed ({res.status_code}), retrying... [{elapsed:.2f}s]")
                         except httpx.ReadError:
-                            print(f"Chunk upload failed {time.monotonic() - start:.2f}s")
-                            print("Network read error, retrying...")
+                            self.log.push(f"❌ ReadError on chunk {i+1}, retrying... [{elapsed:.2f}s]")
                         await asyncio.sleep(2**attempt)
                     else:
+                        self.log.push(f"💀 Chunk {i+1} failed after 10 retries.")
                         raise RuntimeError("Chunk upload failed after 10 retries")
 
                     uploaded_bytes += len(chunk)
-
-                    # 🔁 Report progress if callback provided
                     if on_progress:
                         await on_progress(uploaded_bytes, file_size)
 
-                    if res.status_code == 308:
-                        print(f"📦 Chunk {i+1}/{num_chunks} accepted ({uploaded_bytes/file_size*100:.1f}%)")
-                        continue
-                    elif res.status_code in (200, 201):
-                        print("🎉 Upload complete!")
+                    if res.status_code in (200, 201):
+                        self.log.push(f"🎉 Upload complete for {name}")
                         return res.json()
-                    else:
-                        res.raise_for_status()
+
+            self.log.push("⚠️ Upload did not complete cleanly — check PeerTube logs.")
         except Exception as exc:
-            print(f"❌ Upload failed: {exc}")
+            self.log.push(f"❌ Upload failed: {exc}")
             raise
 
     async def get_hls_clip(

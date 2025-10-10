@@ -146,10 +146,10 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                         )
                         print("DEBUG: PeerTube upload response:", response)
                         ui.notify(f"🎉 PeerTube upload complete for {e.name}: {response}", color="green")
-                        if await sync_playlist(playlist_id, token, playlist_name, play_id, "peertube"):
-                            refresh_playlists()
-                            render_dashboard()
-                        dialog.close()
+                        # if await sync_playlist(playlist_id, token, playlist_name, play_id, "peertube"):
+                        # refresh_playlists()
+                        # render_dashboard()
+                        # dialog.close()
                     except Exception as ex:
                         ui.notify(f"Error uploading {e.name}: {ex}", color="red")
                         print(f"Error uploading {e.name}: {ex}")
