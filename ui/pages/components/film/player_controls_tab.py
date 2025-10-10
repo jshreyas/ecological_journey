@@ -58,45 +58,38 @@ class PlayerControlsTab:
                         )
 
     def play_clip(self, clip):
-        """Play a specific clip"""
-        if self.on_clip_play:
-            self.on_clip_play(clip)
-        else:
-            ui.notify(
-                f"▶️ Playing: {clip['title']} at {clip.get('speed', 1.0)}x",
-                type="info",
-                position="bottom",
-                timeout=3000,
-            )
-            start_time = clip.get("start", 0)
-            speed = clip.get("speed", 1.0)
-            ref = self.player_container["ref"]
-            if ref:
-                ref.clear()
-                with ref:
-                    if self.video_state.is_peertube():
-                        # Avoid reloading the same page if already showing this clip
-                        request = ui.context.client.request
-                        if request.query_params.get("clip") != clip.get("clip_id"):
-                            ui.navigate.to(f"/film/{self.video_state.video_id}?clip={clip.get('clip_id')}")
-                        else:
-                            # TODO: BUG: this scenario does not work, displays a greyed out smaller size HLS player
-                            with ui.column().classes("w-full h-full") as player_ref:
-                                HLSPlayer(
-                                    hls_url=self.video_state.get_url(),
-                                    start=start_time,
-                                    end=clip.get("end"),
-                                    speed=speed,
-                                    parent=player_ref,
-                                )
-                    else:
-                        VideoPlayer(
-                            self.video_state.video_id,
-                            start=start_time,
-                            end=clip.get("end"),
-                            speed=speed,
-                            parent=ref,
-                        )
+        """Play a specific clip (without navigation)"""
+        ui.notify(
+            f"▶️ Playing: {clip['title']} at {clip.get('speed', 1.0)}x",
+            type="info",
+            position="bottom",
+            timeout=3000,
+        )
+        start_time = clip.get("start", 0)
+        end_time = clip.get("end")
+        speed = clip.get("speed", 1.0)
+        ref = self.player_container["ref"]
+
+        if ref:
+            ref.clear()
+            with ref:
+                if self.video_state.is_peertube() or True:
+                    HLSPlayer(
+                        hls_url=self.video_state.get_url(),
+                        start=start_time,
+                        end=end_time,
+                        speed=speed,
+                        parent=ref,
+                        on_end=lambda: ui.notify("Clip ended.", type="info"),
+                    )
+                else:
+                    VideoPlayer(
+                        self.video_state.video_id,
+                        start=start_time,
+                        end=end_time,
+                        speed=speed,
+                        parent=ref,
+                    )
 
     def play_clips_playlist_mode(self):
         """Play all clips in sequence"""
@@ -113,29 +106,16 @@ class PlayerControlsTab:
     def _play_next_clip(self):
         """Play the next clip in the playlist"""
         idx = self.clips_playlist_state["index"]
-        if idx >= len(self.clips_playlist_state["clips"]):
+        clips = self.clips_playlist_state["clips"]
+        if idx >= len(clips):
+            ui.notify("Playlist finished.", type="info")
             return
 
-        clip = self.clips_playlist_state["clips"][idx]
-        start_time = clip.get("start", 0)
-        end_time = clip.get("end")
-        speed = clip.get("speed", 1.0)
-        ref = self.player_container["ref"]
+        clip = clips[idx]
+        self.play_clip(clip, on_next_clip=lambda: self._advance_clip())
 
-        if ref:
-            ref.clear()
-            with ref:
-                VideoPlayer(
-                    self.video_state.video_id,
-                    start=start_time,
-                    end=end_time,
-                    speed=speed,
-                    on_end=lambda: self._next_clip_callback(),
-                    parent=ref,
-                )
-
-    def _next_clip_callback(self):
-        """Callback for when a clip ends in playlist mode"""
+    def _advance_clip(self):
+        """Advance to the next clip in the playlist"""
         self.clips_playlist_state["index"] += 1
         self._play_next_clip()
 
@@ -150,3 +130,13 @@ class PlayerControlsTab:
     def get_player_container(self):
         """Get the player container reference"""
         return self.player_container["ref"]
+
+    def _on_clip_end(self, clip, on_next_clip=None):
+        ref = self.player_container["ref"]
+        if ref:
+            with ref:
+                ui.notify("Clip ended.", type="info")
+                with ui.row().classes("justify-center gap-4 mt-2"):
+                    ui.button("Replay Clip", on_click=lambda: self.play_clip(clip, on_next_clip)).props("color=primary")
+                    if on_next_clip:
+                        ui.button("Play Next", on_click=on_next_clip).props("color=secondary")

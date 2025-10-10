@@ -138,6 +138,7 @@ class HLSPlayer:
                     const interval = setInterval(() => {{
                         if (video.currentTime >= {self.end}) {{
                             video.pause();
+                            video.currentTime = {self.end};
                             clearInterval(interval);
                             {js_on_end}
                         }}
@@ -145,6 +146,8 @@ class HLSPlayer:
 
                     video.addEventListener('ended', function() {{
                         console.log("[HLSPlayer] Clip ended");
+                        video.currentTime = {self.end};
+                        video.controls = false;
                         {js_on_end}
                     }});
 
@@ -162,7 +165,13 @@ class HLSPlayer:
 
                 def on_speed_change(_):
                     self.speed = knob.value
-                    ui.run_javascript(f"window.setHLSSpeed_{safe_id}({self.speed});")
+                    ui.run_javascript(
+                        f"""
+                        if (window.setHLSSpeed_{safe_id}) {{
+                            window.setHLSSpeed_{safe_id}({self.speed});
+                        }}
+                        """
+                    )
 
                 with ui.row().classes("items-center justify-center mt-2 mx-6"):
                     knob = (
