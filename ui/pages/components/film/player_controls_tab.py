@@ -142,13 +142,3 @@ class PlayerControlsTab:
     def get_player_container(self):
         """Get the player container reference"""
         return self.player_container["ref"]
-
-    def _on_clip_end(self, clip, on_next_clip=None):
-        ref = self.player_container["ref"]
-        if ref:
-            with ref:
-                ui.notify("Clip ended.", type="info")
-                with ui.row().classes("justify-center gap-4 mt-2"):
-                    ui.button("Replay Clip", on_click=lambda: self.play_clip(clip)).props("color=primary")
-                    if on_next_clip:
-                        ui.button("Play Next", on_click=on_next_clip).props("color=secondary")
