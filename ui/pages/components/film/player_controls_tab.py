@@ -73,14 +73,13 @@ class PlayerControlsTab:
         if ref:
             ref.clear()
             with ref:
-                if self.video_state.is_peertube() or True:
+                if self.video_state.is_peertube():
                     HLSPlayer(
                         hls_url=self.video_state.get_url(),
                         start=start_time,
                         end=end_time,
                         speed=speed,
                         parent=ref,
-                        on_end=lambda: ui.notify("Clip ended.", type="info"),
                     )
                 else:
                     VideoPlayer(

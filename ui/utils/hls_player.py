@@ -57,12 +57,20 @@ class HLSPlayer:
                 js_on_end = f"fetch('{endpoint}',{{method:'POST'}});"
 
             # --- HLS JS ---
-            ui.add_body_html(
-                f"""
+            ui.add_head_html(
+                """
                 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-                <script>
-                document.addEventListener('DOMContentLoaded', function() {{
+                """
+            )
+
+            ui.run_javascript(
+                f"""
+                (function() {{
                     const video = document.getElementById('{self.element_id}');
+                    if (!video) {{
+                        console.error('[HLSPlayer] Video element not found!');
+                        return;
+                    }}
                     const url = "{self.hls_url}?start={self.start}&end={self.end}&_=" + Date.now();
                     console.log("[HLSPlayer] Loading:", url);
 
@@ -79,7 +87,7 @@ class HLSPlayer:
                         delete window[hlsVarName];
                     }}
 
-                    if (Hls.isSupported()) {{
+                    if (window.Hls && Hls.isSupported()) {{
                         const hls = new Hls({{
                             startFragPrefetch: true,
                             maxBufferLength: 20,
@@ -102,7 +110,6 @@ class HLSPlayer:
                             hls.loadSource(url);
                         }});
 
-                        // Play only after buffered enough
                         hls.on(Hls.Events.BUFFER_APPENDED, () => {{
                             if (video.buffered.length && video.buffered.end(0) > 5 && video.paused) {{
                                 console.log("[HLSPlayer] Enough buffer → start playback");
@@ -145,9 +152,7 @@ class HLSPlayer:
                     }}, 500);
 
                     video.addEventListener('ended', function() {{
-                        console.log("[HLSPlayer] Clip ended");
                         video.currentTime = {self.end};
-                        video.controls = false;
                         {js_on_end}
                     }});
 
@@ -155,9 +160,8 @@ class HLSPlayer:
                         video.playbackRate = s;
                         console.log("[HLSPlayer] Speed set to", s);
                     }};
-                }});
-                </script>
-            """
+                }})();
+                """
             )
 
             # --- Speed Slider ---
