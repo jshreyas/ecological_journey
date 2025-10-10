@@ -1,4 +1,5 @@
 import math
+import os
 import re
 from pathlib import Path
 from typing import Optional
@@ -6,21 +7,40 @@ from urllib.parse import urljoin
 
 import httpx
 import requests
+from dotenv import load_dotenv
 from nicegui import ui
 
+load_dotenv()
+
 PEERTUBE_URL: str = "https://makertube.net"
-PEERTUBE_TOKEN: str = "67ee8bd680cab0b36c09be3b52bfa9c75172b422"
+PEERTUBE_CLIENT_ID: str = "k8bjstu8zg6pazmi3bla0onhbmf5zuo9"
+PEERTUBE_CLIENT_SECRET: str = "LGc8zR5czZ1fM2lSiem4yr38AoPpSdEy"
+PEERTUBE_API_USER: str = "shreyas.jukanti"
+PEERTUBE_API_PASS: str = os.getenv("PEERTUBE_API_PASS")
 CHUNK_SIZE_MB: int = 50  # 50MB per chunk
 
 
 class PeerTubeClient:
     """Lightweight client for PeerTube REST API."""
 
-    def __init__(self, base_url: str = None, token: str = None):
+    def __init__(self, base_url: str = None):
         self.base_url = base_url or PEERTUBE_URL.rstrip("/")
-        self.token = token or PEERTUBE_TOKEN
+        self.token = self.get_token()
         self.headers = {"Authorization": f"Bearer {self.token}"}
         self.log = None
+
+    def get_token(self):
+        data = {
+            "client_id": PEERTUBE_CLIENT_ID,
+            "client_secret": PEERTUBE_CLIENT_SECRET,
+            "grant_type": "password",
+            "response_type": "code",
+            "username": PEERTUBE_API_USER,
+            "password": PEERTUBE_API_PASS,
+        }
+        response = requests.post(f"{self.base_url}/api/v1/users/token", data=data)
+        data = response.json()
+        return data["access_token"]
 
     async def create_channel(self, name: str, display_name: Optional[str] = None):
         data = {"name": name, "displayName": display_name or name}
@@ -171,16 +191,33 @@ class PeerTubeClient:
         on_progress=None,
     ):
         import asyncio
+        import json
         import math
         import os
         import time
+        import uuid
+        from datetime import datetime
 
         import httpx
+        from utils.cache import cache_del, cache_expire, cache_lpush, cache_lrange
+
+        upload_id = str(uuid.uuid4())
+        redis_key = f"upload:{upload_id}:logs"
 
         # 🌱 Create a live upload log UI
         if not self.log:
             self.log = ui.log().classes("w-full h-64 bg-black text-primary p-2 font-mono text-xs overflow-y-auto")
-        self.log.push(f"🚀 Starting upload: {name}")
+
+        def log_line(msg):
+            from utils.utils import human_stamp
+
+            timestamp = datetime.utcnow().isoformat()
+            entry = {"t": timestamp, "msg": msg}
+            cache_lpush(redis_key, json.dumps(entry))
+            cache_expire(redis_key, 86400)
+            self.log.push(f"{human_stamp(timestamp)} | {msg}")
+
+        log_line(f"🚀 Starting upload: {name}")
 
         try:
             # Determine file details
@@ -201,7 +238,7 @@ class PeerTubeClient:
             timeout = httpx.Timeout(800.0, read=800.0, write=800.0)
 
             async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
-                self.log.push(f"Initializing upload for {file_name} ({file_size/1024/1024:.2f} MB)...")
+                log_line(f"Initializing upload for {file_name} ({file_size/1024/1024:.2f} MB)...")
                 init_body = {"channelId": channel_id, "filename": file_name, "name": name, "privacy": "1"}
                 init_headers = {
                     **headers,
@@ -216,7 +253,7 @@ class PeerTubeClient:
                 )
                 init_resp.raise_for_status()
                 chunk_url = init_resp.headers["location"]
-                self.log.push(f"✅ Initialized upload: {chunk_url}")
+                log_line(f"✅ Initialized upload: {chunk_url}")
 
                 uploaded_bytes = 0
                 for i in range(num_chunks):
@@ -237,17 +274,17 @@ class PeerTubeClient:
                             res = await client.put(chunk_url, headers=put_headers, content=chunk)
                             elapsed = time.monotonic() - t0
                             if res.status_code in (200, 201, 308):
-                                self.log.push(
+                                log_line(
                                     f"📦 Chunk {i+1}/{num_chunks} accepted ({uploaded_bytes/file_size*100:.1f}%) [{elapsed:.2f}s]"
                                 )
                                 break
                             else:
-                                self.log.push(f"⚠️ Chunk {i+1} failed ({res.status_code}), retrying... [{elapsed:.2f}s]")
+                                log_line(f"⚠️ Chunk {i+1} failed ({res.status_code}), retrying... [{elapsed:.2f}s]")
                         except httpx.ReadError:
-                            self.log.push(f"❌ ReadError on chunk {i+1}, retrying... [{elapsed:.2f}s]")
+                            log_line(f"❌ ReadError on chunk {i+1}, retrying... [{elapsed:.2f}s]")
                         await asyncio.sleep(2**attempt)
                     else:
-                        self.log.push(f"💀 Chunk {i+1} failed after 10 retries.")
+                        log_line(f"💀 Chunk {i+1} failed after 10 retries.")
                         raise RuntimeError("Chunk upload failed after 10 retries")
 
                     uploaded_bytes += len(chunk)
@@ -255,13 +292,17 @@ class PeerTubeClient:
                         await on_progress(uploaded_bytes, file_size)
 
                     if res.status_code in (200, 201):
-                        self.log.push(f"🎉 Upload complete for {name}")
+                        log_line(f"🎉 Upload complete for {name}")
                         return res.json()
 
-            self.log.push("⚠️ Upload did not complete cleanly — check PeerTube logs.")
+            log_line("⚠️ Upload did not complete cleanly — check PeerTube logs.")
         except Exception as exc:
-            self.log.push(f"❌ Upload failed: {exc}")
+            log_line(f"❌ Upload failed: {exc}")
             raise
+        finally:
+            logs = cache_lrange(redis_key, 0, -1)
+            print("printing all logs from cache before cleanup\n", logs)
+            cache_del(redis_key)
 
     async def get_hls_clip(
         self,

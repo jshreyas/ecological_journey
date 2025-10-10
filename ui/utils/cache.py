@@ -22,6 +22,15 @@ class CacheBackend:
     def delete(self, *keys):
         raise NotImplementedError
 
+    def lpush(self, key: str, value):
+        raise NotImplementedError
+
+    def expire(self, key: str, ex: int = None):
+        raise NotImplementedError
+
+    def lrange(self, key: str, start: int, end: int):
+        raise NotImplementedError
+
 
 class RedisClientBackend(CacheBackend):
     def __init__(self):
@@ -48,6 +57,19 @@ class RedisClientBackend(CacheBackend):
     def delete(self, *keys):
         for key in keys:
             self.client.delete(key)
+
+    def lpush(self, key, value):
+        try:
+            self.client.lpush(key, json.dumps(value))
+        except Exception:
+            pass
+
+    def expire(self, key, ex):
+        self.client.expire(key, ex)
+
+    def lrange(self, key, start, end):
+        val = self.client.lrange(key, start, end)
+        return val
 
 
 # TODO: check if these Upstash APIs are successful
@@ -83,6 +105,15 @@ class UpstashRestBackend(CacheBackend):
                 headers={"Authorization": f"Bearer {self.token}"},
             )
 
+    def lpush(self, key, value):
+        pass
+
+    def expire(self, key, ex):
+        pass
+
+    def lrange(self, key, start, end):
+        pass
+
 
 def get_cache_backend() -> CacheBackend:
     if os.getenv("UPSTASH_REDIS_REST_URL") and os.getenv("UPSTASH_REDIS_REST_TOKEN"):
@@ -108,6 +139,24 @@ def cache_set(key: str, value, ex: int = None):
 
 def cache_del(*keys):
     cache_backend.delete(*keys)
+
+
+def cache_lpush(key: str, value):
+    cache_backend.lpush(key, value)
+
+
+def cache_expire(key: str, ex: int):
+    cache_backend.expire(key, ex)
+
+
+def cache_lrange(key: str, start: int, end: int):
+    from utils.utils import parse_cached_logs
+
+    value = cache_backend.lrange(key, start, end)
+    if value:
+        return "\n".join(parse_cached_logs(value))
+    else:
+        return None
 
 
 _cache: Dict[str, Any] = {}

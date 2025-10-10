@@ -1,4 +1,5 @@
 # utils.py
+import json
 from datetime import datetime
 
 import requests
@@ -16,6 +17,27 @@ def format_time(seconds):
     minutes = seconds // 60
     sec = seconds % 60
     return f"{int(minutes):02}:{int(sec):02}"
+
+
+def parse_cached_logs(value: list[str]) -> list[str]:
+    """Parse Redis logs into clean UI-printable lines."""
+    clean_logs = []
+    for raw in value:
+        try:
+            # Step 1: handle double-encoded JSON
+            if isinstance(raw, str) and raw.startswith('"'):
+                raw = json.loads(raw)
+            # Step 2: decode actual JSON dict
+            entry = json.loads(raw)
+            timestamp = entry.get("t", "")
+            msg = entry.get("msg", "")
+            # Optional: prettify timestamp
+            time_str = human_stamp(timestamp)
+            # time_str = datetime.fromisoformat(timestamp).strftime("%H:%M:%S")
+            clean_logs.append(f"[{time_str}] {msg}")
+        except Exception:
+            clean_logs.append(f"[decode error] {raw}")
+    return list(reversed(clean_logs))  # Redis LPUSH adds newest first
 
 
 def parse_flexible_datetime(ts: str) -> datetime:
