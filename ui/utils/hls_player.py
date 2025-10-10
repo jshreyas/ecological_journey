@@ -27,6 +27,7 @@ class HLSPlayer:
         self.parent = parent
         self._render()
 
+    # TODO: BUG: when clip is playing, seek and scrubbing doesnt work
     def _render(self):
         safe_id = uuid.uuid4().hex[:8]
         self.element_id = f"hls_player_{safe_id}"  # JS var-safe ID
@@ -37,7 +38,7 @@ class HLSPlayer:
             # --- HTML container ---
             ui.html(
                 f"""
-                <div id="{wrapper_id}" style="width:{self.width}px;height:{self.height}px;position:relative;">
+                <div id="{wrapper_id}" style="position:absolute;">
                     <video id="{self.element_id}" controls style="width:100%;height:100%;background:#000;border-radius:12px;"></video>
                 </div>
             """
@@ -141,15 +142,14 @@ class HLSPlayer:
                         video.play().catch(err => console.warn("[HLSPlayer] native play error:", err));
                     }}
 
-                    // ⏱ End detection
-                    const interval = setInterval(() => {{
-                        if (video.currentTime >= {self.end}) {{
+                    // ⏱ End detection: only pause if playing and passes end
+                    video.addEventListener('timeupdate', function() {{
+                        if (!video.paused && video.currentTime >= {self.end}) {{
                             video.pause();
                             video.currentTime = {self.end};
-                            clearInterval(interval);
                             {js_on_end}
                         }}
-                    }}, 500);
+                    }});
 
                     video.addEventListener('ended', function() {{
                         video.currentTime = {self.end};

@@ -49,6 +49,7 @@ class PlayerControlsTab:
                         HLSPlayer(
                             hls_url=self.video_state.get_url(),
                             parent=player_container_ref,
+                            on_end=lambda: self.refresh(),
                         )
                     else:
                         VideoPlayer(
@@ -79,6 +80,7 @@ class PlayerControlsTab:
                         start=start_time,
                         end=end_time,
                         speed=speed,
+                        on_end=lambda: self._advance_clip(),
                         parent=ref,
                     )
                 else:
@@ -87,6 +89,7 @@ class PlayerControlsTab:
                         start=start_time,
                         end=end_time,
                         speed=speed,
+                        on_end=lambda: self._advance_clip(),
                         parent=ref,
                     )
 
@@ -106,17 +109,27 @@ class PlayerControlsTab:
         """Play the next clip in the playlist"""
         idx = self.clips_playlist_state["index"]
         clips = self.clips_playlist_state["clips"]
+        ref = self.player_container["ref"]
         if idx >= len(clips):
-            ui.notify("Playlist finished.", type="info")
+            if ref:
+                with ref:
+                    ref.clear()  # Remove the player so it can't auto-replay
+                    ui.notify("Playlist finished.", type="info")
+                    # Optionally, show replay button
+                    with ui.row().classes("justify-center gap-4 mt-2"):
+                        ui.button("Replay Playlist", on_click=self.play_clips_playlist_mode).props("color=primary")
             return
 
         clip = clips[idx]
-        self.play_clip(clip, on_next_clip=lambda: self._advance_clip())
+        self.play_clip(clip)
 
     def _advance_clip(self):
         """Advance to the next clip in the playlist"""
-        self.clips_playlist_state["index"] += 1
-        self._play_next_clip()
+        ref = self.player_container["ref"]
+        if ref:
+            with ref:
+                self.clips_playlist_state["index"] += 1
+                self._play_next_clip()
 
     def set_player_speed(self, speed: float):
         """Set the player speed"""
@@ -136,6 +149,6 @@ class PlayerControlsTab:
             with ref:
                 ui.notify("Clip ended.", type="info")
                 with ui.row().classes("justify-center gap-4 mt-2"):
-                    ui.button("Replay Clip", on_click=lambda: self.play_clip(clip, on_next_clip)).props("color=primary")
+                    ui.button("Replay Clip", on_click=lambda: self.play_clip(clip)).props("color=primary")
                     if on_next_clip:
                         ui.button("Play Next", on_click=on_next_clip).props("color=secondary")
