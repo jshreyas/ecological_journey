@@ -3,11 +3,10 @@ NavigationTab - Component for navigating between videos by date
 Handles the navigation arrows functionality
 """
 
-from datetime import datetime
 from typing import Callable, Optional
 
 from nicegui import ui
-from utils.utils import navigate_to_film
+from utils.utils import navigate_to_film, parse_flexible_datetime
 from utils.utils_api import load_videos
 
 from .video_state import VideoState
@@ -93,16 +92,14 @@ class NavigationTab:
                         )
                     ):
                         ui.icon("arrow_back").classes("text-primary text-bold")
-                        prev_date = datetime.strptime(self.prev_video["date"], "%Y-%m-%dT%H:%M:%SZ").strftime(
-                            "%B %d, %Y"
-                        )
+                        prev_date = parse_flexible_datetime(self.prev_video["date"]).strftime("%B %d, %Y")
                         ui.label(f"Previous Day: {prev_date}").classes("text-sm text-primary text-bold truncate")
                 else:
                     ui.label().classes("")  # Empty cell
 
                 # Center label
                 with ui.row().classes("justify-center"):
-                    ui.label(f'🔍 🎬 {video.get("title", "Untitled Video")}').classes("text-2xl font-bold")
+                    ui.label(f'{video.get("title", "Untitled Video")}').classes("text-2xl font-bold")
 
                 # Next
                 if self.next_video:
@@ -114,9 +111,7 @@ class NavigationTab:
                             lambda e: self._handle_video_click(self.next_video["video_id"]),
                         )
                     ):
-                        next_date = datetime.strptime(self.next_video["date"], "%Y-%m-%dT%H:%M:%SZ").strftime(
-                            "%B %d, %Y"
-                        )
+                        next_date = parse_flexible_datetime(self.next_video["date"]).strftime("%B %d, %Y")
                         ui.label(f"Next Day: {next_date}").classes("text-sm text-primary text-bold truncate")
                         ui.icon("arrow_forward").classes("text-primary text-bold")
                 else:

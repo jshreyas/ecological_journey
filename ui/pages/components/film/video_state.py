@@ -57,3 +57,11 @@ class VideoState:
     def get_notes(self) -> str:
         """Get notes from current video data"""
         return self.get_video().get("notes", "")
+
+    def is_peertube(self) -> bool:
+        """Check if the video source is PeerTube"""
+        return "peertube" == self._video_data.get("playlist_source")
+
+    def get_url(self) -> bool:
+        """Check if the video source is PeerTube"""
+        return self._video_data.get("youtube_url")

@@ -29,6 +29,7 @@ from pages.partner import partner_page
 from pages.playlist import playlist_page
 from structlog.contextvars import bind_contextvars
 from utils.dialog_puns import caught_john_doe, handle_backend_error
+from utils.peertube_api import PeerTubeClient
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -395,6 +396,14 @@ def get_teams():
 @api_router.get("/playlists")
 def get_playlists():
     return load_playlists()
+
+
+# TODO: add params for clip id, start time, end time
+@api_router.get("/hls_clip")
+async def get_hls_clip():
+    client = PeerTubeClient()
+    clip_playlist = await client.get_hls_clip()
+    return PlainTextResponse(clip_playlist, media_type="application/vnd.apple.mpegurl")
 
 
 app.mount("/api", api_router)

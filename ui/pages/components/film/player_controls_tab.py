@@ -6,6 +6,7 @@ Handles the video player controls and playlist mode
 from typing import Callable
 
 from nicegui import ui
+from utils.hls_player import HLSPlayer
 from utils.utils_api import load_video
 from utils.video_player import VideoPlayer
 
@@ -38,41 +39,57 @@ class PlayerControlsTab:
             player_container_classes = "w-full h-full p-4 gap-4"
             with ui.column().classes(player_container_classes) as player_container_ref:
                 self.player_container["ref"] = player_container_ref
-
                 if play_clips_playlist:
                     with player_container_ref:
                         self.play_clips_playlist_mode()
                 elif autoplay_clip:
                     self.play_clip(autoplay_clip)
                 else:
-                    VideoPlayer(
-                        self.video_state.video_id,
-                        speed=self.player_speed["value"],
-                        parent=player_container_ref,
-                    )
+                    if self.video_state.is_peertube():
+                        HLSPlayer(
+                            hls_url=self.video_state.get_url(),
+                            parent=player_container_ref,
+                            on_end=lambda: self.refresh(),
+                        )
+                    else:
+                        VideoPlayer(
+                            self.video_state.video_id,
+                            speed=self.player_speed["value"],
+                            parent=player_container_ref,
+                        )
 
     def play_clip(self, clip):
-        """Play a specific clip"""
-        if self.on_clip_play:
-            self.on_clip_play(clip)
-        else:
-            ui.notify(
-                f"▶️ Playing: {clip['title']} at {clip.get('speed', 1.0)}x",
-                type="info",
-                position="bottom",
-                timeout=3000,
-            )
-            start_time = clip.get("start", 0)
-            speed = clip.get("speed", 1.0)
-            ref = self.player_container["ref"]
-            if ref:
-                ref.clear()
-                with ref:
+        """Play a specific clip (without navigation)"""
+        ui.notify(
+            f"▶️ Playing: {clip['title']} at {clip.get('speed', 1.0)}x",
+            type="info",
+            position="bottom",
+            timeout=3000,
+        )
+        start_time = clip.get("start", 0)
+        end_time = clip.get("end")
+        speed = clip.get("speed", 1.0)
+        ref = self.player_container["ref"]
+
+        if ref:
+            ref.clear()
+            with ref:
+                if self.video_state.is_peertube():
+                    HLSPlayer(
+                        hls_url=self.video_state.get_url(),
+                        start=start_time,
+                        end=end_time,
+                        speed=speed,
+                        on_end=lambda: self._advance_clip(),
+                        parent=ref,
+                    )
+                else:
                     VideoPlayer(
                         self.video_state.video_id,
                         start=start_time,
-                        end=clip.get("end"),
+                        end=end_time,
                         speed=speed,
+                        on_end=lambda: self._advance_clip(),
                         parent=ref,
                     )
 
@@ -91,31 +108,28 @@ class PlayerControlsTab:
     def _play_next_clip(self):
         """Play the next clip in the playlist"""
         idx = self.clips_playlist_state["index"]
-        if idx >= len(self.clips_playlist_state["clips"]):
+        clips = self.clips_playlist_state["clips"]
+        ref = self.player_container["ref"]
+        if idx >= len(clips):
+            if ref:
+                with ref:
+                    ref.clear()  # Remove the player so it can't auto-replay
+                    ui.notify("Playlist finished.", type="info")
+                    # Optionally, show replay button
+                    with ui.row().classes("justify-center gap-4 mt-2"):
+                        ui.button("Replay Playlist", on_click=self.play_clips_playlist_mode).props("color=primary")
             return
 
-        clip = self.clips_playlist_state["clips"][idx]
-        start_time = clip.get("start", 0)
-        end_time = clip.get("end")
-        speed = clip.get("speed", 1.0)
+        clip = clips[idx]
+        self.play_clip(clip)
+
+    def _advance_clip(self):
+        """Advance to the next clip in the playlist"""
         ref = self.player_container["ref"]
-
         if ref:
-            ref.clear()
             with ref:
-                VideoPlayer(
-                    self.video_state.video_id,
-                    start=start_time,
-                    end=end_time,
-                    speed=speed,
-                    on_end=lambda: self._next_clip_callback(),
-                    parent=ref,
-                )
-
-    def _next_clip_callback(self):
-        """Callback for when a clip ends in playlist mode"""
-        self.clips_playlist_state["index"] += 1
-        self._play_next_clip()
+                self.clips_playlist_state["index"] += 1
+                self._play_next_clip()
 
     def set_player_speed(self, speed: float):
         """Set the player speed"""
