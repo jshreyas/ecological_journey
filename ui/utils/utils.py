@@ -34,7 +34,7 @@ def parse_cached_logs(value: list[str]) -> list[str]:
             # Optional: prettify timestamp
             time_str = human_stamp(timestamp)
             # time_str = datetime.fromisoformat(timestamp).strftime("%H:%M:%S")
-            clean_logs.append(f"[{time_str}] {msg}")
+            clean_logs.append(f"{time_str} | {msg}")
         except Exception:
             clean_logs.append(f"[decode error] {raw}")
     return list(reversed(clean_logs))  # Redis LPUSH adds newest first

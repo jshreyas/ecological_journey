@@ -1,3 +1,4 @@
+import asyncio
 from collections import Counter
 from datetime import datetime, timedelta
 
@@ -27,7 +28,8 @@ client = PeerTubeClient()
 
 def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
     with parent:
-        with ui.card().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3"):
+        with ui.column().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2"):
+            # with ui.card().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-3"):
             with ui.row().classes("w-full justify-between items-center"):
 
                 def on_input_change(e):
@@ -132,30 +134,121 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
     parent.clear()
 
+    from data.crud import load_uploads
+
+    def show_logs(upload_id, filename, **kwargs):
+        # import pdb; pdb.set_trace()
+        from utils.cache import cache_lrange
+
+        with ui.dialog() as log_dialog:
+            with ui.card():
+                ui.label(f"📜 Logs for {filename}")
+                logs = ui.log().classes("w-full h-64 bg-black text-primary p-2 font-mono text-xs overflow-y-auto")
+
+                async def refresh_logs():
+                    while True:
+                        resp = cache_lrange(f"upload:{upload_id}:logs", 0, -1)
+                        if resp:
+                            logs.clear()
+                            logs.push(resp)
+                        else:
+                            ui.notify("✅ Upload successful")
+                            break
+                        await asyncio.sleep(2)
+
+                if "status" in kwargs and kwargs["status"] == "completed" and "logs" in kwargs and kwargs["logs"]:
+                    logs.push(kwargs["logs"])
+                else:
+                    ui.timer(0.1, refresh_logs, once=True)
+
+        log_dialog.open()
+
+    def blah(upload_dict):
+        with ui.dialog() as log_dialog:
+            with ui.card():
+                ui.label(f"📜 Logs for {upload_dict['filename']}")
+                logs = ui.log().classes("w-full h-64 bg-black text-primary p-2 font-mono text-xs overflow-y-auto")
+                logs.push(upload_dict["logs"])
+        log_dialog.open()
+
+    def toggle_fab():
+        nonlocal expanded
+        expanded = not expanded
+        for b in buttons:
+            b.visible = expanded
+
+    with ui.column().classes("fixed bottom-4 right-4 items-end"):
+        with ui.page_sticky(position="bottom-left", x_offset=18, y_offset=18):
+            with ui.column().classes("items-center"):
+                buttons = []
+                for each in load_uploads():
+                    if each.get("status") == "uploading":
+                        color = "primary"
+                    elif each.get("status") == "failed":
+                        color = "red"
+                    else:
+                        color = "secondary"
+                    buttons.append(
+                        ui.button(icon="file_copy", on_click=lambda _, upload_dict=each: show_logs(**upload_dict))
+                        .props(f"round color={color}")
+                        .tooltip(f'{each.get("filename")}')
+                    )
+                ui.button(icon="upload_file", on_click=toggle_fab).props("round fab").tooltip("Uploads")
+
+        for b in buttons:
+            b.visible = False  # start hidden
+
+        expanded = False
+
     def upload_and_sync_videos(playlist_id, token, playlist_name, play_id):
         with ui.dialog() as dialog:
             with ui.card():
+                ui.label(f"📤 Upload to {playlist_name}").classes("text-md font-semibold")
 
                 async def handle_upload(e: events.UploadEventArguments):
-                    try:
-                        # Step 2: perform backend → PeerTube upload
-                        response = await client.upload_and_attach_to_playlist(
-                            e.content,
-                            name=f"{e.name}",
-                            file_input_name=e.name,
-                        )
-                        print("DEBUG: PeerTube upload response:", response)
-                        ui.notify(f"🎉 PeerTube upload complete for {e.name}: {response}", color="green")
-                        # if await sync_playlist(playlist_id, token, playlist_name, play_id, "peertube"):
-                        # refresh_playlists()
-                        # render_dashboard()
-                        # dialog.close()
-                    except Exception as ex:
-                        ui.notify(f"Error uploading {e.name}: {ex}", color="red")
-                        print(f"Error uploading {e.name}: {ex}")
+                    import uuid
 
-                ui.upload(on_upload=handle_upload, auto_upload=True, multiple=True).classes("max-w-full")
+                    upload_id = str(uuid.uuid4())
+                    asyncio.create_task(
+                        client.upload_and_attach_to_playlist(
+                            file_input=e.content, name=e.name, file_input_name=e.name, upload_id=upload_id
+                        )
+                    )
+                    # Step 1: send to backend (enqueue)
+                    ui.notify(f"✅ Upload queued: {upload_id}")
+
+                    # Step 2: show modal to view logs
+                    ui.button(
+                        "View Logs", on_click=lambda _, upload_id=upload_id, name=e.name: show_logs(upload_id, name)
+                    ).props("color=primary")
+
+                ui.upload(on_upload=handle_upload, auto_upload=True, multiple=False)
         dialog.open()
+
+    # def upload_and_sync_videos(playlist_id, token, playlist_name, play_id):
+    #     with ui.dialog() as dialog:
+    #         with ui.card():
+
+    #             async def handle_upload(e: events.UploadEventArguments):
+    #                 try:
+    #                     # Step 2: perform backend → PeerTube upload
+    #                     response = await client.upload_and_attach_to_playlist(
+    #                         e.content,
+    #                         name=f"{e.name}",
+    #                         file_input_name=e.name,
+    #                     )
+    #                     print("DEBUG: PeerTube upload response:", response)
+    #                     ui.notify(f"🎉 PeerTube upload complete for {e.name}: {response}", color="green")
+    #                     # if await sync_playlist(playlist_id, token, playlist_name, play_id, "peertube"):
+    #                     # refresh_playlists()
+    #                     # render_dashboard()
+    #                     # dialog.close()
+    #                 except Exception as ex:
+    #                     ui.notify(f"Error uploading {e.name}: {ex}", color="red")
+    #                     print(f"Error uploading {e.name}: {ex}")
+
+    #             ui.upload(on_upload=handle_upload, auto_upload=True, multiple=True).classes("max-w-full")
+    #     dialog.open()
 
     if not user:
         for playlist in load_playlists():

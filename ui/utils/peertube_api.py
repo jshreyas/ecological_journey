@@ -1,6 +1,11 @@
+import asyncio
+import json
 import math
 import os
 import re
+import time
+import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin
@@ -8,7 +13,7 @@ from urllib.parse import urljoin
 import httpx
 import requests
 from dotenv import load_dotenv
-from nicegui import ui
+from utils.cache import cache_expire, cache_lpush, cache_lrange
 
 load_dotenv()
 
@@ -27,7 +32,7 @@ class PeerTubeClient:
         self.base_url = base_url or PEERTUBE_URL.rstrip("/")
         self.token = self.get_token()
         self.headers = {"Authorization": f"Bearer {self.token}"}
-        self.log = None
+        # self.log = None
 
     def get_token(self):
         data = {
@@ -74,12 +79,13 @@ class PeerTubeClient:
         channel_id: int = 12187,
         file_input_name: str = "uploaded_file.mp4",
         playlist_id: int = 37814,
+        upload_id: str = "",
     ):
         """
         Upload a video to the specified channel, then attach it to a playlist.
         """
         video_info = await self.upload_resumable(
-            file_input, channel_id=channel_id, name=name, file_input_name=file_input_name
+            file_input, channel_id=channel_id, name=name, file_input_name=file_input_name, upload_id=upload_id
         )
         video_id = video_info["video"]["uuid"]
         await self.add_video_to_playlist(playlist_id, video_id)
@@ -189,24 +195,15 @@ class PeerTubeClient:
         channel_id: int = 12187,
         file_input_name: str = "uploaded_file.mp4",
         on_progress=None,
+        upload_id=None,
     ):
-        import asyncio
-        import json
-        import math
-        import os
-        import time
-        import uuid
-        from datetime import datetime
 
-        import httpx
-        from utils.cache import cache_del, cache_expire, cache_lpush, cache_lrange
-
-        upload_id = str(uuid.uuid4())
+        upload_id = upload_id if upload_id else str(uuid.uuid4())
         redis_key = f"upload:{upload_id}:logs"
 
-        # 🌱 Create a live upload log UI
-        if not self.log:
-            self.log = ui.log().classes("w-full h-64 bg-black text-primary p-2 font-mono text-xs overflow-y-auto")
+        from data.crud import create_uploads, update_uploads_logs, update_uploads_status
+
+        create_uploads(upload_id, "queued", name)
 
         def log_line(msg):
             from utils.utils import human_stamp
@@ -215,10 +212,9 @@ class PeerTubeClient:
             entry = {"t": timestamp, "msg": msg}
             cache_lpush(redis_key, json.dumps(entry))
             cache_expire(redis_key, 86400)
-            self.log.push(f"{human_stamp(timestamp)} | {msg}")
+            print(f"{human_stamp(timestamp)} | {msg}")
 
         log_line(f"🚀 Starting upload: {name}")
-
         try:
             # Determine file details
             if hasattr(file_input, "read"):
@@ -236,7 +232,7 @@ class PeerTubeClient:
             num_chunks = math.ceil(file_size / chunk_size)
             headers = {"Authorization": f"Bearer {self.token}"}
             timeout = httpx.Timeout(800.0, read=800.0, write=800.0)
-
+            update_uploads_status(upload_id, "uploading")
             async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
                 log_line(f"Initializing upload for {file_name} ({file_size/1024/1024:.2f} MB)...")
                 init_body = {"channelId": channel_id, "filename": file_name, "name": name, "privacy": "1"}
@@ -293,16 +289,21 @@ class PeerTubeClient:
 
                     if res.status_code in (200, 201):
                         log_line(f"🎉 Upload complete for {name}")
+                        update_uploads_status(upload_id, "completed")
                         return res.json()
 
             log_line("⚠️ Upload did not complete cleanly — check PeerTube logs.")
         except Exception as exc:
             log_line(f"❌ Upload failed: {exc}")
-            raise
+            update_uploads_status(upload_id, "failed")
+            raise exc
         finally:
             logs = cache_lrange(redis_key, 0, -1)
-            print("printing all logs from cache before cleanup\n", logs)
-            cache_del(redis_key)
+            print(f"[{upload_id}]printing all logs from cache before cleanup\n", logs)
+            update_uploads_logs(upload_id, logs)
+            # await asyncio.sleep(20)
+            # from utils.cache import cache_del
+            # cache_del(redis_key)
 
     async def get_hls_clip(
         self,

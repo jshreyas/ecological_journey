@@ -150,3 +150,21 @@ class Learnings(Document):
         populate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
+
+
+class Uploads(Document):
+    upload_id: str = Field(default_factory=lambda: str(uuid4()))
+    filename: str
+    status: str  # "queued" | "uploading" | "completed" | "failed",
+    # filename: Optional[str]
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+    logs: Optional[str] = None
+
+    class Settings:
+        name = "uploads"
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}

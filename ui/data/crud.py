@@ -8,7 +8,7 @@ from uuid import uuid4
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
+from data.models import Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, Uploads, User, Video
 from dotenv import load_dotenv
 from log import log
 from nicegui import ui  # TODO: remove or use your own alert/logger
@@ -373,3 +373,43 @@ def delete_learning(learning_id: str, user=None, **kwargs):
         raise ValueError("Learning not found or access denied")
     learning.delete()
     return True
+
+
+def create_uploads(upload_id: str, status: str, filename: str):
+    uploads = Uploads(
+        upload_id=upload_id,
+        status=status,
+        filename=filename,
+    )
+    uploads.insert()
+    return to_dicts(uploads)
+
+
+def update_uploads_status(upload_id: str, status: str):
+    upload = Uploads.find_one(Uploads.upload_id == upload_id).run()
+    if not upload:
+        raise ValueError("Upload not found or access denied")
+    upload.status = status
+    upload.updated_at = datetime.utcnow()
+    upload.save()
+    return to_dicts(upload)
+
+
+def update_uploads_logs(upload_id: str, logs: str):
+    upload = Uploads.find_one(Uploads.upload_id == upload_id).run()
+    if not upload:
+        raise ValueError("Upload not found or access denied")
+    upload.logs = logs
+    upload.updated_at = datetime.utcnow()
+    upload.save()
+    return to_dicts(upload)
+
+
+def load_uploads():
+    upload = Uploads.find_all().run()
+    return to_dicts(upload)
+
+
+def load_upload(upload_id: str):
+    upload = Uploads.find_one(Uploads.upload_id == upload_id).run()
+    return to_dicts(upload)
