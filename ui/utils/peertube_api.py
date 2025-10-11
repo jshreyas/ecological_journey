@@ -72,6 +72,7 @@ class PeerTubeClient:
             r.raise_for_status()
             return r.json()
 
+    # TODO: enhance to sync videos to playlist in mongodb
     async def upload_and_attach_to_playlist(
         self,
         file_input: Path,

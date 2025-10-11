@@ -137,7 +137,7 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
     from data.crud import load_uploads
 
     def show_logs(upload_id, filename, **kwargs):
-        # import pdb; pdb.set_trace()
+
         from utils.cache import cache_lrange
 
         with ui.dialog() as log_dialog:
@@ -163,23 +163,15 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
 
         log_dialog.open()
 
-    def blah(upload_dict):
-        with ui.dialog() as log_dialog:
-            with ui.card():
-                ui.label(f"📜 Logs for {upload_dict['filename']}")
-                logs = ui.log().classes("w-full h-64 bg-black text-primary p-2 font-mono text-xs overflow-y-auto")
-                logs.push(upload_dict["logs"])
-        log_dialog.open()
-
     def toggle_fab():
         nonlocal expanded
         expanded = not expanded
         for b in buttons:
             b.visible = expanded
 
-    with ui.column().classes("fixed bottom-4 right-4 items-end"):
+    with ui.column().classes("fixed h-[600px] bottom-4 right-4 items-end overflow-y-auto"):
         with ui.page_sticky(position="bottom-left", x_offset=18, y_offset=18):
-            with ui.column().classes("items-center"):
+            with ui.column().classes("items-center overflow-y-auto"):
                 buttons = []
                 for each in load_uploads():
                     if each.get("status") == "uploading":
