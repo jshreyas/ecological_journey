@@ -86,12 +86,12 @@ class MetaforgeTab:
                             "clip_id": {"type": "string", "default": ""},
                             "start": {
                                 "type": "string",
-                                "pattern": r"^(\d+:)?[0-5]?\d:[0-5]\d$",
+                                "pattern": r"^(\d+:[0-5]\d:[0-5]\d|\d+:[0-5]\d)$",
                                 "description": "Format: mm:ss or hh:mm:ss",
                             },
                             "end": {
                                 "type": "string",
-                                "pattern": r"^(\d+:)?[0-5]?\d:[0-5]\d$",
+                                "pattern": r"^(\d+:[0-5]\d:[0-5]\d|\d+:[0-5]\d)$",
                                 "description": "Format: mm:ss or hh:mm:ss",
                             },
                             "speed": {
