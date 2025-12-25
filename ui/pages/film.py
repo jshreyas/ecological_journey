@@ -13,7 +13,6 @@ from pages.components.film.player_controls_tab import PlayerControlsTab
 from pages.components.film.share_dialog_tab import ShareDialogTab
 from pages.components.film.video_state import VideoState
 from utils.user_context import User, with_user_context
-from utils.utils_api import load_video
 
 load_dotenv()
 
@@ -74,41 +73,33 @@ def film_page(user: User | None, video_id: str):
                 with ui.tabs().classes("w-full") as tabs:
                     one = ui.tab("Metadata").classes("w-full")
                     two = ui.tab("Learnings").classes("w-full")
-                with ui.tab_panels(tabs, value=one).classes("w-full h-full"):
+                    three = ui.tab("Clipboard").classes("w-full")
+                with ui.tab_panels(tabs, value=three).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         metaforge_tab.create_tab(metaforge_container)
                     with ui.tab_panel(two):
                         chat_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         learnings_tab.create_tab(chat_container)
+                    with ui.tab_panel(three):
+                        clipboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
+                        clipboard_tab.create_tab(clipboard_container, clip_id)
 
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
 
         ui.separator().classes("w-full mt-2")
-        with ui.splitter(value=50).classes("w-full h-[600px]") as splitter:
-            with splitter.before:
-                # Filmboard heading with count
-                current_video_date = filmboard_tab.get_current_video_date()
-                same_day_count = filmboard_tab.get_same_day_videos_count()
-                with ui.column().classes("w-full h-full rounded-lg"):
-                    if current_video_date:
-                        ui.label(
-                            f'🎥 More films from 🗓️ {datetime.strptime(current_video_date, "%Y-%m-%d").strftime("%B %d, %Y")} ({same_day_count + 1})'
-                        ).classes("text-xl ml-2 font-semibold")
-                    else:
-                        ui.label("🎥 More films from the same day").classes("text-xl ml-2 font-semibold")
-                    with ui.grid().classes(
-                        "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg"
-                    ) as filmboard_container:
-                        filmboard_tab.create_tab(filmboard_container)
-            with splitter.after:
-                # Clipboard heading with count
-                video = load_video(video_id)
-                clips = video.get("clips", [])
-                with ui.column().classes("w-full h-full rounded-lg"):
-                    ui.label(f"📋 Clipboard ({len(clips)})").classes("text-xl font-semibold ml-2")
-                    with ui.grid().classes(
-                        "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg"
-                    ) as clipboard_container:
-                        clipboard_tab.create_tab(clipboard_container, clip_id)
+        # Filmboard heading with count
+        current_video_date = filmboard_tab.get_current_video_date()
+        same_day_count = filmboard_tab.get_same_day_videos_count()
+        with ui.column().classes("w-full h-full rounded-lg"):
+            if current_video_date:
+                ui.label(
+                    f'🎥 More films from 🗓️ {datetime.strptime(current_video_date, "%Y-%m-%d").strftime("%B %d, %Y")} ({same_day_count + 1})'
+                ).classes("text-xl ml-2 font-semibold")
+            else:
+                ui.label("🎥 More films from the same day").classes("text-xl ml-2 font-semibold")
+            with ui.grid().classes(
+                "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg"
+            ) as filmboard_container:
+                filmboard_tab.create_tab(filmboard_container)

@@ -69,7 +69,7 @@ class ClipboardTab:
             video_data = self.video_state.get_video()
 
         highlight_class = " border-2 border-blue-500" if highlight else ""
-        card_classes = f"p-2 flex flex-col justify-between max-w-full overflow-hidden{highlight_class}"
+        card_classes = f"p-2 w-full flex flex-col justify-between max-w-full overflow-hidden{highlight_class}"
         with ui.card().classes(card_classes):
             with ui.column().classes("w-full gap-2"):
                 ui.label(clip["title"]).classes("font-medium text-sm truncate")
