@@ -280,13 +280,28 @@ def render_media_page(
             video_grid = ui.grid().classes(
                 "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full p-4 bg-white"
             )
-
-            pagination = ui.pagination(
-                min=1,
-                max=1,
-                value=1,
-                direction_links=True,
-            ).classes("mx-auto my-4")
+            pagination = (
+                ui.pagination(
+                    min=1,
+                    max=1,
+                    value=1,
+                    direction_links=True,  # NiceGUI-supported
+                )
+                .props(
+                    """
+                    max-pages=5
+                    boundary-numbers=false
+                    boundary-links
+                    input=false
+                    ellipses=false
+                    icon-first=first_page
+                    icon-prev=chevron_left
+                    icon-next=chevron_right
+                    icon-last=last_page
+                    """
+                )
+                .classes("mx-auto my-4")
+            )
 
             def render_videos():
                 filtered = state.apply(all_videos)
