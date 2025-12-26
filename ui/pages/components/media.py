@@ -13,6 +13,7 @@ class QueryBuilder:
         self.items = items
         self.title = title
         self.tooltip = tooltip
+        ui.label(self.title).classes("font-semibold text-gray-600")
         self.display_row = (
             ui.row(wrap=True)
             .classes("gap-2 p-1 bg-white border border-gray-300 w-full rounded min-h-[2rem]")
@@ -21,7 +22,6 @@ class QueryBuilder:
         self._build_ui()
 
     def _build_ui(self):
-        ui.label(self.title).classes("font-semibold text-gray-600")
         self._render_operators()
         self._render_items()
 
@@ -80,6 +80,7 @@ def render_query_builders(all_labels, all_partners):
         title="Labels",
         tooltip="ex: 'label1 AND label2 OR NOT label3'",
     )
+    ui.separator().classes("border-gray-300 w-full")
     partner_qb = QueryBuilder(
         items=all_partners,
         title="Partners",
