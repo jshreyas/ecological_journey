@@ -137,12 +137,27 @@ def render_date_picker(min_date, max_date, state: MediaFilterState):
 
     with ui.input("Date Range", value=default_range).classes("w-full") as date_input:
         with ui.menu().props("no-parent-event") as menu:
-            with ui.date(value={"from": min_date, "to": max_date}).props("range"):
-                with ui.row().classes("justify-end"):
-                    ui.button("Close", on_click=menu.close).props("flat")
+
+            ui.date(value={"from": min_date, "to": max_date}).props("range").bind_value(
+                date_input,
+                forward=lambda x: (
+                    f"{datetime.strptime(x['from'], '%Y-%m-%d').strftime('%B %d, %Y')} - "
+                    f"{datetime.strptime(x['to'], '%Y-%m-%d').strftime('%B %d, %Y')}"
+                    if x and x.get("from") and x.get("to")
+                    else None
+                ),
+                backward=lambda x: (
+                    {
+                        "from": datetime.strptime(x.split(" - ")[0], "%B %d, %Y").strftime("%Y-%m-%d"),
+                        "to": datetime.strptime(x.split(" - ")[1], "%B %d, %Y").strftime("%Y-%m-%d"),
+                    }
+                    if " - " in (x or "")
+                    else None
+                ),
+            )
 
         with date_input.add_slot("append"):
-            ui.icon("edit_calendar").on("click", menu.open)
+            ui.icon("edit_calendar").classes("cursor-pointer").on("click", menu.open)
 
     def update_state():
         try:
