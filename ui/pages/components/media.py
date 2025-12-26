@@ -202,6 +202,7 @@ def render_media_page(
     state = MediaFilterState(all_playlists, min_date, max_date)
 
     with ui.splitter(horizontal=False, value=20).classes("w-full h-full rounded shadow") as splitter:
+        # ---------------- FILTER PANEL ----------------
         with splitter.before:
             with ui.column().classes("w-full p-4 bg-gray-100 rounded-lg"):
 
@@ -218,10 +219,9 @@ def render_media_page(
                 )
 
                 label_qb, partner_qb = render_query_builders(all_labels, all_partners)
-
                 ui.separator()
 
-                date_input, update_dates = render_date_picker(min_date, max_date, state)
+                _, update_dates = render_date_picker(min_date, max_date, state)
 
                 def apply_filters():
                     state.page = 1
@@ -260,24 +260,31 @@ def render_media_page(
                     if show_save_button:
                         ui.button(icon="save", on_click=save_filters)
 
+        # ---------------- RESULTS PANEL ----------------
         with splitter.after:
             video_grid = ui.grid().classes(
                 "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 w-full p-4 bg-white"
             )
 
+            pagination = ui.pagination(
+                min=1,
+                max=1,
+                value=1,
+                direction_links=True,
+            ).classes("mx-auto my-4")
+
             def render_videos():
                 filtered = state.apply(all_videos)
                 filtered.sort(key=lambda v: v["date"], reverse=True)
 
-                total_pages = max(
-                    1,
-                    (len(filtered) + state.VIDEOS_PER_PAGE - 1) // state.VIDEOS_PER_PAGE,
-                )
-                state.page = min(state.page, total_pages)
+                total_pages = max(1, (len(filtered) + state.VIDEOS_PER_PAGE - 1) // state.VIDEOS_PER_PAGE)
+
+                pagination.max = total_pages
+                pagination.value = min(state.page, total_pages)
+                state.page = pagination.value
 
                 start = (state.page - 1) * state.VIDEOS_PER_PAGE
                 end = start + state.VIDEOS_PER_PAGE
-
                 page_videos = filtered[start:end]
 
                 video_grid.clear()
@@ -296,25 +303,11 @@ def render_media_page(
                         for v in vids:
                             render_video_card(v, show_clips_count)
 
-                with ui.row().classes("justify-between col-span-full"):
-                    ui.button(
-                        "Previous",
-                        on_click=lambda: change_page(-1),
-                    ).props(
-                        "flat"
-                    ).set_visibility(state.page > 1)
-
-                    ui.label(f"Page {state.page} of {total_pages}")
-
-                    ui.button(
-                        "Next",
-                        on_click=lambda: change_page(1),
-                    ).props(
-                        "flat"
-                    ).set_visibility(state.page < total_pages)
-
-            def change_page(delta):
-                state.page += delta
-                render_videos()
+            pagination.on_value_change(
+                lambda e: (
+                    setattr(state, "page", e.value),
+                    render_videos(),
+                )
+            )
 
             render_videos()
