@@ -120,9 +120,10 @@ def render_media_page(
                 playlist_filter = (
                     ui.select(
                         options=all_playlists,
-                        value=all_playlists.copy(),
-                        label="Playlist",
+                        value=[],
+                        label="Playlists (empty = all)",
                         multiple=True,
+                        with_input=True,
                     )
                     .classes("w-full")
                     .props("use-chips")
@@ -174,8 +175,12 @@ def render_media_page(
                     except ValueError:
                         start_date, end_date = min_date, max_date
 
+                    selected_playlists = playlist_filter.value
+                    if not selected_playlists:
+                        selected_playlists = all_playlists  # no filter
+
                     filters_state = {
-                        "playlists": playlist_filter.value,
+                        "playlists": selected_playlists,
                         "labels": label_qb.tokens,
                         "partners": partner_qb.tokens,
                         "date_range": [start_date, end_date],
@@ -233,10 +238,14 @@ def render_media_page(
                     parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
                 )
 
+                selected_playlists = playlist_filter.value
+                if not selected_playlists:
+                    selected_playlists = all_playlists  # no filter
+
                 filtered_videos = [
                     v
                     for v in all_videos
-                    if v["playlist_name"] in playlist_filter.value
+                    if v["playlist_name"] in selected_playlists
                     and start_date <= v["date"][:10] <= end_date
                     and parse_label_fn(v.get("labels", []))
                     and parse_partner_fn(v.get("partners", []))
@@ -330,10 +339,14 @@ def render_media_page(
                 parse_partner_fn = (
                     parse_query_expression(partner_qb.tokens) if partner_qb.tokens else lambda partners: True
                 )
+                selected_playlists = playlist_filter.value
+                if not selected_playlists:
+                    selected_playlists = all_playlists  # no filter
+
                 filtered_videos = [
                     v
                     for v in all_videos
-                    if v["playlist_name"] in playlist_filter.value
+                    if v["playlist_name"] in selected_playlists
                     and start_date <= v["date"][:10] <= end_date
                     and parse_label_fn(v.get("labels", []))
                     and parse_partner_fn(v.get("partners", []))
