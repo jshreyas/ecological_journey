@@ -5,6 +5,7 @@ from utils.utils import format_time
 from utils.utils_api import get_filtered_clips
 from utils.video_player import VideoPlayer
 
+playback_token = 0
 current_index = 0
 is_autoplay = True
 is_loop = True
@@ -66,25 +67,43 @@ def playlist_page(user: User | None, cliplist_id):
             for i, clip in enumerate(queue):
                 render_clip_card(clip, i)
 
-    def play_clip(index: int):
+    def next_clip():
         global current_index
+
+        if not queue:
+            return
+
+        current_index = (current_index + 1) % len(queue)
+        play_clip(current_index)
+
+    def handle_end(token: int):
+        # Ignore stale callbacks
+        if token != playback_token:
+            return
+
+        if is_autoplay:
+            next_clip()
+
+    def play_clip(index: int):
+        global current_index, playback_token
+
+        playback_token += 1  # invalidate old players
+        my_token = playback_token  # token for THIS player
+
         current_index = index
         player_column.clear()
+
         with player_column:
             VideoPlayer(
                 video_url=queue[index]["video_id"],
                 start=queue[index]["start"],
                 end=queue[index]["end"],
-                speed=2.0,  # TODO: pick from clip, else default to 2.0
-                on_end=lambda: next_clip() if is_autoplay else None,
+                speed=2.0,
+                on_end=lambda: handle_end(my_token),
                 parent=player_column,
             )
-        render_cliplist()  # <-- rerender the cliplist to update highlight
 
-    def next_clip():
-        global current_index
-        current_index = (current_index + 1) % len(queue)
-        play_clip(current_index)
+        render_cliplist()
 
     # Initial render
     play_clip(current_index)
