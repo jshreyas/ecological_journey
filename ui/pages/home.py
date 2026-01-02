@@ -453,20 +453,6 @@ SYNC_RETRY_SOON = "retry_soon"
 SYNC_ERROR = "error"
 
 
-PLAYLISTS = [
-    {
-        "playlist_id": "682276bd84136e7d49633b33",
-        "playlist_name": "Grappling Journal",
-        "play_id": "PLHXvJ_QLQWhXuOo2HcwsL4sysM79x8Id8",
-    },
-    {
-        "playlist_id": "682a7ed45054fc1c1f5326dd",
-        "playlist_name": "Home Training Journal",
-        "play_id": "PLHXvJ_QLQWhWfwGejBdQE8LjHHToMMCge",
-    },
-]
-
-
 async def ssync_playlist(
     playlist_id: str,
     token: str,
@@ -525,12 +511,12 @@ async def playlist_sync_worker():
     while True:
         retry_soon_detected = False
 
-        for p in PLAYLISTS:
+        for p in load_playlists():
             result = await ssync_playlist(
-                playlist_id=p["playlist_id"],
+                playlist_id=p["_id"],
                 token=token,
-                playlist_name=p["playlist_name"],
-                play_id=p["play_id"],
+                playlist_name=p["name"],
+                play_id=p["playlist_id"],
             )
 
             if result == SYNC_RETRY_SOON:
