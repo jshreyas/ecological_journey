@@ -1,0 +1,42 @@
+name: Mint Service Token
+on:
+  workflow_dispatch:
+
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build UI image
+        run: docker build -t ecological-ui -f Dockerfile.ui .
+
+      - name: Run mint script inside container
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          docker run --rm \
+            -e MONGODB_URI \
+            -e JWT_SECRET \
+            ecological-ui \
+            cd ui && python -m scripts.mint_service_token
+
+      - name: Copy token out safely
+        run: |
+          CONTAINER_ID=$(docker create ecological-ui)
+          docker cp $CONTAINER_ID:/tmp/service_token.txt token.txt
+          docker rm $CONTAINER_ID
+
+      - name: Mask token
+        run: |
+          TOKEN=$(cat token.txt)
+          echo "::add-mask::$TOKEN"
+
+      - name: Upload token artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-token
+          path: token.txt
+          retention-days: 1
