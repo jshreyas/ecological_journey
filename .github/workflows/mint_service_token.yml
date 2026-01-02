@@ -21,7 +21,7 @@ jobs:
             -e MONGODB_URI \
             -e JWT_SECRET \
             ecological-ui \
-            cd ui && python -m scripts.mint_service_token
+            bash -c "cd ui && python -m scripts.mint_service_token"
 
       - name: Copy token out safely
         run: |
