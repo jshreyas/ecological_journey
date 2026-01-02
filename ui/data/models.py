@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 from uuid import uuid4
 
 from bson import ObjectId
@@ -111,8 +111,9 @@ class User(Document):
     id: Optional[ObjectId] = Field(default_factory=ObjectId, alias="_id")
     username: str
     email: EmailStr
-    hashed_password: str
+    hashed_password: Optional[str] = None
     team_ids: List[ObjectId] = []
+    role: Literal["user", "service", "admin"] = "user"
     oauth_provider: Optional[str] = None
     oauth_sub: Optional[str] = None
 

@@ -1,8 +1,10 @@
 import asyncio
+import os
 from collections import Counter
 from datetime import datetime, timedelta
 
 from data.crud import AuthError, load_playlists
+from dotenv import load_dotenv
 from log import log
 from nicegui import ui
 from pages.components.home.calendar_component import calendar_container
@@ -18,6 +20,8 @@ from utils.utils_api import (
     load_playlists_for_user,
     load_videos,
 )
+
+load_dotenv()
 
 
 def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
@@ -501,9 +505,11 @@ async def ssync_playlist(
 LONG_POLL = 60 * 60
 SHORT_POLL = 5 * 60
 
+SERVICE_TOKEN = os.environ["SERVICE_TOKEN"]
+
 
 async def playlist_sync_worker():
-    token = "HARDCODED_TOKEN_FOR_NOW"
+    token = SERVICE_TOKEN
     sleep_interval = LONG_POLL
 
     log.info("▶️ Playlist sync worker started")
