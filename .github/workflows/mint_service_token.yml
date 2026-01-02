@@ -12,29 +12,35 @@ jobs:
       - name: Build UI image
         run: docker build -t ecological-ui -f Dockerfile.ui .
 
-      - name: Run mint script inside container
+      - name: Create container for mint script
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          docker run --rm \
-            -e MONGODB_URI \
-            -e JWT_SECRET \
+          # 1. Create container (does not start yet)
+          CONTAINER_ID=$(docker create \
+            -e MONGODB_URI=${{ secrets.MONGODB_URI }} \
+            -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
             ecological-ui \
-            bash -c "cd ui && python -m scripts.mint_service_token"
+            bash -c "cd ui && python -m scripts.mint_service_token")
 
-      - name: Copy token out safely
-        run: |
-          CONTAINER_ID=$(docker create ecological-ui)
+          echo "Container created: $CONTAINER_ID"
+
+          # 2. Start container and wait for script to finish
+          docker start -a $CONTAINER_ID
+
+          # 3. Copy the generated service token to host
           docker cp $CONTAINER_ID:/tmp/service_token.txt token.txt
+
+          # 4. Remove container
           docker rm $CONTAINER_ID
 
-      - name: Mask token
+      - name: Mask token in GitHub Actions logs
         run: |
           TOKEN=$(cat token.txt)
           echo "::add-mask::$TOKEN"
 
-      - name: Upload token artifact
+      - name: Upload service token as artifact
         uses: actions/upload-artifact@v4
         with:
           name: service-token
