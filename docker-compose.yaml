@@ -36,6 +36,7 @@ services:
       - redis
       - mongo
     environment:
+      - SERVICE_TOKEN=${SERVICE_TOKEN}
       - LOKI_URL=${LOKI_URL}
       - LOKI_USER=${LOKI_USER}
       - LOKI_PASS=${LOKI_PASS}

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 
@@ -23,7 +24,7 @@ from pages.cliplists import cliplists_page
 from pages.clips import clips_page
 from pages.film import film_page
 from pages.films import films_page
-from pages.home import home_page
+from pages.home import home_page, playlist_sync_worker
 from pages.notion import notion_page
 from pages.partner import partner_page
 from pages.playlist import playlist_page
@@ -368,6 +369,11 @@ def stories():
                 style="width:100%; height:110vh; border:none;"></iframe>
     """
     ).classes("w-full h-full")
+
+
+@app.on_startup
+async def start_background_tasks():
+    asyncio.create_task(playlist_sync_worker())
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)

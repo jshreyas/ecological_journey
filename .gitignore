@@ -39,4 +39,3 @@ scripts/migrate_add_clip_id.py
 # Media
 *.zip
 *.md
-*.yml

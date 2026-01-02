@@ -43,17 +43,19 @@ def get_user_from_token(token: str):
         return None
 
 
+class AuthError(Exception):
+    pass
+
+
 def with_user_from_token(fn):
     @wraps(fn)
     def wrapper(*args, token=None, **kwargs):
         if not token:
-            ui.notify("Missing token", type="negative")
-            return None
+            raise AuthError("Missing token")
 
         user = get_user_from_token(token)
         if not user:
-            ui.notify("Invalid or expired token", type="negative")
-            return None
+            raise AuthError("Invalid or expired token")
 
         # Inject user into kwargs
         return fn(*args, user=user, **kwargs)
@@ -155,12 +157,20 @@ def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], u
     return to_dicts(playlist)
 
 
+def can_write_playlist(user: User, playlist: Playlist) -> bool:
+    if user.role == "service":
+        return True
+    return playlist.owner_id == user.id
+
+
 @with_user_from_token
 @invalidate_cache(keys=["playlists"])
 def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):
-    playlist = Playlist.find_one(Playlist.playlist_id == playlist_id, Playlist.owner_id == user.id).run()
-    if not playlist:
-        raise ValueError("Playlist not found or access denied")
+
+    playlist = Playlist.find_one(Playlist.playlist_id == playlist_id).run()
+
+    if not playlist or not can_write_playlist(user, playlist):
+        raise AuthError("Playlist not found or access denied")
 
     playlist.videos.extend([Video(**video) for video in new_videos])
     playlist.save()
@@ -270,6 +280,19 @@ def load_user(email: str):
 
 def verify_password(plain_password, hashed):
     return pwd_context.verify(plain_password, hashed)
+
+
+# TODO: combine with create_access_token
+def create_service_token(service_user: User):
+    return jwt.encode(
+        {
+            "sub": str(service_user.id),
+            "role": "service",
+            "exp": datetime.utcnow() + timedelta(days=30),
+        },
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
 
 
 def create_access_token(data: dict):
