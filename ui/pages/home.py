@@ -124,7 +124,7 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
             async def run():
                 try:
                     log.info(f"User-initiated sync for playlist: {playlist_name} ({playlist_id})")
-                    result = await ssync_playlist(
+                    result = await sync_playlist(
                         playlist_id=playlist_id,
                         token=token,
                         playlist_name=playlist_name,
@@ -490,7 +490,7 @@ SYNC_RETRY_SOON = "retry_soon"
 SYNC_ERROR = "error"
 
 
-async def ssync_playlist(
+async def sync_playlist(
     playlist_id: str,
     token: str,
     playlist_name: str,
@@ -551,7 +551,7 @@ async def playlist_sync_worker():
         retry_soon_detected = False
 
         for p in load_playlists():
-            result = await ssync_playlist(
+            result = await sync_playlist(
                 playlist_id=p["_id"],
                 token=token,
                 playlist_name=p["name"],
