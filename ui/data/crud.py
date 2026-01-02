@@ -43,17 +43,19 @@ def get_user_from_token(token: str):
         return None
 
 
+class AuthError(Exception):
+    pass
+
+
 def with_user_from_token(fn):
     @wraps(fn)
     def wrapper(*args, token=None, **kwargs):
         if not token:
-            ui.notify("Missing token", type="negative")
-            return None
+            raise AuthError("Missing token")
 
         user = get_user_from_token(token)
         if not user:
-            ui.notify("Invalid or expired token", type="negative")
-            return None
+            raise AuthError("Invalid or expired token")
 
         # Inject user into kwargs
         return fn(*args, user=user, **kwargs)

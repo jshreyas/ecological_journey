@@ -1,7 +1,8 @@
+import asyncio
 from collections import Counter
 from datetime import datetime, timedelta
 
-from data.crud import load_playlists
+from data.crud import AuthError, load_playlists
 from log import log
 from nicegui import ui
 from pages.components.home.calendar_component import calendar_container
@@ -444,6 +445,106 @@ def open_team_modal(team):
         ui.button("Close", on_click=dialog.close).classes("mt-4")
 
     dialog.open()
+
+
+SYNC_OK = "ok"
+SYNC_NOOP = "noop"
+SYNC_RETRY_SOON = "retry_soon"
+SYNC_ERROR = "error"
+
+
+PLAYLISTS = [
+    {
+        "playlist_id": "682276bd84136e7d49633b33",
+        "playlist_name": "Grappling Journal",
+        "play_id": "PLHXvJ_QLQWhXuOo2HcwsL4sysM79x8Id8",
+    },
+    {
+        "playlist_id": "682a7ed45054fc1c1f5326dd",
+        "playlist_name": "Home Training Journal",
+        "play_id": "PLHXvJ_QLQWhWfwGejBdQE8LjHHToMMCge",
+    },
+]
+
+
+async def ssync_playlist(
+    playlist_id: str,
+    token: str,
+    playlist_name: str,
+    play_id: str,
+) -> str:
+    try:
+        existing_videos = load_videos(playlist_id)
+
+        if existing_videos:
+            latest_saved_date_str = max(video["date"] for video in existing_videos)
+            latest_saved_date = datetime.fromisoformat(latest_saved_date_str.replace("Z", "+00:00")) - timedelta(days=1)
+            existing_video_ids = {video["video_id"] for video in existing_videos}
+        else:
+            latest_saved_date = None
+            existing_video_ids = set()
+
+        latest_video_data = fetch_playlist_items(play_id, latest_saved_date)
+        new_video_data = [v for v in latest_video_data if v["video_id"] not in existing_video_ids]
+
+        if not new_video_data:
+            log.info(f"[{playlist_name}] No new videos")
+            return SYNC_NOOP
+
+        create_video(new_video_data, token, play_id)
+        log.info(f"[{playlist_name}] Synced {len(new_video_data)} videos")
+        return SYNC_OK
+
+    except AuthError as e:
+        log.error(f"[{playlist_name}] Auth error: {e}")
+        return SYNC_ERROR
+
+    except Exception as e:
+        msg = str(e)
+        log.info(f"[{playlist_name}] {msg}")
+
+        # 👇 detect active-upload validation error
+        if "duration_seconds" in msg and "Field required" in msg:
+            log.warning(f"[{playlist_name}] Upload in progress detected, retrying soon")
+            return SYNC_RETRY_SOON
+
+        log.exception(f"[{playlist_name}] Sync failed")
+        return SYNC_ERROR
+
+
+LONG_POLL = 60 * 60
+SHORT_POLL = 5 * 60
+
+
+async def playlist_sync_worker():
+    token = "HARDCODED_TOKEN_FOR_NOW"
+    sleep_interval = LONG_POLL
+
+    log.info("▶️ Playlist sync worker started")
+
+    while True:
+        retry_soon_detected = False
+
+        for p in PLAYLISTS:
+            result = await ssync_playlist(
+                playlist_id=p["playlist_id"],
+                token=token,
+                playlist_name=p["playlist_name"],
+                play_id=p["play_id"],
+            )
+
+            if result == SYNC_RETRY_SOON:
+                retry_soon_detected = True
+
+        # Adaptive interval logic
+        if retry_soon_detected:
+            sleep_interval = SHORT_POLL
+            log.info("⏱ Switching to 5-minute polling")
+        else:
+            sleep_interval = LONG_POLL
+            log.info("⏱ Switching to 1-hour polling")
+
+        await asyncio.sleep(sleep_interval)
 
 
 def sync_playlist(playlist_id, token, playlist_name, play_id):
