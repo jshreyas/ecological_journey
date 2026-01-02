@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 from data.crud import create_service_token
 from data.models import User
 
@@ -9,6 +7,6 @@ if not service_user:
 
 token = create_service_token(service_user)
 
-print("SERVICE TOKEN (store securely):")
-print(token)
-print("Expires:", datetime.utcnow() + timedelta(days=30))
+# write only – never print
+with open("/tmp/service_token.txt", "w") as f:
+    f.write(token)
