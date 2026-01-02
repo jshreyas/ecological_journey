@@ -113,5 +113,8 @@ def parse_query_expression(tokens):
 
 
 def human_stamp(ts: str) -> str:
+    if ts.endswith("Z"):
+        ts = ts.replace("Z", "+00:00")
+
     dt = datetime.fromisoformat(ts)
     return dt.strftime("%b %d, %I:%M %p")  # e.g. "Sep 23, 12:29 AM"
