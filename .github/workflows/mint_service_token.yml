@@ -17,22 +17,13 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          # 1. Create container (does not start yet)
-          CONTAINER_ID=$(docker create \
-            -e MONGODB_URI=${{ secrets.MONGODB_URI }} \
-            -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-            ecological-ui \
-            bash -c "cd ui && python -m scripts.mint_service_token")
-
+          CONTAINER_ID=$(docker create -e MONGODB_URI=$MONGODB_URI -e JWT_SECRET=$JWT_SECRET ecological-ui bash -c "cd ui && python -m scripts.mint_service_token")
           echo "Container created: $CONTAINER_ID"
 
-          # 2. Start container and wait for script to finish
           docker start -a $CONTAINER_ID
 
-          # 3. Copy the generated service token to host
           docker cp $CONTAINER_ID:/tmp/service_token.txt token.txt
 
-          # 4. Remove container
           docker rm $CONTAINER_ID
 
       - name: Mask token in GitHub Actions logs
