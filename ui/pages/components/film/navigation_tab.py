@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from nicegui import ui
-from utils.utils import navigate_to_film
+from utils.utils import human_stamp, navigate_to_film
 from utils.utils_api import load_videos
 
 from .video_state import VideoState
@@ -92,17 +92,19 @@ class NavigationTab:
                             lambda e: self._handle_video_click(self.prev_video["video_id"]),
                         )
                     ):
-                        ui.icon("arrow_back").classes("text-primary text-bold")
                         prev_date = datetime.strptime(self.prev_video["date"], "%Y-%m-%dT%H:%M:%SZ").strftime(
                             "%B %d, %Y"
                         )
-                        ui.label(f"Previous Day: {prev_date}").classes("text-sm text-primary text-bold truncate")
+                        with ui.icon("keyboard_double_arrow_left").classes("text-primary text-bold text-lg"):
+                            ui.tooltip(prev_date).classes("bg-secondary text-white")
                 else:
                     ui.label().classes("")  # Empty cell
 
                 # Center label
-                with ui.row().classes("justify-center"):
-                    ui.label(f'🔍 🎬 {video.get("title", "Untitled Video")}').classes("text-2xl font-bold")
+                with ui.row().classes("justify-center items-center"):
+                    with ui.icon("calendar_month").classes("text-primary text-bold text-2xl items-center"):
+                        ui.tooltip(human_stamp(video.get("date"))).classes("bg-secondary text-white")
+                    ui.label(f'{video.get("title", "Untitled Video")}').classes("text-2xl font-bold items-center")
 
                 # Next
                 if self.next_video:
@@ -117,8 +119,8 @@ class NavigationTab:
                         next_date = datetime.strptime(self.next_video["date"], "%Y-%m-%dT%H:%M:%SZ").strftime(
                             "%B %d, %Y"
                         )
-                        ui.label(f"Next Day: {next_date}").classes("text-sm text-primary text-bold truncate")
-                        ui.icon("arrow_forward").classes("text-primary text-bold")
+                        with ui.icon("keyboard_double_arrow_right").classes("text-primary text-bold text-lg"):
+                            ui.tooltip(next_date).classes("bg-secondary text-white")
                 else:
                     ui.label().classes("")  # Empty cell
 
