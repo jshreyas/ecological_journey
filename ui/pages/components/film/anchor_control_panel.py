@@ -50,7 +50,7 @@ class AnchorControlPanel:
 
         # --- Timestamp cell ---
         table.add_slot(
-            "body-cell-t",
+            "body-cell-start",
             """
             <q-td>
                 <q-input dense outlined v-model="props.row._time" class="w-20" />
@@ -140,10 +140,10 @@ class AnchorControlPanel:
 
             # Parse labels
             anchor["labels"] = [_.strip() for _ in anchor.get("_labels", "").split(",") if _.strip()]
-
+            print(f"Parsed labels: {anchor}")
             # Cleanup transient fields
             anchor.pop("_time", None)
             anchor.pop("_labels", None)
-
+        print(f"Saving anchors...\n{self.video_state.anchor_draft}")
         self.video_state.save_anchors()
         ui.notify("Anchors saved", type="positive")

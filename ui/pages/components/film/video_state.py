@@ -4,6 +4,7 @@ VideoState class for centralized state management of video data
 
 from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
 
+from utils.dialog_puns import generate_funny_title
 from utils.utils_api import load_video
 
 SEED_ANCHORS = [
@@ -80,10 +81,9 @@ class VideoState:
 
         self.anchor_draft.append(
             {
-                "id": f"a_{len(self.anchor_draft)+1}",
                 "start": t,
-                "title": f"Anchor @ {t//60}:{t%60:02d}",
-                "labels": [],
+                "title": generate_funny_title(),
+                # f"Anchor @ {t//60}:{t%60:02d}",
             }
         )
 
@@ -110,6 +110,9 @@ class VideoState:
         video = self.get_video()
         video["anchors"] = sorted(self.anchor_draft, key=lambda a: a["start"])
         # TODO: persist to backend
+        import pprint
+
+        pprint.pprint(video["anchors"])
         self._anchor_dirty = False
         self.refresh()
 

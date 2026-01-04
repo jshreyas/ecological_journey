@@ -2,58 +2,6 @@ import random
 
 from nicegui import ui
 
-SEED_ANCHORS = [
-    {
-        "id": "a1",
-        "start": 423,  # 7:03
-        "title": "Back entry attempt → reversal",
-        "labels": ["#backentry"],
-        "notes": "Not fully to back, resulted in reversal",
-    },
-    {
-        "id": "a2",
-        "start": 790,  # 13:10
-        "title": "Clean back entry",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a3",
-        "start": 845,  # 14:05
-        "title": "Back entry sequence",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a4",
-        "start": 1190,  # 19:50
-        "title": "Dynamic scramble sequence",
-        "labels": ["#backentry"],
-        "notes": "Not a back take, but cool sequence",
-    },
-    {
-        "id": "a5",
-        "start": 2055,  # 34:15
-        "title": "Back entry from transition",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a6",
-        "start": 2642,  # 44:02
-        "title": "Late-round back entry",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a7",
-        "start": 2867,  # 47:47
-        "title": "Final back entry attempt",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-]
-
 
 class AnchorboardTab:
 
@@ -70,7 +18,6 @@ class AnchorboardTab:
         self.refresh()
 
     def _create_anchorboard_ui(self):
-        # anchors = self.video_state.metadata.get("anchors", [])
         anchors = sorted(self.video_state.anchor_draft, key=lambda a: a["start"])
 
         with self.container:
