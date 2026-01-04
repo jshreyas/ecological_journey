@@ -92,5 +92,5 @@ class AnchorControlPanel:
 
     def _save_and_close(self):
         self.video_state.save_anchors()
-        self.dialog.close()
+        # self.dialog.close()
         ui.notify("Anchors saved", type="positive")

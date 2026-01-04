@@ -60,12 +60,20 @@ class AnchorboardTab:
     def __init__(self, video_state, on_play_anchor):
         self.video_state = video_state
         self.on_play_anchor = on_play_anchor
+        self.container = None
+
+        # Register for video state refresh notifications
+        self.video_state.add_refresh_callback(self.refresh)
 
     def create_tab(self, container):
-        # anchors = self.video_state.metadata.get("anchors", [])
-        anchors = SEED_ANCHORS
+        self.container = container
+        self.refresh()
 
-        with container:
+    def _create_anchorboard_ui(self):
+        # anchors = self.video_state.metadata.get("anchors", [])
+        anchors = sorted(self.video_state.anchor_draft, key=lambda a: a["t"])
+
+        with self.container:
             with ui.column().classes("w-full p-4 gap-4"):
                 # ui.label("Anchors").classes("text-lg font-semibold")
                 ui.button(
@@ -76,6 +84,15 @@ class AnchorboardTab:
                 with ui.grid(columns=4).classes("w-full gap-4"):
                     for anchor in anchors:
                         self._render_anchor_tile(anchor)
+
+    def refresh(self):
+        """Refresh the clipboard tab with current video data"""
+        if not self.container:
+            return
+
+        self.container.clear()
+        with self.container:
+            self._create_anchorboard_ui()
 
     def _render_anchor_tile(self, anchor):
         size_class = random.choice(
