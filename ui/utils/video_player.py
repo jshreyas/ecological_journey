@@ -122,6 +122,33 @@ class VideoPlayer:
                     }}, 500);
                 }}
 
+                function onPlayerReady(event) {{
+                    event.target.setPlaybackRate(window.ytConfig.speed);
+                    event.target.playVideo();
+
+                    // Set global ytPlayer reference
+                    window.ytPlayer = event.target;
+
+                    // Define helper after player is ready
+                    window.getYTCurrentTime = function() {{
+                        if (window.ytPlayer && typeof window.ytPlayer.getCurrentTime === "function") {{
+                            return window.ytPlayer.getCurrentTime();
+                        }}
+                        return null;
+                    }};
+
+                    if (ytEndInterval) clearInterval(ytEndInterval);
+                    ytEndInterval = setInterval(() => {{
+                        const current = ytPlayer.getCurrentTime();
+                        if (current >= window.ytConfig.end) {{
+                            ytPlayer.pauseVideo();
+                            clearInterval(ytEndInterval);
+                            {js_on_end}
+                        }}
+                    }}, 500);
+                }}
+
+
                 function onPlayerStateChange(event) {{}}
 
                 window.setYTClip = function(start, end) {{
@@ -174,10 +201,20 @@ class VideoPlayer:
                     )
 
                     ui.button(
-                        icon="add",
-                        on_click=lambda: self.video_state.add_clip_at_time(start=self.video_state.current_time),
-                    )
-                    ui.button(
                         icon="settings",
                         on_click=lambda: self.video_state.get_anchor_control_panel().open(),
                     )
+
+                    async def _add_anchor():
+                        t = await ui.run_javascript("window.getYTCurrentTime();")
+                        if t is not None:
+                            ui.notify(f"Adding anchor at time: {t:.2f}s", type="info", position="bottom", timeout=2000)
+                            self.video_state.add_anchor_at_time(t)
+                            ui.notify(
+                                f"Anchor added: {self.video_state.anchor_draft}",
+                                type="positive",
+                                position="bottom",
+                                timeout=2000,
+                            )
+
+                    ui.button(icon="bookmark_add", on_click=_add_anchor)

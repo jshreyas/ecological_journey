@@ -97,7 +97,7 @@ class AnchorboardTab:
 
                 with ui.row().classes("gap-1"):
                     for label in anchor.get("labels", []):
-                        ui.badge(label).classes("bg-black text-white")
+                        ui.badge(label).classes("bg-primary text-white")
 
     @staticmethod
     def _format_time(seconds: int) -> str:

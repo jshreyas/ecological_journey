@@ -57,14 +57,11 @@ class AnchorControlPanel:
     def __init__(self, video_state):
         self.video_state = video_state
         self.dialog = None
-        self.draft_anchors = []
 
     def open(self):
         if self.dialog:
             self.dialog.open()
             return
-
-        self.draft_anchors = [a.copy() for a in SEED_ANCHORS]
 
         self.dialog = ui.dialog().props("persistent")
         with self.dialog, ui.card().classes("w-[90vw] h-[80vh] p-4"):
@@ -75,24 +72,21 @@ class AnchorControlPanel:
     def _render(self):
         ui.label("Anchor Control Panel").classes("text-lg font-semibold mb-2")
 
-        # Header
-        with ui.row().classes("font-semibold gap-4"):
-            ui.label("Time").classes("w-20")
-            ui.label("Title").classes("w-60")
-            ui.label("Labels").classes("w-60")
-            ui.label("")
-
-        ui.separator()
-
-        # Rows
-        for anchor in self.draft_anchors:
+        for anchor in self.video_state.anchor_draft:
             self._render_row(anchor)
-
-        ui.separator().classes("my-2")
 
         with ui.row().classes("justify-end gap-2"):
             ui.button("Cancel", on_click=self.dialog.close)
-            ui.button("Save", on_click=self._save_and_close).props("color=black")
+
+            save_btn = ui.button(
+                "Save",
+                on_click=self._save_and_close,
+            ).props("color=black")
+
+            save_btn.bind_enabled_from(
+                self.video_state,
+                "is_anchor_dirty",
+            )
 
     def _render_row(self, anchor):
         with ui.row().classes("items-center gap-4"):
@@ -117,10 +111,11 @@ class AnchorControlPanel:
             ).props("flat dense")
 
     def _delete_anchor(self, anchor):
-        self.draft_anchors.remove(anchor)
+        self.video_state.anchor_draft.remove(anchor)
+        self.video_state.mark_anchor_dirty()
         self.dialog.close()
         self.dialog = None
-        self.open()  # simple rerender for MVP
+        self.open()
 
     def _update_time(self, anchor, value):
         try:
@@ -137,6 +132,6 @@ class AnchorControlPanel:
         return f"{m}:{s:02d}"
 
     def _save_and_close(self):
-        self.video_state.metadata["anchors"] = sorted(self.draft_anchors, key=lambda a: a["t"])
+        self.video_state.save_anchors()
         self.dialog.close()
         ui.notify("Anchors saved", type="positive")
