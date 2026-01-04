@@ -88,6 +88,7 @@ class VideoState:
         )
 
         self._anchor_dirty = True
+        self.refresh()
 
     def get_anchors(self) -> list[dict]:
         video = self.get_video()

@@ -210,11 +210,5 @@ class VideoPlayer:
                         if t is not None:
                             ui.notify(f"Adding anchor at time: {t:.2f}s", type="info", position="bottom", timeout=2000)
                             self.video_state.add_anchor_at_time(t)
-                            ui.notify(
-                                f"Anchor added: {self.video_state.anchor_draft}",
-                                type="positive",
-                                position="bottom",
-                                timeout=2000,
-                            )
 
                     ui.button(icon="bookmark_add", on_click=_add_anchor)

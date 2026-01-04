@@ -1,62 +1,14 @@
 from nicegui import ui
 
-SEED_ANCHORS = [
-    {
-        "id": "a1",
-        "t": 423,  # 7:03
-        "title": "Back entry attempt → reversal",
-        "labels": ["#backentry"],
-        "notes": "Not fully to back, resulted in reversal",
-    },
-    {
-        "id": "a2",
-        "t": 790,  # 13:10
-        "title": "Clean back entry",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a3",
-        "t": 845,  # 14:05
-        "title": "Back entry sequence",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a4",
-        "t": 1190,  # 19:50
-        "title": "Dynamic scramble sequence",
-        "labels": ["#backentry"],
-        "notes": "Not a back take, but cool sequence",
-    },
-    {
-        "id": "a5",
-        "t": 2055,  # 34:15
-        "title": "Back entry from transition",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a6",
-        "t": 2642,  # 44:02
-        "title": "Late-round back entry",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-    {
-        "id": "a7",
-        "t": 2867,  # 47:47
-        "title": "Final back entry attempt",
-        "labels": ["#backentry"],
-        "notes": "",
-    },
-]
-
 
 class AnchorControlPanel:
     def __init__(self, video_state):
         self.video_state = video_state
         self.dialog = None
+        self.container = None
+
+        # Register refresh callback
+        self.video_state.add_refresh_callback(self.refresh)
 
     def open(self):
         if self.dialog:
@@ -69,10 +21,15 @@ class AnchorControlPanel:
 
         self.dialog.open()
 
+    def refresh(self):
+        """Re-render anchors from video_state.anchor_draft"""
+        self.dialog = None
+
     def _render(self):
         ui.label("Anchor Control Panel").classes("text-lg font-semibold mb-2")
-
-        for anchor in self.video_state.anchor_draft:
+        # print("Rednering anchors:", self.video_state.anchor_draft)
+        sorted_anchors = sorted(self.video_state.anchor_draft, key=lambda a: a["t"])
+        for anchor in sorted_anchors:
             self._render_row(anchor)
 
         with ui.row().classes("justify-end gap-2"):
@@ -113,19 +70,21 @@ class AnchorControlPanel:
     def _delete_anchor(self, anchor):
         self.video_state.anchor_draft.remove(anchor)
         self.video_state.mark_anchor_dirty()
-        self.dialog.close()
-        self.dialog = None
-        self.open()
+        self.video_state.refresh()  # Trigger re-render via refresh callback
 
     def _update_time(self, anchor, value):
         try:
             m, s = value.split(":")
             anchor["t"] = int(m) * 60 + int(s)
+            self.video_state.mark_anchor_dirty()
+            self.video_state.refresh()
         except Exception:
             ui.notify("Invalid time format (mm:ss)", type="warning")
 
     def _update_labels(self, anchor, value):
         anchor["labels"] = [_.strip() for _ in value.split(",") if _.strip()]
+        self.video_state.mark_anchor_dirty()
+        self.video_state.refresh()
 
     def _format_time(self, t):
         m, s = divmod(t, 60)
