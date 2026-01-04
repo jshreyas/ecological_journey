@@ -52,6 +52,19 @@ class PlayerControlsTab:
                         video_state=self.video_state,
                     )
 
+    def play_at_time(self, t: float):
+        ref = self.player_container["ref"]
+        if ref:
+            ref.clear()
+            with ref:
+                VideoPlayer(
+                    self.video_state.video_id,
+                    start=t - 10,
+                    parent=ref,
+                    speed=2,
+                    video_state=self.video_state,
+                )
+
     def play_clip(self, clip):
         """Play a specific clip"""
         if self.on_clip_play:

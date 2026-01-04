@@ -55,21 +55,6 @@ SEED_ANCHORS = [
     },
 ]
 
-# _anchor_control_panel_instance = None
-
-
-# def get_anchor_control_panel(video_state):
-#     """
-#     Singleton accessor for AnchorControlPanel.
-#     Ensures only one modal instance exists per page/session.
-#     """
-#     global _anchor_control_panel_instance
-
-#     if _anchor_control_panel_instance is None:
-#         _anchor_control_panel_instance = AnchorControlPanel(video_state)
-
-#     return _anchor_control_panel_instance
-
 
 class AnchorboardTab:
 
@@ -84,7 +69,6 @@ class AnchorboardTab:
         with container:
             with ui.column().classes("w-full p-4 gap-4"):
                 # ui.label("Anchors").classes("text-lg font-semibold")
-                # anchor_control_panel = get_anchor_control_panel(self.video_state)
                 ui.button(
                     "Edit Anchors",
                     icon="edit",
