@@ -27,12 +27,83 @@ class AnchorControlPanel:
 
     def _render(self):
         ui.label("Anchor Control Panel").classes("text-lg font-semibold mb-2")
-        # print("Rednering anchors:", self.video_state.anchor_draft)
-        sorted_anchors = sorted(self.video_state.anchor_draft, key=lambda a: a["t"])
-        for anchor in sorted_anchors:
-            self._render_row(anchor)
 
-        with ui.row().classes("justify-end gap-2"):
+        # Always render sorted
+        rows = sorted(self.video_state.anchor_draft, key=lambda a: a["t"])
+
+        columns = [
+            {"name": "t", "label": "Time", "field": "t"},
+            {"name": "title", "label": "Title", "field": "title"},
+            {"name": "labels", "label": "Labels", "field": "labels"},
+            {"name": "actions", "label": "", "field": "actions"},
+        ]
+
+        table = ui.table(
+            rows=rows,
+            columns=columns,
+            row_key="id",
+            column_defaults={
+                "align": "left",
+                "headerClasses": "uppercase text-primary text-xs",
+            },
+        ).classes("w-full")
+
+        # --- Timestamp cell ---
+        table.add_slot(
+            "body-cell-t",
+            """
+            <q-td>
+                <q-input dense outlined v-model="props.row._time" class="w-20" />
+            </q-td>
+            """,
+        )
+
+        # --- Title cell ---
+        table.add_slot(
+            "body-cell-title",
+            """
+            <q-td>
+                <q-input dense outlined v-model="props.row.title" />
+            </q-td>
+            """,
+        )
+
+        # --- Labels cell ---
+        table.add_slot(
+            "body-cell-labels",
+            """
+            <q-td>
+                <q-input dense outlined v-model="props.row._labels" />
+            </q-td>
+            """,
+        )
+
+        # --- Delete button ---
+        table.add_slot(
+            "body-cell-actions",
+            """
+            <q-td class="text-right">
+                <q-btn
+                    flat dense icon="delete"
+                    @click="$emit('delete', props.row)"
+                />
+            </q-td>
+            """,
+        )
+
+        # Initialize derived editable fields
+        for anchor in rows:
+            anchor["_time"] = self._format_time(anchor["t"])
+            anchor["_labels"] = ", ".join(anchor.get("labels", []))
+
+        # Handle delete
+        table.on(
+            "delete",
+            lambda e: self._delete_anchor(e.args),
+        )
+
+        # Footer actions
+        with ui.row().classes("justify-end gap-2 mt-4"):
             ui.button("Cancel", on_click=self.dialog.close)
 
             save_btn = ui.button(
@@ -45,52 +116,34 @@ class AnchorControlPanel:
                 "is_anchor_dirty",
             )
 
-    def _render_row(self, anchor):
-        with ui.row().classes("items-center gap-4"):
-            ui.input(
-                value=self._format_time(anchor["t"]),
-                on_change=lambda e, a=anchor: self._update_time(a, e.value),
-            ).classes("w-20")
-
-            ui.input(
-                value=anchor.get("title", ""),
-                on_change=lambda e, a=anchor: a.__setitem__("title", e.value),
-            ).classes("w-60")
-
-            ui.input(
-                value=", ".join(anchor.get("labels", [])),
-                on_change=lambda e, a=anchor: self._update_labels(a, e.value),
-            ).classes("w-60")
-
-            ui.button(
-                "🗑",
-                on_click=lambda a=anchor: self._delete_anchor(a),
-            ).props("flat dense")
-
     def _delete_anchor(self, anchor):
         self.video_state.anchor_draft.remove(anchor)
         self.video_state.mark_anchor_dirty()
         self.video_state.refresh()  # Trigger re-render via refresh callback
-
-    def _update_time(self, anchor, value):
-        try:
-            m, s = value.split(":")
-            anchor["t"] = int(m) * 60 + int(s)
-            self.video_state.mark_anchor_dirty()
-            self.video_state.refresh()
-        except Exception:
-            ui.notify("Invalid time format (mm:ss)", type="warning")
-
-    def _update_labels(self, anchor, value):
-        anchor["labels"] = [_.strip() for _ in value.split(",") if _.strip()]
-        self.video_state.mark_anchor_dirty()
-        self.video_state.refresh()
 
     def _format_time(self, t):
         m, s = divmod(t, 60)
         return f"{m}:{s:02d}"
 
     def _save_and_close(self):
+        for anchor in self.video_state.anchor_draft:
+            # Parse time
+            try:
+                m, s = anchor["_time"].split(":")
+                anchor["t"] = int(m) * 60 + int(s)
+            except Exception:
+                ui.notify(
+                    f"Invalid time format for anchor '{anchor.get('title', '')}'",
+                    type="warning",
+                )
+                return
+
+            # Parse labels
+            anchor["labels"] = [_.strip() for _ in anchor.get("_labels", "").split(",") if _.strip()]
+
+            # Cleanup transient fields
+            anchor.pop("_time", None)
+            anchor.pop("_labels", None)
+
         self.video_state.save_anchors()
-        # self.dialog.close()
         ui.notify("Anchors saved", type="positive")
