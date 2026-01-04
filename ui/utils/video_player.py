@@ -172,13 +172,12 @@ class VideoPlayer:
                         .props("size=60")
                         .on("change", on_speed_change)
                     )
-                    from pages.components.film.anchor_control_panel import AnchorControlPanel
 
                     ui.button(
                         icon="add",
                         on_click=lambda: self.video_state.add_clip_at_time(start=self.video_state.current_time),
                     )
                     ui.button(
-                        "⚙ Edit Anchors",
-                        on_click=lambda: AnchorControlPanel.get(self.video_state).open(),
+                        icon="settings",
+                        on_click=lambda: self.video_state.get_anchor_control_panel().open(),
                     )

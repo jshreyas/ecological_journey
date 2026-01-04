@@ -54,14 +54,6 @@ SEED_ANCHORS = [
 
 
 class AnchorControlPanel:
-    _instance = None
-
-    @classmethod
-    def get(cls, video_state):
-        if cls._instance is None:
-            cls._instance = cls(video_state)
-        return cls._instance
-
     def __init__(self, video_state):
         self.video_state = video_state
         self.dialog = None

@@ -15,6 +15,15 @@ class VideoState:
         self._video_data: Optional[Dict[str, Any]] = None
         self._refresh_callbacks: List[Callable] = []
         self.conversation: List[Dict[str, Any]] = []
+        # 👇 controllers
+        self._anchor_control_panel = None
+
+    def get_anchor_control_panel(self):
+        if self._anchor_control_panel is None:
+            from pages.components.film.anchor_control_panel import AnchorControlPanel
+
+            self._anchor_control_panel = AnchorControlPanel(self)
+        return self._anchor_control_panel
 
     def get_video(self) -> Optional[Dict[str, Any]]:
         """Get video data, loading from API if not cached"""

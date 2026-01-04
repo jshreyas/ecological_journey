@@ -1,7 +1,6 @@
 import random
 
 from nicegui import ui
-from pages.components.film.anchor_control_panel import AnchorControlPanel
 
 SEED_ANCHORS = [
     {
@@ -70,9 +69,8 @@ class AnchorboardTab:
             with ui.column().classes("w-full p-4 gap-4"):
                 # ui.label("Anchors").classes("text-lg font-semibold")
                 ui.button(
-                    "Edit Anchors",
                     icon="edit",
-                    on_click=lambda: AnchorControlPanel.get(self.video_state).open(),
+                    on_click=lambda: self.video_state.get_anchor_control_panel().open(),
                 ).props("outline")
 
                 with ui.grid(columns=4).classes("w-full gap-4"):
