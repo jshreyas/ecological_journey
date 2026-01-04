@@ -4,6 +4,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import ui
+from pages.components.film.anchorboard_tab import AnchorboardTab
 from pages.components.film.clipboard_tab import ClipboardTab
 from pages.components.film.filmboard_tab import FilmboardTab
 from pages.components.film.learnings_tab import LearningsTab
@@ -58,6 +59,10 @@ def film_page(user: User | None, video_id: str):
         on_play_clip=player_controls_tab.play_clip,
         on_share_clip=share_dialog_tab.share_clip,
     )
+    anchorboard_tab = AnchorboardTab(
+        video_state,
+        on_play_anchor=player_controls_tab.play_at_time,
+    )
 
     # Inline render_film_editor functionality
     with ui.column().classes("w-full"):
@@ -74,7 +79,8 @@ def film_page(user: User | None, video_id: str):
                     one = ui.tab("Metadata").classes("w-full")
                     two = ui.tab("Learnings").classes("w-full")
                     three = ui.tab("Clipboard").classes("w-full")
-                with ui.tab_panels(tabs, value=three).classes("w-full h-full"):
+                    four = ui.tab("Anchorboard").classes("w-full")
+                with ui.tab_panels(tabs, value=four).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         metaforge_tab.create_tab(metaforge_container)
@@ -84,6 +90,9 @@ def film_page(user: User | None, video_id: str):
                     with ui.tab_panel(three):
                         clipboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         clipboard_tab.create_tab(clipboard_container, clip_id)
+                    with ui.tab_panel(four):
+                        anchorboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
+                        anchorboard_tab.create_tab(anchorboard_container)
 
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")

@@ -16,6 +16,7 @@ class VideoPlayer:
         height: int = 400,
         on_end=None,
         parent=None,  # 👈 NEW
+        video_state=None,  # 👈 NEW
     ):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
@@ -26,6 +27,7 @@ class VideoPlayer:
         self.height = height
         self.on_end = on_end
         self.parent = parent
+        self.video_state = video_state
         self._render()
 
     def _extract_video_id(self, url: str) -> str:
@@ -169,4 +171,14 @@ class VideoPlayer:
                         )
                         .props("size=60")
                         .on("change", on_speed_change)
+                    )
+                    from pages.components.film.anchor_control_panel import AnchorControlPanel
+
+                    ui.button(
+                        icon="add",
+                        on_click=lambda: self.video_state.add_clip_at_time(start=self.video_state.current_time),
+                    )
+                    ui.button(
+                        "⚙ Edit Anchors",
+                        on_click=lambda: AnchorControlPanel.get(self.video_state).open(),
                     )

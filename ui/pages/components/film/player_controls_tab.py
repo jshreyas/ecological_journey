@@ -49,6 +49,7 @@ class PlayerControlsTab:
                         self.video_state.video_id,
                         speed=self.player_speed["value"],
                         parent=player_container_ref,
+                        video_state=self.video_state,
                     )
 
     def play_clip(self, clip):
@@ -74,6 +75,7 @@ class PlayerControlsTab:
                         end=clip.get("end"),
                         speed=speed,
                         parent=ref,
+                        video_state=self.video_state,
                     )
 
     def play_clips_playlist_mode(self):
@@ -110,6 +112,7 @@ class PlayerControlsTab:
                     speed=speed,
                     on_end=lambda: self._next_clip_callback(),
                     parent=ref,
+                    video_state=self.video_state,
                 )
 
     def _next_clip_callback(self):
