@@ -29,10 +29,10 @@ class AnchorControlPanel:
         ui.label("Anchor Control Panel").classes("text-lg font-semibold mb-2")
 
         # Always render sorted
-        rows = sorted(self.video_state.anchor_draft, key=lambda a: a["t"])
+        rows = sorted(self.video_state.anchor_draft, key=lambda a: a["start"])
 
         columns = [
-            {"name": "t", "label": "Time", "field": "t"},
+            {"name": "start", "label": "Time", "field": "start"},
             {"name": "title", "label": "Title", "field": "title"},
             {"name": "labels", "label": "Labels", "field": "labels"},
             {"name": "actions", "label": "", "field": "actions"},
@@ -93,7 +93,7 @@ class AnchorControlPanel:
 
         # Initialize derived editable fields
         for anchor in rows:
-            anchor["_time"] = self._format_time(anchor["t"])
+            anchor["_time"] = self._format_time(anchor["start"])
             anchor["_labels"] = ", ".join(anchor.get("labels", []))
 
         # Handle delete
@@ -130,7 +130,7 @@ class AnchorControlPanel:
             # Parse time
             try:
                 m, s = anchor["_time"].split(":")
-                anchor["t"] = int(m) * 60 + int(s)
+                anchor["start"] = int(m) * 60 + int(s)
             except Exception:
                 ui.notify(
                     f"Invalid time format for anchor '{anchor.get('title', '')}'",

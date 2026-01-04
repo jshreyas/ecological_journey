@@ -8,7 +8,7 @@ from uuid import uuid4
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
+from data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
 from log import log
 from nicegui import ui  # TODO: remove or use your own alert/logger
@@ -224,6 +224,74 @@ def edit_video_in_playlist(playlist_id: str, updated_video: Dict[str, Any], user
 
     playlist.save()
     return to_dicts(playlist)
+
+
+def merge_embedded_docs(
+    *,
+    existing_docs: list,
+    updated_docs: list,
+    id_field: str,
+    doc_cls,
+):
+    """
+    Generic merge helper for embedded docs (clips, anchors, etc.)
+    """
+    existing_map = {getattr(doc, id_field): doc.dict() for doc in existing_docs if getattr(doc, id_field, None)}
+
+    merged_docs = []
+
+    for doc in updated_docs:
+        doc_dict = doc.dict()
+        doc_id = doc_dict.get(id_field)
+
+        if doc_id and doc_id in existing_map:
+            merged = {**existing_map[doc_id], **doc_dict}
+        else:
+            if not doc_id:
+                doc_dict[id_field] = str(uuid4())
+            merged = doc_dict
+
+        merged_docs.append(doc_cls(**merged))
+
+    return merged_docs
+
+
+@with_user_from_token
+@invalidate_cache(keys=["playlists"])
+def update_video_anchors(
+    playlist_id: str,
+    video_id: str,
+    anchors: List[dict],
+    user=None,
+    **kwargs,
+):
+    playlist = Playlist.find_one(
+        Playlist.playlist_id == playlist_id,
+        Playlist.owner_id == user.id,
+    ).run()
+
+    if not playlist:
+        raise ValueError("Playlist not found or access denied")
+
+    for i, video in enumerate(playlist.videos):
+        if video.video_id != video_id:
+            continue
+
+        merged_anchors = merge_embedded_docs(
+            existing_docs=video.anchors,
+            updated_docs=[Anchor(**a) for a in anchors],
+            id_field="anchor_id",
+            doc_cls=Anchor,
+        )
+
+        updated_fields = video.dict()
+        updated_fields["anchors"] = merged_anchors
+        playlist.videos[i] = Video(**updated_fields)
+        playlist.save()
+
+        return to_dicts(playlist)
+
+    raise ValueError("Video not found in playlist")
 
 
 @with_user_from_token

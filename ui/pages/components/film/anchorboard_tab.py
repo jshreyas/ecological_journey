@@ -5,49 +5,49 @@ from nicegui import ui
 SEED_ANCHORS = [
     {
         "id": "a1",
-        "t": 423,  # 7:03
+        "start": 423,  # 7:03
         "title": "Back entry attempt → reversal",
         "labels": ["#backentry"],
         "notes": "Not fully to back, resulted in reversal",
     },
     {
         "id": "a2",
-        "t": 790,  # 13:10
+        "start": 790,  # 13:10
         "title": "Clean back entry",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a3",
-        "t": 845,  # 14:05
+        "start": 845,  # 14:05
         "title": "Back entry sequence",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a4",
-        "t": 1190,  # 19:50
+        "start": 1190,  # 19:50
         "title": "Dynamic scramble sequence",
         "labels": ["#backentry"],
         "notes": "Not a back take, but cool sequence",
     },
     {
         "id": "a5",
-        "t": 2055,  # 34:15
+        "start": 2055,  # 34:15
         "title": "Back entry from transition",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a6",
-        "t": 2642,  # 44:02
+        "start": 2642,  # 44:02
         "title": "Late-round back entry",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a7",
-        "t": 2867,  # 47:47
+        "start": 2867,  # 47:47
         "title": "Final back entry attempt",
         "labels": ["#backentry"],
         "notes": "",
@@ -71,7 +71,7 @@ class AnchorboardTab:
 
     def _create_anchorboard_ui(self):
         # anchors = self.video_state.metadata.get("anchors", [])
-        anchors = sorted(self.video_state.anchor_draft, key=lambda a: a["t"])
+        anchors = sorted(self.video_state.anchor_draft, key=lambda a: a["start"])
 
         with self.container:
             with ui.column().classes("w-full p-4 gap-4"):
@@ -105,12 +105,12 @@ class AnchorboardTab:
         with (
             ui.card()
             .classes(f"{size_class} cursor-pointer hover:shadow-lg transition")
-            .on("click", lambda a=anchor: self.on_play_anchor(a["t"]))
+            .on("click", lambda a=anchor: self.on_play_anchor(a["start"]))
         ):
             with ui.column().classes("gap-2"):
                 # ui.label(anchor["title"]).classes("font-medium")
 
-                ui.label(self._format_time(anchor["t"])).classes("text-sm text-gray-500")
+                ui.label(self._format_time(anchor["start"])).classes("text-sm text-gray-500")
 
                 with ui.row().classes("gap-1"):
                     for label in anchor.get("labels", []):

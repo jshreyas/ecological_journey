@@ -9,49 +9,49 @@ from utils.utils_api import load_video
 SEED_ANCHORS = [
     {
         "id": "a1",
-        "t": 423,  # 7:03
+        "start": 423,  # 7:03
         "title": "Back entry attempt → reversal",
         "labels": ["#backentry"],
         "notes": "Not fully to back, resulted in reversal",
     },
     {
         "id": "a2",
-        "t": 790,  # 13:10
+        "start": 790,  # 13:10
         "title": "Clean back entry",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a3",
-        "t": 845,  # 14:05
+        "start": 845,  # 14:05
         "title": "Back entry sequence",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a4",
-        "t": 1190,  # 19:50
+        "start": 1190,  # 19:50
         "title": "Dynamic scramble sequence",
         "labels": ["#backentry"],
         "notes": "Not a back take, but cool sequence",
     },
     {
         "id": "a5",
-        "t": 2055,  # 34:15
+        "start": 2055,  # 34:15
         "title": "Back entry from transition",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a6",
-        "t": 2642,  # 44:02
+        "start": 2642,  # 44:02
         "title": "Late-round back entry",
         "labels": ["#backentry"],
         "notes": "",
     },
     {
         "id": "a7",
-        "t": 2867,  # 47:47
+        "start": 2867,  # 47:47
         "title": "Final back entry attempt",
         "labels": ["#backentry"],
         "notes": "",
@@ -81,7 +81,7 @@ class VideoState:
         self.anchor_draft.append(
             {
                 "id": f"a_{len(self.anchor_draft)+1}",
-                "t": t,
+                "start": t,
                 "title": f"Anchor @ {t//60}:{t%60:02d}",
                 "labels": [],
             }
@@ -108,7 +108,7 @@ class VideoState:
 
     def save_anchors(self):
         video = self.get_video()
-        video["anchors"] = sorted(self.anchor_draft, key=lambda a: a["t"])
+        video["anchors"] = sorted(self.anchor_draft, key=lambda a: a["start"])
         # TODO: persist to backend
         self._anchor_dirty = False
         self.refresh()
