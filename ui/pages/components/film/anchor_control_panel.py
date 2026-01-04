@@ -42,7 +42,7 @@ class AnchorControlPanel:
             ui.label("Time")
             ui.label("Title")
             ui.label("Labels")
-            ui.label("")
+            ui.label("Actions")
 
         # ---------- Rows ----------
         for anchor in rows:
@@ -79,11 +79,15 @@ class AnchorControlPanel:
             ).props("dense outlined").classes("w-full")
 
             # ---- Labels (chips) ----
-            ui.chip(
-                text=anchor["_labels"],
-                on_selection_change=lambda e, a=anchor: self._update_labels(a, e.value),
-                removable=True,
-            ).props("dense outlined").classes("w-full")
+            with (
+                ui.input(
+                    on_change=lambda e, a=anchor: self._update_labels(a, e.value),
+                )
+                .props("dense outlined")
+                .classes("w-full")
+            ):
+                for op in anchor["_labels"]:
+                    ui.chip(op, removable=True).classes("text-xs bg-primary")
 
             # ---- Delete ----
             ui.button(
@@ -144,7 +148,6 @@ class AnchorControlPanel:
         print("Saving anchors:\n", self.video_state.anchor_draft)
         self.video_state.save_anchors()
         ui.notify("Anchors saved", type="positive")
-        # self.dialog.close()
 
     # --------------------------------------------------
     # Utils
