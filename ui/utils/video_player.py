@@ -15,8 +15,8 @@ class VideoPlayer:
         width: int = 700,
         height: int = 400,
         on_end=None,
-        parent=None,  # 👈 NEW
-        video_state=None,  # 👈 NEW
+        parent=None,
+        video_state=None,
     ):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
@@ -200,7 +200,7 @@ class VideoPlayer:
                         .on("change", on_speed_change)
                     )
 
-                    if self.video_state.user:
+                    if self.video_state and self.video_state.user:
                         ui.button(
                             icon="settings",
                             on_click=lambda: self.video_state.get_anchor_control_panel().open(),
