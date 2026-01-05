@@ -7,7 +7,7 @@ from bunnet import Document
 from pydantic import BaseModel, EmailStr, Field
 
 
-class Anchor(Document):
+class Anchor(BaseModel):
     anchor_id: str = Field(default_factory=lambda: str(uuid4()))
     start: int  # seconds
     title: str
@@ -15,7 +15,7 @@ class Anchor(Document):
     description: Optional[str] = ""
 
 
-class Clip(Document):
+class Clip(BaseModel):
     clip_id: str = Field(default_factory=lambda: str(uuid4()))
     start: int
     end: int

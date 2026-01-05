@@ -25,7 +25,7 @@ BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 @with_user_context
 def film_page(user: User | None, video_id: str):
     # Initialize VideoState for centralized state management
-    video_state = VideoState(video_id)
+    video_state = VideoState(video_id, user)
 
     query_params = ui.context.client.request.query_params
     clip_id = query_params.get("clip")
@@ -44,7 +44,7 @@ def film_page(user: User | None, video_id: str):
         video_id = autoplay_clip.get("video_id", video_id)
         # Reinitialize video_state if video_id changed
         if video_id != video_state.video_id:
-            video_state = VideoState(video_id)
+            video_state = VideoState(video_id), user
 
     # Initialize components with user
     navigation_tab = NavigationTab(video_state)

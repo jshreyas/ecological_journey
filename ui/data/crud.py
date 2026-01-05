@@ -265,13 +265,15 @@ def update_video_anchors(
     user=None,
     **kwargs,
 ):
-    playlist = Playlist.find_one(
-        Playlist.playlist_id == playlist_id,
-        Playlist.owner_id == user.id,
-    ).run()
+    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id), Playlist.owner_id == user.id).run()
 
     if not playlist:
         raise ValueError("Playlist not found or access denied")
+
+    def normalize_anchor_payload(a: dict) -> dict:
+        if "id" in a and "anchor_id" not in a:
+            a = {**a, "anchor_id": a.pop("id")}
+        return a
 
     for i, video in enumerate(playlist.videos):
         if video.video_id != video_id:
@@ -279,7 +281,7 @@ def update_video_anchors(
 
         merged_anchors = merge_embedded_docs(
             existing_docs=video.anchors,
-            updated_docs=[Anchor(**a) for a in anchors],
+            updated_docs=[Anchor(**normalize_anchor_payload(a)) for a in anchors],
             id_field="anchor_id",
             doc_cls=Anchor,
         )

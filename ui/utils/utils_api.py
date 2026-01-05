@@ -3,7 +3,14 @@ from typing import Any, Dict, List, Optional, Union
 from data.crud import add_video_to_playlist, create_cliplist
 from data.crud import create_playlist as cp
 from data.crud import create_team as ct
-from data.crud import edit_video_in_playlist, load_cliplist, load_notion_latest, load_playlists, load_teams
+from data.crud import (
+    edit_video_in_playlist,
+    load_cliplist,
+    load_notion_latest,
+    load_playlists,
+    load_teams,
+    update_video_anchors,
+)
 from utils.cache import cache_get, cache_set
 from utils.utils import parse_query_expression
 
@@ -185,6 +192,10 @@ def convert_video_metadata_to_raw_text(video: dict) -> str:
 def save_video_metadata(video_metadata: dict, token: str) -> bool:
     playlist_id = get_playlist_id_for_video(video_metadata.get("video_id"))
     return edit_video_in_playlist(playlist_id=playlist_id, updated_video=video_metadata, token=token)
+
+
+def save_video_anchors(video_metadata: dict, token: str) -> bool:
+    return update_video_anchors(token=token, **video_metadata)
 
 
 def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optional[Dict[str, Any]]:

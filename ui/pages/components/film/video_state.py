@@ -5,57 +5,51 @@ VideoState class for centralized state management of video data
 from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
 
 from utils.dialog_puns import generate_funny_title
-from utils.utils_api import load_video
+from utils.user_context import User
+from utils.utils_api import load_video, save_video_anchors
 
 SEED_ANCHORS = [
     {
-        "id": "a1",
         "start": 423,  # 7:03
         "title": "Back entry attempt → reversal",
         "labels": ["#backentry"],
-        "notes": "Not fully to back, resulted in reversal",
+        "description": "Not fully to back, resulted in reversal",
     },
     {
-        "id": "a2",
         "start": 790,  # 13:10
         "title": "Clean back entry",
         "labels": ["#backentry"],
-        "notes": "",
+        "description": "",
     },
     {
-        "id": "a3",
         "start": 845,  # 14:05
         "title": "Back entry sequence",
         "labels": ["#backentry"],
-        "notes": "",
+        "description": "",
     },
     {
-        "id": "a4",
         "start": 1190,  # 19:50
         "title": "Dynamic scramble sequence",
         "labels": ["#backentry"],
-        "notes": "Not a back take, but cool sequence",
+        "description": "Not a back take, but cool sequence",
     },
     {
-        "id": "a5",
         "start": 2055,  # 34:15
         "title": "Back entry from transition",
         "labels": ["#backentry"],
-        "notes": "",
+        "description": "",
     },
     {
-        "id": "a6",
         "start": 2642,  # 44:02
         "title": "Late-round back entry",
         "labels": ["#backentry"],
-        "notes": "",
+        "description": "",
     },
     {
-        "id": "a7",
         "start": 2867,  # 47:47
         "title": "Final back entry attempt",
         "labels": ["#backentry"],
-        "notes": "",
+        "description": "",
     },
 ]
 
@@ -63,8 +57,9 @@ SEED_ANCHORS = [
 class VideoState:
     """Centralized state management for video data and refresh callbacks"""
 
-    def __init__(self, video_id: str):
+    def __init__(self, video_id: str, user: User | None = None):
         self.video_id = video_id
+        self.user = user
         self._video_data: Optional[Dict[str, Any]] = None
         self._refresh_callbacks: List[Callable] = []
         self.conversation: List[Dict[str, Any]] = []
@@ -92,7 +87,7 @@ class VideoState:
 
     def get_anchors(self) -> list[dict]:
         video = self.get_video()
-        return video.get("anchors") or SEED_ANCHORS
+        return video.get("anchors", [])
 
     def init_anchor_draft(self):
         if self.anchor_draft is None:
@@ -109,10 +104,7 @@ class VideoState:
     def save_anchors(self):
         video = self.get_video()
         video["anchors"] = sorted(self.anchor_draft, key=lambda a: a["start"])
-        # TODO: persist to backend
-        import pprint
-
-        pprint.pprint(video["anchors"])
+        _ = save_video_anchors(video, self.user.token)
         self._anchor_dirty = False
         self.refresh()
 
