@@ -27,29 +27,30 @@ class AnchorControlPanel:
     def _render(self):
         ui.label("Anchor Control Panel").classes("text-lg font-semibold mb-2")
 
-        # Ensure stable IDs and transient fields
+        # Ensure stable IDs + transient fields
         for anchor in self.video_state.anchor_draft:
-            if "id" not in anchor:
-                anchor["id"] = str(uuid4())
-            anchor["_time"] = self._format_time(anchor.get("start", 0))
-            anchor["_labels"] = ", ".join(anchor.get("labels", []))
+            anchor.setdefault("id", str(uuid4()))
+            anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
+            anchor.setdefault("_labels", ", ".join(anchor.get("labels", [])))
+
+        # Sort IN PLACE
+        self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
 
         columns = [
-            {"name": "time", "label": "Time", "field": "_time", "align": "left"},
+            {"name": "time", "label": "Time", "field": "_time"},
             {"name": "title", "label": "Title", "field": "title"},
             {"name": "labels", "label": "Labels", "field": "_labels"},
-            {"name": "actions", "label": "Actions", "field": "actions"},
+            {"name": "actions", "label": "", "field": "actions"},
         ]
-
-        rows = sorted(self.video_state.anchor_draft, key=lambda a: a.get("start", 0))
 
         self.table = ui.table(
             columns=columns,
-            rows=rows,
+            rows=self.video_state.anchor_draft,
             row_key="id",
-            column_defaults={"align": "left", "headerClasses": "uppercase text-primary text-xs"},
+            column_defaults={"align": "left"},
         ).classes("w-full")
 
+        # 🔑 CRITICAL FIX: emit UPDATED ROW, not ID
         self.table.add_slot(
             "body",
             r"""
@@ -63,9 +64,12 @@ class AnchorControlPanel:
                         v-slot="scope"
                         @update:model-value="() => $parent.$emit('edit', props.row)"
                     >
-                        <q-input v-model="scope.value" dense autofocus
+                        <q-input
+                            v-model="scope.value"
+                            dense autofocus
                             placeholder="m:ss"
-                            @keyup.enter="scope.set" />
+                            @keyup.enter="scope.set"
+                        />
                     </q-popup-edit>
                 </q-td>
 
@@ -77,8 +81,11 @@ class AnchorControlPanel:
                         v-slot="scope"
                         @update:model-value="() => $parent.$emit('edit', props.row)"
                     >
-                        <q-input v-model="scope.value" dense autofocus
-                            @keyup.enter="scope.set" />
+                        <q-input
+                            v-model="scope.value"
+                            dense autofocus
+                            @keyup.enter="scope.set"
+                        />
                     </q-popup-edit>
                 </q-td>
 
@@ -90,76 +97,78 @@ class AnchorControlPanel:
                         v-slot="scope"
                         @update:model-value="() => $parent.$emit('edit', props.row)"
                     >
-                        <q-input v-model="scope.value" dense autofocus
+                        <q-input
+                            v-model="scope.value"
+                            dense autofocus
                             placeholder="comma, separated"
-                            @keyup.enter="scope.set" />
+                            @keyup.enter="scope.set"
+                        />
                     </q-popup-edit>
                 </q-td>
+
                 <!-- delete -->
                 <q-td key="actions" auto-width>
-                    {{ props.row.actions }}
-                    <q-btn color="red" dense flat icon="delete"
-                        @click="() => $parent.$emit('delete', props.row)" />
+                    <q-btn
+                        color="red"
+                        dense flat icon="delete"
+                        @click="() => $parent.$emit('delete', props.row.id)"
+                    />
                 </q-td>
+
             </q-tr>
             """,
         )
 
+        # 🔑 MERGE PAYLOAD BACK INTO SOURCE OF TRUTH
         def on_edit(e: events.GenericEventArguments):
-            # row already mutated by popup-edit
+            payload = dict(e.args)
+            anchor_id = payload.pop("id")
+
+            for anchor in self.video_state.anchor_draft:
+                if anchor["id"] == anchor_id:
+                    anchor.update(payload)
+                    break
+
             self.video_state.mark_anchor_dirty()
 
         def on_delete(e: events.GenericEventArguments):
-            self.video_state.anchor_draft.remove(e.args)
+            anchor_id = e.args
+            self.video_state.anchor_draft[:] = [a for a in self.video_state.anchor_draft if a["id"] != anchor_id]
             self.video_state.mark_anchor_dirty()
             self.table.update()
 
         self.table.on("edit", on_edit)
         self.table.on("delete", on_delete)
 
-        # -------------------------
-        # Footer
-        # -------------------------
         with ui.row().classes("justify-end gap-2 mt-4"):
             ui.button("Cancel", on_click=self.dialog.close)
             save_btn = ui.button("Save", on_click=self._save_and_close).props("color=black")
             save_btn.bind_enabled_from(self.video_state, "is_anchor_dirty")
 
-    # -------------------------
-    # Delete
-    # -------------------------
-    def _delete_anchor(self, row):
-        self.video_state.anchor_draft.remove(row)
-        self.video_state.mark_anchor_dirty()
-        self.video_state.refresh()
-
-    # -------------------------
-    # Save anchors
-    # -------------------------
     def _save_and_close(self):
         for anchor in self.video_state.anchor_draft:
-            # Parse time
             try:
                 m, s = anchor["_time"].split(":")
                 anchor["start"] = int(m) * 60 + int(s)
             except Exception:
-                ui.notify(f"Invalid time format for anchor '{anchor.get('title', '')}'", type="warning")
+                ui.notify(
+                    f"Invalid time format for anchor '{anchor.get('title', '')}'",
+                    type="warning",
+                )
                 return
 
-            # Parse labels
             anchor["labels"] = [x.strip() for x in anchor.get("_labels", "").split(",") if x.strip()]
-            print(f"Parsed labels: {anchor['labels']}")
-            # Clean transient fields
+
             anchor.pop("_time", None)
             anchor.pop("_labels", None)
 
-        print(f"Saving anchors:\n{self.video_state.anchor_draft}")
+        print("Saving anchors:")
+        for a in self.video_state.anchor_draft:
+            print(a)
+
         self.video_state.save_anchors()
         ui.notify("Anchors saved", type="positive")
 
-    # -------------------------
-    # Helpers
-    # -------------------------
-    def _format_time(self, t):
+    def _format_time(self, t: int) -> str:
         m, s = divmod(t, 60)
         return f"{m}:{s:02d}"
