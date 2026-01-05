@@ -8,51 +8,6 @@ from utils.dialog_puns import generate_funny_title
 from utils.user_context import User
 from utils.utils_api import load_video, save_video_anchors
 
-SEED_ANCHORS = [
-    {
-        "start": 423,  # 7:03
-        "title": "Back entry attempt → reversal",
-        "labels": ["#backentry"],
-        "description": "Not fully to back, resulted in reversal",
-    },
-    {
-        "start": 790,  # 13:10
-        "title": "Clean back entry",
-        "labels": ["#backentry"],
-        "description": "",
-    },
-    {
-        "start": 845,  # 14:05
-        "title": "Back entry sequence",
-        "labels": ["#backentry"],
-        "description": "",
-    },
-    {
-        "start": 1190,  # 19:50
-        "title": "Dynamic scramble sequence",
-        "labels": ["#backentry"],
-        "description": "Not a back take, but cool sequence",
-    },
-    {
-        "start": 2055,  # 34:15
-        "title": "Back entry from transition",
-        "labels": ["#backentry"],
-        "description": "",
-    },
-    {
-        "start": 2642,  # 44:02
-        "title": "Late-round back entry",
-        "labels": ["#backentry"],
-        "description": "",
-    },
-    {
-        "start": 2867,  # 47:47
-        "title": "Final back entry attempt",
-        "labels": ["#backentry"],
-        "description": "",
-    },
-]
-
 
 class VideoState:
     """Centralized state management for video data and refresh callbacks"""
