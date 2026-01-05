@@ -178,11 +178,18 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
 
 
 # TODO: updates can be done by team members, not just owner
-# TODO: use merge_embedded_docs helper similar to Anchor
 @with_user_from_token
 @invalidate_cache(keys=["playlists"])
-def edit_video_in_playlist(playlist_id: str, updated_video: Dict[str, Any], user=None, **kwargs):
-    playlist = Playlist.find_one(Playlist.playlist_id == playlist_id, Playlist.owner_id == user.id).run()
+def edit_video_in_playlist(
+    playlist_id: str,
+    updated_video: Dict[str, Any],
+    user=None,
+    **kwargs,
+):
+    playlist = Playlist.find_one(
+        Playlist.playlist_id == playlist_id,
+        Playlist.owner_id == user.id,
+    ).run()
 
     if not playlist:
         raise ValueError("Playlist not found or access denied")
@@ -191,34 +198,41 @@ def edit_video_in_playlist(playlist_id: str, updated_video: Dict[str, Any], user
     updated_video_id = updated_video_obj.video_id
 
     updated = False
+
     for i, video in enumerate(playlist.videos):
-        if video.video_id == updated_video_id:
-            # Step 1: Map existing clips by clip_id
-            existing_clips = {clip.clip_id: clip.dict() for clip in video.clips}
-            merged_clips = []
+        if video.video_id != updated_video_id:
+            continue
 
-            for clip in updated_video_obj.clips:
-                clip_dict = clip.dict()
-                clip_id = clip_dict.get("clip_id")
+        updated_fields = video.dict()
 
-                if clip_id and clip_id in existing_clips:
-                    merged = {**existing_clips[clip_id], **clip_dict}
-                else:
-                    if not clip_id:
-                        clip_dict["clip_id"] = str(uuid4())
-                    merged = clip_dict
-
-                merged_clips.append(Clip(**merged))
-
-            # Step 2: Merge all fields properly
-            updated_fields = video.dict()
-            updated_fields.update(updated_video)
+        # --- CLIPS ---
+        if "clips" in updated_video:
+            merged_clips = merge_embedded_docs(
+                existing_docs=video.clips,
+                updated_docs=updated_video_obj.clips,
+                id_field="clip_id",
+                doc_cls=Clip,
+            )
             updated_fields["clips"] = merged_clips
 
-            # Step 3: Replace the video
-            playlist.videos[i] = Video(**updated_fields)
-            updated = True
-            break
+        # --- ANCHORS (NEW) ---
+        if "anchors" in updated_video:
+            merged_anchors = merge_embedded_docs(
+                existing_docs=video.anchors,
+                updated_docs=updated_video_obj.anchors,
+                id_field="anchor_id",
+                doc_cls=Anchor,
+            )
+            updated_fields["anchors"] = merged_anchors
+
+        # --- ALL OTHER FIELDS ---
+        for k, v in updated_video.items():
+            if k not in {"clips", "anchors"}:
+                updated_fields[k] = v
+
+        playlist.videos[i] = Video(**updated_fields)
+        updated = True
+        break
 
     if not updated:
         raise ValueError("Video not found in playlist")

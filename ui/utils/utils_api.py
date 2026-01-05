@@ -195,6 +195,7 @@ def save_video_metadata(video_metadata: dict, token: str) -> bool:
 
 
 def save_video_anchors(video_metadata: dict, token: str) -> bool:
+    # TODO: use edit_video_in_playlist(...) instead
     return update_video_anchors(token=token, **video_metadata)
 
 
