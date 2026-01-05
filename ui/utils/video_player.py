@@ -199,19 +199,17 @@ class VideoPlayer:
                         .props("size=60")
                         .on("change", on_speed_change)
                     )
+            # TODO: is this logic appropriate in VideoPlayer?
+            if self.video_state and self.video_state.user:
+                ui.button(
+                    icon="settings",
+                    on_click=lambda: self.video_state.get_anchor_control_panel().open(),
+                )
 
-                    if self.video_state and self.video_state.user:
-                        ui.button(
-                            icon="settings",
-                            on_click=lambda: self.video_state.get_anchor_control_panel().open(),
-                        )
+                async def _add_anchor():
+                    t = await ui.run_javascript("window.getYTCurrentTime();")
+                    if t is not None:
+                        ui.notify(f"Adding anchor at time: {t:.2f}s", type="info", position="bottom", timeout=2000)
+                        self.video_state.add_anchor_at_time(t)
 
-                        async def _add_anchor():
-                            t = await ui.run_javascript("window.getYTCurrentTime();")
-                            if t is not None:
-                                ui.notify(
-                                    f"Adding anchor at time: {t:.2f}s", type="info", position="bottom", timeout=2000
-                                )
-                                self.video_state.add_anchor_at_time(t)
-
-                        ui.button(icon="bookmark_add", on_click=_add_anchor)
+                ui.button(icon="bookmark_add", on_click=_add_anchor)
