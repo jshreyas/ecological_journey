@@ -122,8 +122,33 @@ class MetaforgeTab:
                         ],
                     },
                 },
+                "anchors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "clip_id": {"type": "string", "default": ""},
+                            "start": {  # TODO: change this to string with timestamp format
+                                "type": "number",
+                                # "pattern": r"^(\d+:[0-5]\d:[0-5]\d|\d+:[0-5]\d)$",
+                                "description": "Format: mm:ss or hh:mm:ss",
+                            },
+                            "title": {"type": "string", "default": ""},
+                            "labels": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "default": [],
+                            },
+                        },
+                        "required": [
+                            "start",
+                            "title",
+                            "labels",
+                        ],
+                    },
+                },
             },
-            "required": ["description", "labels", "partners", "clips"],
+            "required": ["description", "labels", "partners", "clips", "anchors"],
         }
 
         # Create JSON editor
@@ -146,6 +171,7 @@ class MetaforgeTab:
             "description": full_video.get("notes", ""),
             "labels": full_video.get("labels", []),
             "partners": full_video.get("partners", []),
+            "anchors": full_video.get("anchors", []),
             "clips": [
                 {
                     "clip_id": clip["clip_id"],
@@ -235,6 +261,7 @@ class MetaforgeTab:
             "labels": video.get("labels", []),
             "partners": video.get("partners", []),
             "clips": cleaned_clips,
+            "anchors": video.get("anchors", []),
         }
 
     def _dict_diff(self, d1, d2, path=""):
@@ -413,6 +440,7 @@ class MetaforgeTab:
             ],
         }
 
+    # TODO: account for saving anchors as well
     async def _get_data(self):
         """Get data from JSON editor and validate"""
         editor = self.editor_container["ref"]
