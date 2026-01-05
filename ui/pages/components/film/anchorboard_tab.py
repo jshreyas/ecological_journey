@@ -23,10 +23,10 @@ class AnchorboardTab:
         with self.container:
             with ui.column().classes("w-full p-4 gap-4"):
                 # ui.label("Anchors").classes("text-lg font-semibold")
-                ui.button(
-                    icon="edit",
-                    on_click=lambda: self.video_state.get_anchor_control_panel().open(),
-                ).props("outline")
+                # ui.button(
+                #     icon="edit",
+                #     on_click=lambda: self.video_state.get_anchor_control_panel().open(),
+                # ).props("outline")
 
                 with ui.grid(columns=4).classes("w-full gap-4"):
                     for anchor in anchors:

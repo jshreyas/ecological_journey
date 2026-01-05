@@ -178,6 +178,7 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
 
 
 # TODO: updates can be done by team members, not just owner
+# TODO: use merge_embedded_docs helper similar to Anchor
 @with_user_from_token
 @invalidate_cache(keys=["playlists"])
 def edit_video_in_playlist(playlist_id: str, updated_video: Dict[str, Any], user=None, **kwargs):
