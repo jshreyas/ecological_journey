@@ -15,7 +15,8 @@ class VideoPlayer:
         width: int = 700,
         height: int = 400,
         on_end=None,
-        parent=None,  # 👈 NEW
+        parent=None,
+        video_state=None,
     ):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
@@ -26,6 +27,7 @@ class VideoPlayer:
         self.height = height
         self.on_end = on_end
         self.parent = parent
+        self.video_state = video_state
         self._render()
 
     def _extract_video_id(self, url: str) -> str:
@@ -120,6 +122,33 @@ class VideoPlayer:
                     }}, 500);
                 }}
 
+                function onPlayerReady(event) {{
+                    event.target.setPlaybackRate(window.ytConfig.speed);
+                    event.target.playVideo();
+
+                    // Set global ytPlayer reference
+                    window.ytPlayer = event.target;
+
+                    // Define helper after player is ready
+                    window.getYTCurrentTime = function() {{
+                        if (window.ytPlayer && typeof window.ytPlayer.getCurrentTime === "function") {{
+                            return window.ytPlayer.getCurrentTime();
+                        }}
+                        return null;
+                    }};
+
+                    if (ytEndInterval) clearInterval(ytEndInterval);
+                    ytEndInterval = setInterval(() => {{
+                        const current = ytPlayer.getCurrentTime();
+                        if (current >= window.ytConfig.end) {{
+                            ytPlayer.pauseVideo();
+                            clearInterval(ytEndInterval);
+                            {js_on_end}
+                        }}
+                    }}, 500);
+                }}
+
+
                 function onPlayerStateChange(event) {{}}
 
                 window.setYTClip = function(start, end) {{
@@ -170,3 +199,17 @@ class VideoPlayer:
                         .props("size=60")
                         .on("change", on_speed_change)
                     )
+            # TODO: is this logic appropriate in VideoPlayer?
+            if self.video_state and self.video_state.user:
+                ui.button(
+                    icon="settings",
+                    on_click=lambda: self.video_state.get_anchor_control_panel().open(),
+                )
+
+                async def _add_anchor():
+                    t = await ui.run_javascript("window.getYTCurrentTime();")
+                    if t is not None:
+                        ui.notify(f"Adding anchor at time: {t:.2f}s", type="info", position="bottom", timeout=2000)
+                        self.video_state.add_anchor_at_time(t)
+
+                ui.button(icon="bookmark_add", on_click=_add_anchor)

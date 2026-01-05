@@ -7,7 +7,15 @@ from bunnet import Document
 from pydantic import BaseModel, EmailStr, Field
 
 
-class Clip(Document):
+class Anchor(BaseModel):
+    anchor_id: str = Field(default_factory=lambda: str(uuid4()))
+    start: int  # seconds
+    title: str
+    labels: List[str] = []
+    description: Optional[str] = ""
+
+
+class Clip(BaseModel):
     clip_id: str = Field(default_factory=lambda: str(uuid4()))
     start: int
     end: int
@@ -31,6 +39,7 @@ class Video(Document):
     notes: Optional[str] = ""
     labels: List[str] = []
     clips: List[Clip] = []
+    anchors: List[Anchor] = []
 
     class Config:
         validate_by_name = True

@@ -4,17 +4,71 @@ VideoState class for centralized state management of video data
 
 from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
 
-from utils.utils_api import load_video
+from utils.dialog_puns import generate_funny_title
+from utils.user_context import User
+from utils.utils_api import load_video, save_video_anchors
 
 
 class VideoState:
     """Centralized state management for video data and refresh callbacks"""
 
-    def __init__(self, video_id: str):
+    def __init__(self, video_id: str, user: User | None = None):
         self.video_id = video_id
+        self.user = user
         self._video_data: Optional[Dict[str, Any]] = None
         self._refresh_callbacks: List[Callable] = []
         self.conversation: List[Dict[str, Any]] = []
+        # 👇 controllers
+        self._anchor_control_panel = None
+
+        # 👇 anchors
+        self.anchor_draft: list[dict] | None = None
+        self._anchor_dirty: bool = False
+        self.init_anchor_draft()
+
+    def add_anchor_at_time(self, t: float):
+        t = int(t)
+
+        self.anchor_draft.append(
+            {
+                "start": t,
+                "title": generate_funny_title(),
+                # f"Anchor @ {t//60}:{t%60:02d}",
+            }
+        )
+
+        self._anchor_dirty = True
+        self.refresh()
+
+    def get_anchors(self) -> list[dict]:
+        video = self.get_video()
+        return video.get("anchors", [])
+
+    def init_anchor_draft(self):
+        if self.anchor_draft is None:
+            source = self.get_anchors()
+            self.anchor_draft = [a.copy() for a in source]
+            self._anchor_dirty = False
+
+    def mark_anchor_dirty(self):
+        self._anchor_dirty = True
+
+    def is_anchor_dirty(self) -> bool:
+        return self._anchor_dirty
+
+    def save_anchors(self):
+        video = self.get_video()
+        video["anchors"] = sorted(self.anchor_draft, key=lambda a: a["start"])
+        _ = save_video_anchors(video, self.user.token)
+        self._anchor_dirty = False
+        self.refresh()
+
+    def get_anchor_control_panel(self):
+        if self._anchor_control_panel is None:
+            from pages.components.film.anchor_control_panel import AnchorControlPanel
+
+            self._anchor_control_panel = AnchorControlPanel(self)
+        return self._anchor_control_panel
 
     def get_video(self) -> Optional[Dict[str, Any]]:
         """Get video data, loading from API if not cached"""
