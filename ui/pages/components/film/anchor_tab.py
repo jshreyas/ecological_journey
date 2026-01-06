@@ -214,7 +214,7 @@ class AnchorTab:
                 anchor["start"] = int(m) * 60 + int(s)
             except Exception:
                 ui.notify(
-                    f"Invalid time format for anchor '{anchor.get('title', '')}'",
+                    f"Invalid time format for anchor '{anchor.get('_time', '')}'",
                     type="warning",
                 )
                 return
