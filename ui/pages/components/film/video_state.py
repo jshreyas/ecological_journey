@@ -50,6 +50,11 @@ class VideoState:
             self.anchor_draft = [a.copy() for a in source]
             self._anchor_dirty = False
 
+    def reload_anchors(self):
+        source = self.get_anchors()
+        self.anchor_draft = [a.copy() for a in source]
+        self._anchor_dirty = False
+
     def mark_anchor_dirty(self):
         self._anchor_dirty = True
 
