@@ -79,11 +79,11 @@ def film_page(user: User | None, video_id: str):
                     player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
             with splitter.after:
                 with ui.tabs().classes("w-full") as tabs:
-                    one = ui.tab("Metadata").classes("w-full")
-                    two = ui.tab("Learnings").classes("w-full")
-                    three = ui.tab("Clipboard").classes("w-full")
-                    four = ui.tab("Anchorboard").classes("w-full")
-                    five = ui.tab("Control Panel").classes("w-full")
+                    one = ui.tab("Metadata", label="", icon="description").classes("w-full")
+                    two = ui.tab("Learnings", label="", icon="chat").classes("w-full")
+                    three = ui.tab("Clipboard", label="", icon="video_library").classes("w-full")
+                    four = ui.tab("Anchorboard", label="", icon="bookmark").classes("w-full")
+                    five = ui.tab("Control Panel", label="", icon="settings").classes("w-full")
                 with ui.tab_panels(tabs, value=four).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
