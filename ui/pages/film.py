@@ -83,8 +83,8 @@ def film_page(user: User | None, video_id: str):
                     two = ui.tab("Learnings").classes("w-full")
                     three = ui.tab("Clipboard").classes("w-full")
                     four = ui.tab("Anchorboard").classes("w-full")
-                    five = ui.tab("Controlboard").classes("w-full")
-                with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
+                    five = ui.tab("Control Panel").classes("w-full")
+                with ui.tab_panels(tabs, value=four).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         metaforge_tab.create_tab(metaforge_container)
@@ -97,8 +97,7 @@ def film_page(user: User | None, video_id: str):
                     with ui.tab_panel(four):
                         anchorboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         anchorboard_tab.create_tab(anchorboard_container)
-                    with ui.tab_panel(five):
-                        anchortab_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
+                    with ui.tab_panel(five) as anchortab_container:
                         anchor_tab.create_tab(anchortab_container)
 
             with splitter.separator:

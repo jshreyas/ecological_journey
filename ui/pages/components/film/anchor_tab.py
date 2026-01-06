@@ -51,7 +51,7 @@ class AnchorTab:
             rows=self.video_state.anchor_draft,
             row_key="id",
             column_defaults={"align": "left"},
-        ).classes("w-full pointer-events-auto")
+        ).classes("w-full")
 
         self.table.add_slot(
             "body",
@@ -77,9 +77,7 @@ class AnchorTab:
 
                 <!-- title -->
                 <q-td key="title" :props="props">
-                    <div class="cursor-pointer">
-                        {{ props.row.title }}
-                    </div>
+                    {{ props.row.title }}
                     <q-popup-edit
                         v-model="props.row.title"
                         v-slot="scope"
