@@ -5,7 +5,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from nicegui import ui
 from pages.components.film.anchor_tab import AnchorTab
-from pages.components.film.anchorboard_tab import AnchorboardTab
+
+# from pages.components.film.anchorboard_tab import AnchorboardTab
 from pages.components.film.clipboard_tab import ClipboardTab
 from pages.components.film.filmboard_tab import FilmboardTab
 from pages.components.film.learnings_tab import LearningsTab
@@ -62,10 +63,10 @@ def film_page(user: User | None, video_id: str):
         on_play_clip=player_controls_tab.play_clip,
         on_share_clip=share_dialog_tab.share_clip,
     )
-    anchorboard_tab = AnchorboardTab(
-        video_state,
-        on_play_anchor=player_controls_tab.play_at_time,
-    )
+    # anchorboard_tab = AnchorboardTab(
+    #     video_state,
+    #     on_play_anchor=player_controls_tab.play_at_time,
+    # )
 
     # Inline render_film_editor functionality
     with ui.column().classes("w-full"):
@@ -79,12 +80,12 @@ def film_page(user: User | None, video_id: str):
                     player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
             with splitter.after:
                 with ui.tabs().classes("w-full") as tabs:
-                    one = ui.tab("Metadata", label="", icon="description").classes("w-full bg-primary text-white")
-                    two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-white")
-                    three = ui.tab("Clipboard", label="", icon="video_library").classes("w-full bg-primary text-white")
-                    four = ui.tab("Anchorboard", label="", icon="bookmark").classes("w-full bg-primary text-white")
-                    five = ui.tab("Control Panel", label="", icon="settings").classes("w-full bg-primary text-white")
-                with ui.tab_panels(tabs, value=four).classes("w-full h-full"):
+                    one = ui.tab("Metadata", label="", icon="description").classes("w-full bg-primary text-black")
+                    two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
+                    three = ui.tab("Clipboard", label="", icon="video_library").classes("w-full bg-primary text-black")
+                    # four = ui.tab("Anchorboard", label="", icon="bookmark").classes("w-full bg-primary text-white")
+                    five = ui.tab("Control Panel", label="", icon="bookmark").classes("w-full bg-primary text-black")
+                with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         metaforge_tab.create_tab(metaforge_container)
@@ -94,9 +95,9 @@ def film_page(user: User | None, video_id: str):
                     with ui.tab_panel(three):
                         clipboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         clipboard_tab.create_tab(clipboard_container, clip_id)
-                    with ui.tab_panel(four):
-                        anchorboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
-                        anchorboard_tab.create_tab(anchorboard_container)
+                    # with ui.tab_panel(four):
+                    #     anchorboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
+                    #     anchorboard_tab.create_tab(anchorboard_container)
                     with ui.tab_panel(five) as anchortab_container:
                         anchor_tab.create_tab(anchortab_container)
                 video_state.tabber = tabs
