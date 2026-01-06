@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from nicegui import events, ui
+from utils.dialog_puns import caught_john_doe
 
 from .video_state import VideoState
 
@@ -196,7 +197,9 @@ class AnchorTab:
 
         with ui.row().classes("justify-end gap-2 mt-4"):
             ui.button("Clear", on_click=self._clear_unsaved)
-            save_btn = ui.button("Save", on_click=self._save).props("color=black")
+            save_btn = ui.button("Save", on_click=caught_john_doe if not self.video_state.user else self._save).props(
+                "color=black"
+            )
             save_btn.bind_enabled_from(self.video_state, "is_anchor_dirty")
 
     def _clear_unsaved(self):
