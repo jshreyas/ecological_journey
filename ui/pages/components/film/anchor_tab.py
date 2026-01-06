@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from nicegui import events, ui
+from utils.dialog_puns import caught_john_doe
 
 from .video_state import VideoState
 
@@ -36,6 +37,8 @@ class AnchorTab:
             anchor.setdefault("id", str(uuid4()))
             anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
             anchor.setdefault("_labels", ", ".join(anchor.get("labels", [])))
+            anchor.setdefault("_expand", False)
+            anchor.setdefault("description", anchor.get("description", ""))
 
         # Sort IN PLACE
         self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
@@ -45,6 +48,7 @@ class AnchorTab:
             {"name": "time", "label": "Time", "field": "_time"},
             {"name": "title", "label": "Title", "field": "title"},
             {"name": "labels", "label": "Labels", "field": "_labels"},
+            {"name": "expand", "label": "", "field": "expand"},
             {"name": "delete", "label": "", "field": "delete"},
         ]
 
@@ -58,10 +62,11 @@ class AnchorTab:
         self.table.add_slot(
             "body",
             r"""
+            <!-- MAIN ROW -->
             <q-tr :props="props">
 
                 <!-- play -->
-                <q-td key="play" auto-width>
+                <q-td auto-width>
                     <q-btn
                         color="green"
                         dense flat icon="play_arrow"
@@ -70,7 +75,7 @@ class AnchorTab:
                 </q-td>
 
                 <!-- time -->
-                <q-td key="time" :props="props">
+                <q-td>
                     {{ props.row._time }}
                     <q-popup-edit
                         v-model="props.row._time"
@@ -87,7 +92,7 @@ class AnchorTab:
                 </q-td>
 
                 <!-- title -->
-                <q-td key="title" :props="props">
+                <q-td>
                     {{ props.row.title }}
                     <q-popup-edit
                         v-model="props.row.title"
@@ -103,7 +108,7 @@ class AnchorTab:
                 </q-td>
 
                 <!-- labels -->
-                <q-td key="labels" :props="props">
+                <q-td>
                     {{ props.row._labels }}
                     <q-popup-edit
                         v-model="props.row._labels"
@@ -119,8 +124,19 @@ class AnchorTab:
                     </q-popup-edit>
                 </q-td>
 
+                <!-- expand -->
+                <q-td auto-width>
+                    <q-btn
+                        size="sm"
+                        dense round flat
+                        color="primary"
+                        :icon="props.row._expand ? 'expand_less' : 'expand_more'"
+                        @click="props.row._expand = !props.row._expand"
+                    />
+                </q-td>
+
                 <!-- delete -->
-                <q-td key="delete" auto-width>
+                <q-td auto-width>
                     <q-btn
                         color="red"
                         dense flat icon="delete"
@@ -128,6 +144,24 @@ class AnchorTab:
                     />
                 </q-td>
 
+            </q-tr>
+
+            <!-- EXPANDED ROW -->
+            <q-tr v-show="props.row._expand">
+                <q-td colspan="100%">
+                    <div class="q-pa-sm">
+
+                        <q-input
+                            v-model="props.row.description"
+                            type="textarea"
+                            dense
+                            autogrow
+                            placeholder="Add description for this anchor..."
+                            @blur="$parent.$emit('edit', props.row)"
+                        />
+
+                    </div>
+                </q-td>
             </q-tr>
             """,
         )
@@ -163,7 +197,9 @@ class AnchorTab:
 
         with ui.row().classes("justify-end gap-2 mt-4"):
             ui.button("Clear", on_click=self._clear_unsaved)
-            save_btn = ui.button("Save", on_click=self._save).props("color=black")
+            save_btn = ui.button("Save", on_click=caught_john_doe if not self.video_state.user else self._save).props(
+                "color=black"
+            )
             save_btn.bind_enabled_from(self.video_state, "is_anchor_dirty")
 
     def _clear_unsaved(self):
@@ -178,7 +214,7 @@ class AnchorTab:
                 anchor["start"] = int(m) * 60 + int(s)
             except Exception:
                 ui.notify(
-                    f"Invalid time format for anchor '{anchor.get('title', '')}'",
+                    f"Invalid time format for anchor '{anchor.get('_time', '')}'",
                     type="warning",
                 )
                 return

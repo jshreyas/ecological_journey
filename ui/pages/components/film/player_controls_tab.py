@@ -57,6 +57,8 @@ class PlayerControlsTab:
         if ref:
             ref.clear()
             with ref:
+                # TODO: should these presets for anchors be parameters?
+                # TODO: if so, is this the right place for this method?
                 VideoPlayer(
                     self.video_state.video_id,
                     start=t - 10,

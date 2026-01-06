@@ -200,7 +200,7 @@ class VideoPlayer:
                         .on("change", on_speed_change)
                     )
             # TODO: is this logic appropriate in VideoPlayer?
-            if self.video_state and self.video_state.user:
+            if self.video_state:
 
                 async def _add_anchor():
                     t = await ui.run_javascript("window.getYTCurrentTime();")

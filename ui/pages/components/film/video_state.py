@@ -34,7 +34,6 @@ class VideoState:
             {
                 "start": t,
                 "title": generate_funny_title(),
-                # f"Anchor @ {t//60}:{t%60:02d}",
             }
         )
 
