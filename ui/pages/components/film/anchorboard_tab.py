@@ -21,16 +21,9 @@ class AnchorboardTab:
         anchors = sorted(self.video_state.anchor_draft, key=lambda a: a["start"])
 
         with self.container:
-            with ui.column().classes("w-full p-4 gap-4"):
-                # ui.label("Anchors").classes("text-lg font-semibold")
-                # ui.button(
-                #     icon="edit",
-                #     on_click=lambda: self.video_state.get_anchor_control_panel().open(),
-                # ).props("outline")
-
-                with ui.grid(columns=4).classes("w-full gap-4"):
-                    for anchor in anchors:
-                        self._render_anchor_tile(anchor)
+            with ui.grid(columns=4).classes("w-full gap-4"):
+                for anchor in anchors:
+                    self._render_anchor_tile(anchor)
 
     def refresh(self):
         """Refresh the clipboard tab with current video data"""

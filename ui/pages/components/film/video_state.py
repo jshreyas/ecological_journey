@@ -24,6 +24,7 @@ class VideoState:
         # 👇 anchors
         self.anchor_draft: list[dict] | None = None
         self._anchor_dirty: bool = False
+        self.tabber = None
         self.init_anchor_draft()
 
     def add_anchor_at_time(self, t: float):
