@@ -99,7 +99,7 @@ def film_page(user: User | None, video_id: str):
                         anchorboard_tab.create_tab(anchorboard_container)
                     with ui.tab_panel(five) as anchortab_container:
                         anchor_tab.create_tab(anchortab_container)
-
+                video_state.tabber = tabs
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
 
