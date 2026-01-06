@@ -7,9 +7,10 @@ from .video_state import VideoState
 
 class AnchorTab:
 
-    def __init__(self, video_state: VideoState):
+    def __init__(self, video_state: VideoState, on_play_anchor):
         self.video_state = video_state
         self.container = None
+        self.on_play_anchor = on_play_anchor
 
         # Register for video state refresh notifications
         self.video_state.add_refresh_callback(self.refresh)
@@ -40,10 +41,11 @@ class AnchorTab:
         self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
 
         columns = [
+            {"name": "play", "label": "", "field": "play"},
             {"name": "time", "label": "Time", "field": "_time"},
             {"name": "title", "label": "Title", "field": "title"},
             {"name": "labels", "label": "Labels", "field": "_labels"},
-            {"name": "actions", "label": "", "field": "actions"},
+            {"name": "delete", "label": "", "field": "delete"},
         ]
 
         self.table = ui.table(
@@ -57,6 +59,15 @@ class AnchorTab:
             "body",
             r"""
             <q-tr :props="props">
+
+                <!-- play -->
+                <q-td key="play" auto-width>
+                    <q-btn
+                        color="green"
+                        dense flat icon="play_arrow"
+                        @click="() => $parent.$emit('play', props.row.id)"
+                    />
+                </q-td>
 
                 <!-- time -->
                 <q-td key="time" :props="props">
@@ -109,7 +120,7 @@ class AnchorTab:
                 </q-td>
 
                 <!-- delete -->
-                <q-td key="actions" auto-width>
+                <q-td key="delete" auto-width>
                     <q-btn
                         color="red"
                         dense flat icon="delete"
@@ -139,7 +150,15 @@ class AnchorTab:
             self.video_state.mark_anchor_dirty()
             self.table.update()
 
+        def on_play(e: events.GenericEventArguments):
+            anchor_id = e.args
+            for anchor in self.video_state.anchor_draft:
+                if anchor["id"] == anchor_id:
+                    self.on_play_anchor(anchor["start"])
+                    break
+
         self.table.on("edit", on_edit)
+        self.table.on("play", on_play)
         self.table.on("delete", on_delete)
 
         with ui.row().classes("justify-end gap-2 mt-4"):
