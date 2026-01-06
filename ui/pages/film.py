@@ -4,6 +4,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import ui
+from pages.components.film.anchor_tab import AnchorTab
 from pages.components.film.anchorboard_tab import AnchorboardTab
 from pages.components.film.clipboard_tab import ClipboardTab
 from pages.components.film.filmboard_tab import FilmboardTab
@@ -54,6 +55,7 @@ def film_page(user: User | None, video_id: str):
     metaforge_tab = MetaforgeTab(video_state, user)
     filmboard_tab = FilmboardTab(video_state)
     learnings_tab = LearningsTab(video_state, user)
+    anchor_tab = AnchorTab(video_state)
 
     clipboard_tab = ClipboardTab(
         video_state,
@@ -81,7 +83,8 @@ def film_page(user: User | None, video_id: str):
                     two = ui.tab("Learnings").classes("w-full")
                     three = ui.tab("Clipboard").classes("w-full")
                     four = ui.tab("Anchorboard").classes("w-full")
-                with ui.tab_panels(tabs, value=four).classes("w-full h-full"):
+                    five = ui.tab("Controlboard").classes("w-full")
+                with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         metaforge_tab.create_tab(metaforge_container)
@@ -94,6 +97,9 @@ def film_page(user: User | None, video_id: str):
                     with ui.tab_panel(four):
                         anchorboard_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         anchorboard_tab.create_tab(anchorboard_container)
+                    with ui.tab_panel(five):
+                        anchortab_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
+                        anchor_tab.create_tab(anchortab_container)
 
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
