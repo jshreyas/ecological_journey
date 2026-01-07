@@ -34,6 +34,7 @@ class VideoState:
             {
                 "start": t,
                 "title": generate_funny_title(),
+                "_dirty": True,
             }
         )
 

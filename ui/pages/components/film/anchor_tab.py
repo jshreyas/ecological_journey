@@ -39,6 +39,7 @@ class AnchorTab:
             anchor.setdefault("_labels", ", ".join(anchor.get("labels", [])))
             anchor.setdefault("_expand", False)
             anchor.setdefault("description", anchor.get("description", ""))
+            anchor.setdefault("_dirty", False)
 
         # Sort IN PLACE
         self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
@@ -63,7 +64,12 @@ class AnchorTab:
             "body",
             r"""
             <!-- MAIN ROW -->
-            <q-tr :props="props">
+            <q-tr
+            :props="props"
+            :class="props.row._dirty
+                ? 'text-primary border-l-2 border-primary/50'
+                : ''"
+            >
 
                 <!-- play -->
                 <q-td auto-width>
@@ -166,7 +172,6 @@ class AnchorTab:
             """,
         )
 
-        # 🔑 MERGE PAYLOAD BACK INTO SOURCE OF TRUTH
         def on_edit(e: events.GenericEventArguments):
             payload = dict(e.args)
             anchor_id = payload.pop("id")
@@ -174,9 +179,11 @@ class AnchorTab:
             for anchor in self.video_state.anchor_draft:
                 if anchor["id"] == anchor_id:
                     anchor.update(payload)
+                    anchor["_dirty"] = True
                     break
 
             self.video_state.mark_anchor_dirty()
+            self.table.update()
 
         def on_delete(e: events.GenericEventArguments):
             anchor_id = e.args
@@ -223,12 +230,12 @@ class AnchorTab:
 
             anchor.pop("_time", None)
             anchor.pop("_labels", None)
-
-        print("Saving anchors:")
-        for a in self.video_state.anchor_draft:
-            print(a)
+            anchor.pop("_dirty", None)
 
         self.video_state.save_anchors()
+        for anchor in self.video_state.anchor_draft:
+            anchor["_dirty"] = False
+
         ui.notify("Anchors saved", type="positive")
 
     def _format_time(self, t: int) -> str:
