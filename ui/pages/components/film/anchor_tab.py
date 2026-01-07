@@ -36,7 +36,6 @@ class AnchorTab:
         for anchor in self.video_state.anchor_draft:
             anchor.setdefault("id", str(uuid4()))
             anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
-            # anchor.setdefault("_labels", ", ".join(anchor.get("labels", [])))
             anchor.setdefault("_labels", list(anchor.get("labels", [])))
 
             anchor.setdefault("_expand", False)
@@ -56,16 +55,16 @@ class AnchorTab:
         ]
 
         LABEL_OPTIONS = ["guard", "pass", "backentry", "sweep", "mount"]
-        self.table = (
-            ui.table(
-                columns=columns,
-                rows=self.video_state.anchor_draft,
-                row_key="id",
-                column_defaults={"align": "left"},
-            )
-            .props(f":label-options='{LABEL_OPTIONS}'")
-            .classes("w-full")
-        )
+
+        for anchor in self.video_state.anchor_draft:
+            anchor.setdefault("_label_options", LABEL_OPTIONS)
+
+        self.table = ui.table(
+            columns=columns,
+            rows=self.video_state.anchor_draft,
+            row_key="id",
+            column_defaults={"align": "left"},
+        ).classes("w-full")
 
         self.table.add_slot(
             "body",
@@ -151,7 +150,7 @@ class AnchorTab:
                     multiple
                     use-chips
                     use-input
-                    :options="$parent.$props.labelOptions"
+                    :options="props.row._label_options"
                     new-value-mode="add"
                     input-debounce="0"
                     dense
@@ -272,11 +271,11 @@ class AnchorTab:
                 return
 
             anchor["labels"] = list(anchor.get("_labels", []))
-            # anchor["labels"] = [x.strip() for x in anchor.get("_labels", "").split(",") if x.strip()]
 
             anchor.pop("_time", None)
             anchor.pop("_labels", None)
             anchor.pop("_dirty", None)
+            anchor.pop("_label_options", None)
 
         self.video_state.save_anchors()
         for anchor in self.video_state.anchor_draft:
