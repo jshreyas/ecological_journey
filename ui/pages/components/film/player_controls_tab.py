@@ -61,7 +61,7 @@ class PlayerControlsTab:
                 # TODO: if so, is this the right place for this method?
                 VideoPlayer(
                     self.video_state.video_id,
-                    start=t - 10,
+                    start=t,
                     parent=ref,
                     speed=2,
                     video_state=self.video_state,
