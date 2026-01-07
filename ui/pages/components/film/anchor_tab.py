@@ -73,7 +73,7 @@ class AnchorTab:
             <q-tr
             :props="props"
             :class="props.row._dirty
-                ? 'text-primary border-l-2 border-primary/50'
+                ? 'text-primary'
                 : ''"
             >
 
