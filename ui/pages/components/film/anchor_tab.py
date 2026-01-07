@@ -129,8 +129,6 @@ class AnchorTab:
                     v-for="label in props.row._labels"
                     :key="label"
                     dense
-                    color="primary"
-                    text-color="white"
                     size="sm"
                     >
                     {{ label }}
