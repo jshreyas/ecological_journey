@@ -36,7 +36,9 @@ class AnchorTab:
         for anchor in self.video_state.anchor_draft:
             anchor.setdefault("id", str(uuid4()))
             anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
-            anchor.setdefault("_labels", ", ".join(anchor.get("labels", [])))
+            # anchor.setdefault("_labels", ", ".join(anchor.get("labels", [])))
+            anchor.setdefault("_labels", list(anchor.get("labels", [])))
+
             anchor.setdefault("_expand", False)
             anchor.setdefault("description", anchor.get("description", ""))
             anchor.setdefault("_dirty", False)
@@ -53,12 +55,17 @@ class AnchorTab:
             {"name": "delete", "label": "", "field": "delete"},
         ]
 
-        self.table = ui.table(
-            columns=columns,
-            rows=self.video_state.anchor_draft,
-            row_key="id",
-            column_defaults={"align": "left"},
-        ).classes("w-full")
+        LABEL_OPTIONS = ["guard", "pass", "backentry", "sweep", "mount"]
+        self.table = (
+            ui.table(
+                columns=columns,
+                rows=self.video_state.anchor_draft,
+                row_key="id",
+                column_defaults={"align": "left"},
+            )
+            .props(f":label-options='{LABEL_OPTIONS}'")
+            .classes("w-full")
+        )
 
         self.table.add_slot(
             "body",
@@ -115,19 +122,57 @@ class AnchorTab:
 
                 <!-- labels -->
                 <q-td>
-                    {{ props.row._labels }}
-                    <q-popup-edit
-                        v-model="props.row._labels"
-                        v-slot="scope"
-                        @update:model-value="() => $parent.$emit('edit', props.row)"
+                <!-- display -->
+                <div class="row q-gutter-xs">
+                    <q-chip
+                    clickable
+                    @click="$refs.popup.show()"
+                    v-for="label in props.row._labels"
+                    :key="label"
+                    dense
+                    color="primary"
+                    text-color="white"
+                    size="sm"
                     >
-                        <q-input
-                            v-model="scope.value"
-                            dense autofocus
-                            placeholder="comma, separated"
-                            @keyup.enter="scope.set"
-                        />
-                    </q-popup-edit>
+                    {{ label }}
+                    </q-chip>
+                </div>
+
+                <!-- edit -->
+                <q-popup-edit
+                v-model="props.row._labels"
+                v-slot="scope"
+                @update:model-value="() => $parent.$emit('edit', props.row)"
+                >
+                <div class="column q-gutter-sm">
+
+                    <q-select
+                    v-model="scope.value"
+                    multiple
+                    use-chips
+                    use-input
+                    :options="$parent.$props.labelOptions"
+                    new-value-mode="add"
+                    input-debounce="0"
+                    dense
+                    autofocus
+                    placeholder="Add labels"
+                    @new-value="(val, done) => done(val)"
+                    />
+
+                    <div class="row justify-end">
+                    <q-btn
+                        dense
+                        flat
+                        color="primary"
+                        icon="send"
+                        @click="scope.set"
+                    />
+                    </div>
+
+                </div>
+                </q-popup-edit>
+
                 </q-td>
 
                 <!-- expand -->
@@ -226,7 +271,8 @@ class AnchorTab:
                 )
                 return
 
-            anchor["labels"] = [x.strip() for x in anchor.get("_labels", "").split(",") if x.strip()]
+            anchor["labels"] = list(anchor.get("_labels", []))
+            # anchor["labels"] = [x.strip() for x in anchor.get("_labels", "").split(",") if x.strip()]
 
             anchor.pop("_time", None)
             anchor.pop("_labels", None)
