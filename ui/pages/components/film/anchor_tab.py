@@ -36,7 +36,8 @@ class AnchorTab:
         for anchor in self.video_state.anchor_draft:
             anchor.setdefault("id", str(uuid4()))
             anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
-            anchor.setdefault("_labels", ", ".join(anchor.get("labels", [])))
+            anchor.setdefault("_labels", list(anchor.get("labels", [])))
+
             anchor.setdefault("_expand", False)
             anchor.setdefault("description", anchor.get("description", ""))
             anchor.setdefault("_dirty", False)
@@ -53,6 +54,11 @@ class AnchorTab:
             {"name": "delete", "label": "", "field": "delete"},
         ]
 
+        LABEL_OPTIONS = ["guard", "pass", "backentry", "sweep", "mount"]
+
+        for anchor in self.video_state.anchor_draft:
+            anchor.setdefault("_label_options", LABEL_OPTIONS)
+
         self.table = ui.table(
             columns=columns,
             rows=self.video_state.anchor_draft,
@@ -67,7 +73,7 @@ class AnchorTab:
             <q-tr
             :props="props"
             :class="props.row._dirty
-                ? 'text-primary border-l-2 border-primary/50'
+                ? 'text-primary'
                 : ''"
             >
 
@@ -115,19 +121,55 @@ class AnchorTab:
 
                 <!-- labels -->
                 <q-td>
-                    {{ props.row._labels }}
-                    <q-popup-edit
-                        v-model="props.row._labels"
-                        v-slot="scope"
-                        @update:model-value="() => $parent.$emit('edit', props.row)"
+                <!-- display -->
+                <div class="row q-gutter-xs">
+                    <q-chip
+                    clickable
+                    @click="$refs.popup.show()"
+                    v-for="label in props.row._labels"
+                    :key="label"
+                    dense
+                    size="sm"
                     >
-                        <q-input
-                            v-model="scope.value"
-                            dense autofocus
-                            placeholder="comma, separated"
-                            @keyup.enter="scope.set"
-                        />
-                    </q-popup-edit>
+                    {{ label }}
+                    </q-chip>
+                </div>
+
+                <!-- edit -->
+                <q-popup-edit
+                v-model="props.row._labels"
+                v-slot="scope"
+                @update:model-value="() => $parent.$emit('edit', props.row)"
+                >
+                <div class="column q-gutter-sm">
+
+                    <q-select
+                    v-model="scope.value"
+                    multiple
+                    use-chips
+                    use-input
+                    :options="props.row._label_options"
+                    new-value-mode="add"
+                    input-debounce="0"
+                    dense
+                    autofocus
+                    placeholder="Add labels"
+                    @new-value="(val, done) => done(val)"
+                    />
+
+                    <div class="row justify-end">
+                    <q-btn
+                        dense
+                        flat
+                        color="primary"
+                        icon="send"
+                        @click="scope.set"
+                    />
+                    </div>
+
+                </div>
+                </q-popup-edit>
+
                 </q-td>
 
                 <!-- expand -->
@@ -226,11 +268,12 @@ class AnchorTab:
                 )
                 return
 
-            anchor["labels"] = [x.strip() for x in anchor.get("_labels", "").split(",") if x.strip()]
+            anchor["labels"] = list(anchor.get("_labels", []))
 
             anchor.pop("_time", None)
             anchor.pop("_labels", None)
             anchor.pop("_dirty", None)
+            anchor.pop("_label_options", None)
 
         self.video_state.save_anchors()
         for anchor in self.video_state.anchor_draft:
