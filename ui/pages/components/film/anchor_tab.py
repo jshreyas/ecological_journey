@@ -54,11 +54,6 @@ class AnchorTab:
             {"name": "delete", "label": "", "field": "delete"},
         ]
 
-        LABEL_OPTIONS = ["guard", "pass", "backentry", "sweep", "mount"]
-
-        for anchor in self.video_state.anchor_draft:
-            anchor.setdefault("_label_options", LABEL_OPTIONS)
-
         self.table = ui.table(
             columns=columns,
             rows=self.video_state.anchor_draft,
@@ -148,13 +143,15 @@ class AnchorTab:
                     multiple
                     use-chips
                     use-input
-                    :options="props.row._label_options"
                     new-value-mode="add"
                     input-debounce="0"
                     dense
+                    persistent
                     autofocus
                     placeholder="Add labels"
-                    @new-value="(val, done) => done(val)"
+                    @new-value="(val, done) => {
+                        if (!scope.value.includes(val)) done(val)
+                    }"
                     />
 
                     <div class="row justify-end">
