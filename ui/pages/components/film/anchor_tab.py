@@ -1,9 +1,12 @@
+import re
 from uuid import uuid4
 
 from nicegui import events, ui
 from utils.dialog_puns import caught_john_doe
 
 from .video_state import VideoState
+
+LABEL_REGEX = re.compile(r"#([^\s#]+)")
 
 
 class AnchorTab:
@@ -13,44 +16,38 @@ class AnchorTab:
         self.container = None
         self.on_play_anchor = on_play_anchor
 
-        # Register for video state refresh notifications
         self.video_state.add_refresh_callback(self.refresh)
 
     def create_tab(self, container):
-        """Create the metaforge tab UI"""
         self.container = container
         self.refresh()
 
     def refresh(self):
-        """Refresh the metaforge tab with current video data"""
         if not self.container:
             return
-
         self.container.clear()
         with self.container:
             self._create_metaforge_ui()
 
     def _create_metaforge_ui(self):
 
-        # Ensure stable IDs + transient fields
+        # ---------- normalize anchors ----------
         for anchor in self.video_state.anchor_draft:
             anchor.setdefault("id", str(uuid4()))
             anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
-            anchor.setdefault("_labels", list(anchor.get("labels", [])))
+            anchor.setdefault("description", anchor.get("description", ""))
 
             anchor.setdefault("_expand", False)
-            anchor.setdefault("description", anchor.get("description", ""))
             anchor.setdefault("_dirty", False)
 
-        # Sort IN PLACE
         self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
 
+        # ---------- table ----------
         columns = [
             {"name": "play", "label": "", "field": "play"},
             {"name": "time", "label": "Time", "field": "_time"},
             {"name": "title", "label": "Title", "field": "title"},
-            {"name": "labels", "label": "Labels", "field": "_labels"},
-            {"name": "expand", "label": "", "field": "expand"},
+            {"name": "description", "label": "Notes", "field": "description"},
             {"name": "delete", "label": "", "field": "delete"},
         ]
 
@@ -66,151 +63,122 @@ class AnchorTab:
             r"""
             <!-- MAIN ROW -->
             <q-tr
-            :props="props"
-            :class="props.row._dirty
-                ? 'text-primary'
-                : ''"
+              :props="props"
+              :class="props.row._dirty ? 'text-primary' : ''"
             >
 
-                <!-- play -->
-                <q-td auto-width>
-                    <q-btn
-                        color="green"
-                        dense flat icon="play_arrow"
-                        @click="() => $parent.$emit('play', props.row.id)"
-                    />
-                </q-td>
+              <!-- play -->
+              <q-td auto-width>
+                <q-btn
+                  color="green"
+                  dense flat icon="play_arrow"
+                  @click="() => $parent.$emit('play', props.row.id)"
+                />
+              </q-td>
 
-                <!-- time -->
-                <q-td>
-                    {{ props.row._time }}
-                    <q-popup-edit
-                        v-model="props.row._time"
-                        v-slot="scope"
-                        @update:model-value="() => $parent.$emit('edit', props.row)"
-                    >
-                        <q-input
-                            v-model="scope.value"
-                            dense autofocus
-                            placeholder="m:ss"
-                            @keyup.enter="scope.set"
-                        />
-                    </q-popup-edit>
-                </q-td>
-
-                <!-- title -->
-                <q-td>
-                    {{ props.row.title }}
-                    <q-popup-edit
-                        v-model="props.row.title"
-                        v-slot="scope"
-                        @update:model-value="() => $parent.$emit('edit', props.row)"
-                    >
-                        <q-input
-                            v-model="scope.value"
-                            dense autofocus
-                            @keyup.enter="scope.set"
-                        />
-                    </q-popup-edit>
-                </q-td>
-
-                <!-- labels -->
-                <q-td>
-                <!-- display -->
-                <div class="row q-gutter-xs">
-                    <q-chip
-                    clickable
-                    @click="$refs.popup.show()"
-                    v-for="label in props.row._labels"
-                    :key="label"
-                    dense
-                    size="sm"
-                    >
-                    {{ label }}
-                    </q-chip>
-                </div>
-
-                <!-- edit -->
+              <!-- time -->
+              <q-td>
+                {{ props.row._time }}
                 <q-popup-edit
-                v-model="props.row._labels"
-                v-slot="scope"
-                @update:model-value="() => $parent.$emit('edit', props.row)"
+                  v-model="props.row._time"
+                  v-slot="scope"
+                  @update:model-value="() => $parent.$emit('edit', props.row)"
                 >
-                <div class="column q-gutter-sm">
-
-                    <q-select
+                  <q-input
                     v-model="scope.value"
-                    multiple
-                    use-chips
-                    use-input
-                    new-value-mode="add"
-                    input-debounce="0"
-                    dense
-                    persistent
-                    autofocus
-                    placeholder="Add labels"
-                    @new-value="(val, done) => {
-                        if (!scope.value.includes(val)) done(val)
-                    }"
-                    />
-
-                    <div class="row justify-end">
-                    <q-btn
-                        dense
-                        flat
-                        color="primary"
-                        icon="send"
-                        @click="scope.set"
-                    />
-                    </div>
-
-                </div>
+                    dense autofocus
+                    placeholder="m:ss"
+                    @keyup.enter="scope.set"
+                  />
                 </q-popup-edit>
+              </q-td>
 
-                </q-td>
+              <!-- title -->
+              <q-td>
+                {{ props.row.title }}
+                <q-popup-edit
+                  v-model="props.row.title"
+                  v-slot="scope"
+                  @update:model-value="() => $parent.$emit('edit', props.row)"
+                >
+                  <q-input
+                    v-model="scope.value"
+                    dense autofocus
+                    @keyup.enter="scope.set"
+                  />
+                </q-popup-edit>
+              </q-td>
 
-                <!-- expand -->
-                <q-td auto-width>
-                    <q-btn
+                <!-- DESCRIPTION (inline chips replacing #labels) -->
+                <q-td>
+
+                <!-- inline rendered description -->
+                <div
+                    style="white-space: pre-wrap; line-height: 1.6;"
+                >
+                    <template
+                    v-for="(part, idx) in props.row.description.split(/(#[^\s#]+)/g)"
+                    :key="idx"
+                    >
+                    <!-- hashtag → chip -->
+                    <q-chip
+                        v-if="part.startsWith('#')"
+                        dense
                         size="sm"
-                        dense round flat
-                        color="primary"
-                        :icon="props.row._expand ? 'expand_less' : 'expand_more'"
-                        @click="props.row._expand = !props.row._expand"
-                    />
-                </q-td>
+                        class="q-mr-xs"
+                    >
+                        {{ part.slice(1) }}
+                    </q-chip>
 
-                <!-- delete -->
-                <q-td auto-width>
-                    <q-btn
-                        color="red"
-                        dense flat icon="delete"
-                        @click="() => $parent.$emit('delete', props.row.id)"
-                    />
-                </q-td>
+                    <!-- normal text -->
+                    <span v-else>
+                        {{ part }}
+                    </span>
+                    </template>
+                </div>
 
-            </q-tr>
-
-            <!-- EXPANDED ROW -->
-            <q-tr v-show="props.row._expand">
-                <q-td colspan="100%">
-                    <div class="q-pa-sm">
-
+                <!-- editor -->
+                <q-popup-edit
+                    v-model="props.row.description"
+                    v-slot="scope"
+                    @update:model-value="() => $parent.$emit('edit', props.row)"
+                >
+                    <div class="row q-gutter-sm">
+                    <div class="col">
                         <q-input
-                            v-model="props.row.description"
+                            v-model="scope.value"
                             type="textarea"
                             dense
                             autogrow
-                            placeholder="Add description for this anchor..."
-                            @blur="$parent.$emit('edit', props.row)"
-                        />
-
+                            autofocus
+                            placeholder="use #labels inline"
+                        /></div>
+                        <div class="col-auto justify-end">
+                        <q-btn
+                            dense
+                            flat
+                            color="primary"
+                            icon="send"
+                            @click="scope.set"
+                        /></div>
                     </div>
+                </q-popup-edit>
                 </q-td>
+
+              <!-- delete -->
+              <q-td auto-width>
+                <q-btn
+                  color="red"
+                  dense flat icon="delete"
+                  @click="() => $parent.$emit('delete', props.row.id)"
+                />
+              </q-td>
+
             </q-tr>
             """,
         )
 
+        # ---------- handlers ----------
         def on_edit(e: events.GenericEventArguments):
             payload = dict(e.args)
             anchor_id = payload.pop("id")
@@ -241,11 +209,13 @@ class AnchorTab:
         self.table.on("play", on_play)
         self.table.on("delete", on_delete)
 
+        # ---------- footer ----------
         with ui.row().classes("justify-end gap-2 mt-4"):
             ui.button("Clear", on_click=self._clear_unsaved)
-            save_btn = ui.button("Save", on_click=caught_john_doe if not self.video_state.user else self._save).props(
-                "color=black"
-            )
+            save_btn = ui.button(
+                "Save",
+                on_click=caught_john_doe if not self.video_state.user else self._save,
+            ).props("color=black")
             save_btn.bind_enabled_from(self.video_state, "is_anchor_dirty")
 
     def _clear_unsaved(self):
@@ -255,6 +225,8 @@ class AnchorTab:
 
     def _save(self):
         for anchor in self.video_state.anchor_draft:
+
+            # time
             try:
                 m, s = anchor["_time"].split(":")
                 anchor["start"] = int(m) * 60 + int(s)
@@ -265,14 +237,15 @@ class AnchorTab:
                 )
                 return
 
-            anchor["labels"] = list(anchor.get("_labels", []))
+            # extract labels from description
+            desc = anchor.get("description", "")
+            anchor["labels"] = list(set(LABEL_REGEX.findall(desc)))
 
             anchor.pop("_time", None)
-            anchor.pop("_labels", None)
             anchor.pop("_dirty", None)
-            anchor.pop("_label_options", None)
 
         self.video_state.save_anchors()
+
         for anchor in self.video_state.anchor_draft:
             anchor["_dirty"] = False
 
