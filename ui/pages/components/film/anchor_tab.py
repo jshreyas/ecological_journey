@@ -239,7 +239,7 @@ class AnchorTab:
 
             # extract labels from description
             desc = anchor.get("description", "")
-            anchor["labels"] = set(LABEL_REGEX.findall(desc))
+            anchor["labels"] = list(set(LABEL_REGEX.findall(desc)))
 
             anchor.pop("_time", None)
             anchor.pop("_dirty", None)
