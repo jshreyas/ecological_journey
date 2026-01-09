@@ -47,7 +47,7 @@ class AnchorTab:
             {"name": "play", "label": "", "field": "play"},
             {"name": "time", "label": "Time", "field": "_time"},
             {"name": "title", "label": "Title", "field": "title"},
-            {"name": "description", "label": "Description", "field": "description"},
+            {"name": "description", "label": "Notes", "field": "description"},
             {"name": "delete", "label": "", "field": "delete"},
         ]
 
