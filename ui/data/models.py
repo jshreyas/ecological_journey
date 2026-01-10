@@ -12,6 +12,7 @@ class Anchor(BaseModel):
     start: int  # seconds
     title: str
     labels: List[str] = []
+    partners: List[str] = []
     description: Optional[str] = ""
 
 
@@ -22,7 +23,7 @@ class Clip(BaseModel):
     description: str
     title: str
     labels: List[str] = []
-    partners: List[str] = []  # Usernames or IDs
+    partners: List[str] = []
     speed: float = 1.0
 
 
