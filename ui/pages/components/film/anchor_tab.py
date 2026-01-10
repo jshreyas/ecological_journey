@@ -46,7 +46,6 @@ class AnchorTab:
         columns = [
             {"name": "play", "label": "", "field": "play"},
             {"name": "time", "label": "Time", "field": "_time"},
-            {"name": "title", "label": "Title", "field": "title"},
             {"name": "description", "label": "Notes", "field": "description"},
             {"name": "delete", "label": "", "field": "delete"},
         ]
@@ -88,22 +87,6 @@ class AnchorTab:
                     v-model="scope.value"
                     dense autofocus
                     placeholder="m:ss"
-                    @keyup.enter="scope.set"
-                  />
-                </q-popup-edit>
-              </q-td>
-
-              <!-- title -->
-              <q-td>
-                {{ props.row.title }}
-                <q-popup-edit
-                  v-model="props.row.title"
-                  v-slot="scope"
-                  @update:model-value="() => $parent.$emit('edit', props.row)"
-                >
-                  <q-input
-                    v-model="scope.value"
-                    dense autofocus
                     @keyup.enter="scope.set"
                   />
                 </q-popup-edit>
