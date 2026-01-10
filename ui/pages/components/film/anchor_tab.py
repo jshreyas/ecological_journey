@@ -7,6 +7,7 @@ from utils.dialog_puns import caught_john_doe
 from .video_state import VideoState
 
 LABEL_REGEX = re.compile(r"#([^\s#]+)")
+PARTNER_REGEX = re.compile(r"@([^\s#]+)")
 
 
 class AnchorTab:
@@ -91,23 +92,35 @@ class AnchorTab:
                   />
                 </q-popup-edit>
               </q-td>
-
-                <!-- DESCRIPTION (inline chips replacing #labels) -->
+                <!-- DESCRIPTION (inline chips replacing #labels and @partners) -->
                 <q-td>
 
                 <!-- inline rendered description -->
-                <div
-                    style="white-space: pre-wrap; line-height: 1.6;"
-                >
+                <div style="white-space: pre-wrap; line-height: 1.6;">
                     <template
-                    v-for="(part, idx) in props.row.description.split(/(#[^\s#]+)/g)"
+                    v-for="(part, idx) in props.row.description.split(/(#[^\s#@]+|@[^\s#@]+)/g)"
                     :key="idx"
                     >
-                    <!-- hashtag → chip -->
+                    <!-- LABEL CHIP -->
                     <q-chip
                         v-if="part.startsWith('#')"
                         dense
                         size="sm"
+                        outline
+                        color="primary"
+                        class="q-mr-xs"
+                    >
+                        {{ part.slice(1) }}
+                    </q-chip>
+
+                    <!-- PARTNER CHIP -->
+                    <q-chip
+                        v-else-if="part.startsWith('@')"
+                        dense
+                        outline
+                        size="sm"
+                        icon="person"
+                        color="primary"
                         class="q-mr-xs"
                     >
                         {{ part.slice(1) }}
@@ -129,21 +142,23 @@ class AnchorTab:
                     <div class="row q-gutter-sm">
                     <div class="col">
                         <q-input
-                            v-model="scope.value"
-                            type="textarea"
-                            dense
-                            autogrow
-                            autofocus
-                            placeholder="use #labels inline"
-                        /></div>
-                        <div class="col-auto justify-end">
+                        v-model="scope.value"
+                        type="textarea"
+                        dense
+                        autogrow
+                        autofocus
+                        placeholder="use #labels and @partners inline"
+                        />
+                    </div>
+                    <div class="col-auto justify-end">
                         <q-btn
-                            dense
-                            flat
-                            color="primary"
-                            icon="send"
-                            @click="scope.set"
-                        /></div>
+                        dense
+                        flat
+                        color="primary"
+                        icon="send"
+                        @click="scope.set"
+                        />
+                    </div>
                     </div>
                 </q-popup-edit>
                 </q-td>
@@ -223,6 +238,7 @@ class AnchorTab:
             # extract labels from description
             desc = anchor.get("description", "")
             anchor["labels"] = list(set(LABEL_REGEX.findall(desc)))
+            anchor["partners"] = list(set(PARTNER_REGEX.findall(desc)))
 
             anchor.pop("_time", None)
             anchor.pop("_dirty", None)
