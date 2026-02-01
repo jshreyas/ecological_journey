@@ -123,7 +123,7 @@ class AnchorTab:
                 <!-- editor -->
                 <q-popup-edit
                 v-slot="scope"
-                @save="$parent.$emit('edit-video-description', scope.value)"
+                @update:model-value="() => $parent.$emit('edit-video-description', props.row.description)"
                 v-model="props.row.description"
                 >
                 <div class="row q-gutter-sm">
@@ -290,12 +290,6 @@ class AnchorTab:
                 if anchor["id"] == anchor_id:
                     self.on_play_anchor(anchor["start"])
                     break
-
-        # def on_edit_video_description(e: events.GenericEventArguments):
-        #     value = e.args
-        #     self.video_state.video_description_draft = value
-        #     self.video_state.is_video_description_dirty = True
-        #     ui.notify("Video description updated (not saved yet)", type="info")
 
         def on_edit_video_description(e: events.GenericEventArguments):
             value = e.args
