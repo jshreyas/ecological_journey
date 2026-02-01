@@ -24,6 +24,10 @@ class VideoState:
         # 👇 anchors
         self.anchor_draft: list[dict] | None = None
         self._anchor_dirty: bool = False
+        # temporary UI-only fields
+        self.video_description_draft = getattr(self, "video_description_draft", "@hey im #fine")
+        self.is_video_description_dirty = False
+
         self.tabber = None
         self.init_anchor_draft()
 
