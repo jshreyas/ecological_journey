@@ -61,12 +61,16 @@ class AnchorTab:
         }
         combined_rows = [video_row] + list(self.video_state.anchor_draft)
 
-        self.table = ui.table(
-            columns=columns,
-            rows=combined_rows,
-            row_key="id",
-            column_defaults={"align": "left"},
-        ).classes("w-full")
+        self.table = (
+            ui.table(
+                columns=columns,
+                rows=combined_rows,
+                row_key="id",
+                column_defaults={"align": "left"},
+            )
+            .props("hide-header")
+            .classes("w-full")
+        )
 
         self.table.add_slot(
             "body",
@@ -123,29 +127,29 @@ class AnchorTab:
                 <!-- editor -->
                 <q-popup-edit
                 v-slot="scope"
-                @update:model-value="() => $parent.$emit('edit-video-description', props.row.description)"
+                @update:model-value="(val) => $parent.$emit('edit-video-description', val)"
                 v-model="props.row.description"
                 >
                 <div class="row q-gutter-sm">
-                        <div class="col">
-                        <q-input
-                                v-model="scope.value"
-                                type="textarea"
-                                dense
-                                autogrow
-                                autofocus
-                                placeholder="Video-level notes. Supports #labels and @partners"
-                        />
-                        </div>
-                        <div class="col-auto justify-end">
-                        <q-btn
-                                dense
-                                flat
-                                color="primary"
-                                icon="send"
-                                @click="scope.set"
-                        />
-                        </div>
+                    <div class="col">
+                    <q-input
+                        v-model="scope.value"
+                        type="textarea"
+                        dense
+                        autogrow
+                        autofocus
+                        placeholder="Video-level notes. Supports #labels and @partners"
+                    />
+                    </div>
+                    <div class="col-auto justify-end">
+                    <q-btn
+                        dense
+                        flat
+                        color="primary"
+                        icon="send"
+                        @click="scope.set"
+                    />
+                    </div>
                 </div>
                 </q-popup-edit>
 
@@ -229,23 +233,23 @@ class AnchorTab:
                         >
                                 <div class="row q-gutter-sm">
                                 <div class="col">
-                                        <q-input
-                                        v-model="scope.value"
-                                        type="textarea"
-                                        dense
-                                        autogrow
-                                        autofocus
-                                        placeholder="use #labels and @partners inline"
-                                        />
+                                    <q-input
+                                    v-model="scope.value"
+                                    type="textarea"
+                                    dense
+                                    autogrow
+                                    autofocus
+                                    placeholder="use #labels and @partners inline"
+                                    />
                                 </div>
                                 <div class="col-auto justify-end">
-                                        <q-btn
-                                        dense
-                                        flat
-                                        color="primary"
-                                        icon="send"
-                                        @click="scope.set"
-                                        />
+                                    <q-btn
+                                    dense
+                                    flat
+                                    color="primary"
+                                    icon="send"
+                                    @click="scope.set"
+                                    />
                                 </div>
                                 </div>
                         </q-popup-edit>
@@ -293,18 +297,23 @@ class AnchorTab:
 
         def on_edit_video_description(e: events.GenericEventArguments):
             value = e.args
+
+            # 1️⃣ update centralized state
             self.video_state.video_description_draft = value
             self.video_state.is_video_description_dirty = True
 
-            ui.notify(
-                "Video description updated (draft)",
-                type="info",
-            )
+            # 2️⃣ update synthetic row immediately
+            for row in self.table.rows:
+                if row.get("_is_video_description"):
+                    row["description"] = value
+                    row["_dirty"] = True
+                    break
 
-            # mark overall state dirty so Save button enables
             self.video_state.mark_anchor_dirty()
 
-            # rebuild the table so the synthetic description row is updated
+            ui.notify(self.video_state.video_description_draft, type="info")
+
+            # optional but safe
             self.refresh()
 
         self.table.on("edit", on_edit)
@@ -327,6 +336,7 @@ class AnchorTab:
         ui.notify("Unsaved changes cleared", type="info")
 
     def _save(self):
+        # TODO: combine video descirption and anchors save into single API call
         for anchor in self.video_state.anchor_draft:
 
             # time
@@ -351,19 +361,23 @@ class AnchorTab:
         self.video_state.save_anchors()
 
         if self.video_state.is_video_description_dirty:
-            # TODO: implement saving video description to backend
-            ui.notify(
-                "Saving video description (backend stub)",
-                type="positive",
-            )
             self.video_state.is_video_description_dirty = False
+            video_metadata = {}
+            # extract labels from description
+            video_desc = self.video_state.video_description_draft
+            video_metadata["notes"] = video_desc
+            video_metadata["labels"] = list(set(LABEL_REGEX.findall(video_desc)))
+            video_metadata["partners"] = list(set(PARTNER_REGEX.findall(video_desc)))
+
+            self.video_state.save_video_description(video_metadata)
+
             # rebuild UI so description row shows saved state
             self.refresh()
 
         for anchor in self.video_state.anchor_draft:
             anchor["_dirty"] = False
 
-        ui.notify("Anchors saved", type="positive")
+        ui.notify("Film metadata saved", type="positive")
 
     def _format_time(self, t: int) -> str:
         m, s = divmod(t, 60)

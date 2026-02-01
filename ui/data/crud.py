@@ -194,6 +194,7 @@ def edit_video_in_playlist(
     if not playlist:
         raise ValueError("Playlist not found or access denied")
 
+    updated_video.pop("_id", None)
     updated_video_obj = Video(**updated_video)
     updated_video_id = updated_video_obj.video_id
 
