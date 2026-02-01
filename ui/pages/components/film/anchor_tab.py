@@ -72,7 +72,7 @@ class AnchorTab:
             "body",
             r"""
             <!-- VIDEO DESCRIPTION ROW (single-column first row) -->
-            <q-tr v-if="props.row && props.row._is_video_description" :props="props" :class="props.row._dirty ? 'text-primary bg-grey-2' : 'bg-grey-2'">
+            <q-tr v-if="props.row && props.row._is_video_description" :props="props" :class="props.row._dirty ? 'text-primary' : ''">
             <q-td colspan="100%" class="q-pa-sm">
 
                 <!-- rendered description -->
