@@ -22,3 +22,6 @@ opentelemetry-instrumentation-asgi==0.57b0
 opentelemetry-instrumentation-fastapi==0.57b0
 opentelemetry-instrumentation-logging==0.57b0
 structlog==25.4.0
+httpx==0.28.1
+dateparser==1.2.2
+isodate==0.7.2
