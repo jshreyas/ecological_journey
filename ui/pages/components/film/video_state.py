@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional  # All used in type annot
 
 from utils.dialog_puns import generate_funny_title
 from utils.user_context import User
-from utils.utils_api import load_video, save_video_anchors
+from utils.utils_api import load_video, save_video_anchors, save_video_metadata
 
 
 class VideoState:
@@ -24,8 +24,28 @@ class VideoState:
         # 👇 anchors
         self.anchor_draft: list[dict] | None = None
         self._anchor_dirty: bool = False
+        # temporary UI-only fields
+        self.video_description_draft = None
+        self.is_video_description_dirty = False
+
         self.tabber = None
         self.init_anchor_draft()
+        self.init_video_description_draft()
+
+    def get_video_notes(self) -> list[dict]:
+        video = self.get_video()
+        return video.get("notes", [])
+
+    def init_video_description_draft(self):
+        if self.video_description_draft is None:
+            source = self.get_video_notes()
+            self.video_description_draft = source
+            self.is_video_description_dirty = False
+
+    def reload_video_description(self):
+        source = self.get_video_notes()
+        self.video_description_draft = source
+        self.is_video_description_dirty = False
 
     def add_anchor_at_time(self, t: float):
         t = int(t)
@@ -67,6 +87,17 @@ class VideoState:
         video["anchors"] = sorted(self.anchor_draft, key=lambda a: a["start"])
         _ = save_video_anchors(video, self.user.token)
         self._anchor_dirty = False
+        self.refresh()
+
+    def save_video_description(self, video_metadata: dict):
+        video = self.get_video()
+        video["notes"] = video_metadata.get("notes", "")
+        video["partners"] = video_metadata.get("partners", [])
+        video["labels"] = video_metadata.get("labels", [])
+        video.pop("clips")
+        video.pop("anchors")
+        _ = save_video_metadata(video, self.user.token)
+        self.is_video_description_dirty = False
         self.refresh()
 
     def get_anchor_control_panel(self):
