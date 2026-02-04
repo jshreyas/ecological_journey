@@ -99,6 +99,7 @@ class AnchorTab:
                         size="sm"
                         outline
                         color="primary"
+                        icon="label"
                         class="q-mr-xs"
                         >
                         {{ part.slice(1) }}
@@ -200,6 +201,7 @@ class AnchorTab:
                                         size="sm"
                                         outline
                                         color="primary"
+                                        icon="label"
                                         class="q-mr-xs"
                                 >
                                         {{ part.slice(1) }}
