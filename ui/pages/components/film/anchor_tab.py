@@ -121,7 +121,7 @@ class AnchorTab:
                 </template>
 
                 <span v-if="!props.row.description" class="text-grey">
-                        Click to add video description, #labels, @partners…
+                        Click to add notes, #labels, @partners…
                 </span>
                 </div>
 
@@ -139,7 +139,7 @@ class AnchorTab:
                         dense
                         autogrow
                         autofocus
-                        placeholder="Video-level notes. Supports #labels and @partners"
+                        placeholder="Add notes. Supports #labels and @partners"
                     />
                     </div>
                     <div class="col-auto justify-end">
