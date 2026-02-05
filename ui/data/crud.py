@@ -167,8 +167,7 @@ def can_write_playlist(user: User, playlist: Playlist) -> bool:
 @invalidate_cache(keys=["playlists"])
 def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):
 
-    playlist = Playlist.find_one(Playlist.playlist_id == playlist_id).run()
-
+    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
     if not playlist or not can_write_playlist(user, playlist):
         raise AuthError("Playlist not found or access denied")
 

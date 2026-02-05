@@ -1,9 +1,11 @@
 # import asyncio
 import os
 import sys
+from typing import Any, Dict, List
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from data.crud import (
+    add_video_to_playlist,
     clear_cache,
     create_access_token,
     create_feedback,
@@ -13,7 +15,7 @@ from data.crud import (
     login_user,
 )
 from dotenv import load_dotenv
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -396,6 +398,31 @@ def get_teams():
 @api_router.get("/playlists")
 def get_playlists():
     return load_playlists()
+
+
+@api_router.post("/playlists/{playlist_id}/videos")
+def post_playlist_videos(
+    playlist_id: str,
+    new_videos: List[Dict[str, Any]],
+    authorization: str = Header(...),
+):
+    """
+    Add videos to a playlist.
+    Expects:
+      Authorization: Bearer <token>
+    """
+
+    # Extract raw token
+    if not authorization.startswith("Bearer "):
+        raise OAuthError("Invalid authorization header")
+
+    token = authorization.removeprefix("Bearer ").strip()
+
+    return add_video_to_playlist(
+        playlist_id=playlist_id,
+        new_videos=new_videos,
+        token=token,
+    )
 
 
 app.mount("/api", api_router)

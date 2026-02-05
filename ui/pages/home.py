@@ -514,7 +514,7 @@ async def sync_playlist(
             log.info(f"[{playlist_name}] No new videos")
             return SYNC_NOOP
 
-        create_video(new_video_data, token, play_id)
+        create_video(new_video_data, token, playlist_id)
         log.info(f"[{playlist_name}] Synced {len(new_video_data)} videos")
         return SYNC_OK
 
