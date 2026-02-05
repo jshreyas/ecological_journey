@@ -66,6 +66,9 @@ def main():
         )
     )
 
+    from pprint import pprint
+
+    pprint(_)
     # for playlist_id, videos in _.items():
     #     post_new_videos(playlist_id, videos)
 
