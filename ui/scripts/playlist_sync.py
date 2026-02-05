@@ -8,7 +8,7 @@ from ui.utils.youtube import fetch_playlist_items
 
 load_dotenv()
 
-API_BASE = os.environ["APP_API_BASE"]
+API_BASE = os.environ["BASE_URL_SHARE"]
 SERVICE_TOKEN = os.environ["SERVICE_TOKEN"]
 YOUTUBE_API_KEY = os.environ["API_KEY"]
 
