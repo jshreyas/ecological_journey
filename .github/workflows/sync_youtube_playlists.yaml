@@ -19,7 +19,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - run: python sync_playlists.py
+      - run: python ecological_journey/ui/scripts/playlist_sync.py
         env:
           BASE_URL_SHARE: ${{ secrets.BASE_URL_SHARE }}
           SERVICE_TOKEN: ${{ secrets.SERVICE_TOKEN }}
