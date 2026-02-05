@@ -46,19 +46,28 @@ def get_playlists():
     return response
 
 
-def post_new_videos(playlist_id, videos):
+def post_new_videos(playlist_id: str, videos: list[dict]):
     if not videos:
         return
 
-    print(f"Would sync {len(videos)} videos for playlist {playlist_id}")
-    # stubbed for now
-    # requests.post(...)
+    r = requests.post(
+        f"{API_BASE}/api/playlists/{playlist_id}/videos",
+        headers={
+            "Authorization": f"Bearer {SERVICE_TOKEN}",
+            "Content-Type": "application/json",
+        },
+        json=videos,
+        timeout=30,
+    )
+
+    r.raise_for_status()
+    print(f"✅ Synced {len(videos)} videos to playlist {playlist_id}")
 
 
 def main():
     playlists = get_playlists()
 
-    _ = asyncio.run(
+    videos_to_sync = asyncio.run(
         fetch_playlist_items(
             playlists,
             api_key=YOUTUBE_API_KEY,
@@ -68,9 +77,9 @@ def main():
 
     from pprint import pprint
 
-    pprint(_)
-    # for playlist_id, videos in _.items():
-    #     post_new_videos(playlist_id, videos)
+    pprint(videos_to_sync)
+    for playlist_id, videos in videos_to_sync.items():
+        post_new_videos(playlist_id, videos)
 
 
 if __name__ == "__main__":
