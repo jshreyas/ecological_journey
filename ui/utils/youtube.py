@@ -141,7 +141,7 @@ async def fetch_playlist_items_single(
     client: httpx.AsyncClient,
     api_key: str,
     playlist_id: str,
-    latest_saved_date=None,
+    latest_saved_date: str = None,
 ):
     items = []
     video_ids = []
@@ -169,8 +169,9 @@ async def fetch_playlist_items_single(
                 continue
 
             playlist_added = datetime.fromisoformat(snippet["publishedAt"].replace("Z", "+00:00"))
+            latest_saved_date_dt = datetime.fromisoformat(latest_saved_date.replace("Z", "+00:00"))
 
-            if latest_saved_date and playlist_added < latest_saved_date:
+            if latest_saved_date_dt and playlist_added < latest_saved_date_dt:
                 continue
 
             vid = snippet["resourceId"]["videoId"]

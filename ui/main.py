@@ -371,11 +371,6 @@ def stories():
     ).classes("w-full h-full")
 
 
-# @app.on_startup
-# async def start_background_tasks():
-#     asyncio.create_task(playlist_sync_worker())
-
-
 @app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
 def root():
     return "Ecological Journey UI is alive"
