@@ -10,7 +10,6 @@ load_dotenv()
 
 API_BASE = os.environ["BASE_URL_SHARE"]
 SERVICE_TOKEN = os.environ["SERVICE_TOKEN"]
-YOUTUBE_API_KEY = os.environ["API_KEY"]
 
 HEADERS = {
     "Authorization": f"Bearer {SERVICE_TOKEN}",
@@ -70,7 +69,6 @@ def main():
     videos_to_sync = asyncio.run(
         fetch_playlist_items(
             playlists,
-            api_key=YOUTUBE_API_KEY,
             concurrency=5,
         )
     )

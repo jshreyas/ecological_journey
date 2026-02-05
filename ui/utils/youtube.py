@@ -1,4 +1,5 @@
 import asyncio
+import os
 import re
 from datetime import datetime
 
@@ -6,9 +7,15 @@ import dateparser
 import httpx
 import isodate
 import pytz
+from dotenv import load_dotenv
 
+load_dotenv()
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 UTC = pytz.utc
+
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("Missing API_KEY in environment variables")
 
 
 # ---------- regex patterns ----------
@@ -106,7 +113,6 @@ def parse_training_date_from_title(
 
 async def fetch_videos_metadata(
     client: httpx.AsyncClient,
-    api_key: str,
     video_ids: list[str],
 ):
     results = {}
@@ -120,7 +126,7 @@ async def fetch_videos_metadata(
             params={
                 "part": "snippet,contentDetails",
                 "id": ids,
-                "key": api_key,
+                "key": API_KEY,
             },
             timeout=20,
         )
@@ -139,7 +145,6 @@ async def fetch_videos_metadata(
 
 async def fetch_playlist_items_single(
     client: httpx.AsyncClient,
-    api_key: str,
     playlist_id: str,
     latest_saved_date: str | None = None,
     existing_video_ids: set[str] | None = None,
@@ -156,7 +161,7 @@ async def fetch_playlist_items_single(
                 "maxResults": 50,
                 "playlistId": playlist_id,
                 "pageToken": page_token,
-                "key": api_key,
+                "key": API_KEY,
             },
             timeout=20,
         )
@@ -197,7 +202,6 @@ async def fetch_playlist_items_single(
 
 async def fetch_playlist_items(
     playlists: list[dict],
-    api_key: str,
     concurrency: int = 5,
 ):
     """
@@ -205,7 +209,7 @@ async def fetch_playlist_items(
       {
         "_id": "...",
         "playlist_id": "...",
-        "latest_saved_date": datetime | None
+        "latest_saved_date": str | None
       }
     ]
     """
@@ -218,7 +222,6 @@ async def fetch_playlist_items(
             async with semaphore:
                 return p, await fetch_playlist_items_single(
                     client,
-                    api_key,
                     p["playlist_id"],
                     p.get("latest_saved_date"),
                     set(p.get("existing_video_ids", [])),
@@ -236,7 +239,6 @@ async def fetch_playlist_items(
 
         metadata = await fetch_videos_metadata(
             client,
-            api_key,
             list(set(all_video_ids)),
         )
 
