@@ -1,5 +1,4 @@
 import asyncio
-import os
 from collections import Counter
 from datetime import datetime, timedelta
 
@@ -490,6 +489,7 @@ SYNC_RETRY_SOON = "retry_soon"
 SYNC_ERROR = "error"
 
 
+# TODO: update to use youtube.py and clean up fetch_videos.py
 async def sync_playlist(
     playlist_id: str,
     token: str,
@@ -533,43 +533,6 @@ async def sync_playlist(
 
         log.exception(f"[{playlist_name}] Sync failed")
         return SYNC_ERROR
-
-
-LONG_POLL = 60 * 60
-SHORT_POLL = 5 * 60
-
-SERVICE_TOKEN = os.environ["SERVICE_TOKEN"]
-
-
-async def playlist_sync_worker():
-    token = SERVICE_TOKEN
-    sleep_interval = LONG_POLL
-
-    log.info("▶️ Playlist sync worker started")
-
-    while True:
-        retry_soon_detected = False
-
-        for p in load_playlists():
-            result = await sync_playlist(
-                playlist_id=p["_id"],
-                token=token,
-                playlist_name=p["name"],
-                play_id=p["playlist_id"],
-            )
-
-            if result == SYNC_RETRY_SOON:
-                retry_soon_detected = True
-
-        # Adaptive interval logic
-        if retry_soon_detected:
-            sleep_interval = SHORT_POLL
-            log.info("⏱ Switching to 5-minute polling")
-        else:
-            sleep_interval = LONG_POLL
-            log.info("⏱ Switching to 1-hour polling")
-
-        await asyncio.sleep(sleep_interval)
 
 
 def create_team_modal():

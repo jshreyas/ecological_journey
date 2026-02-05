@@ -19,7 +19,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - run: python sync_playlists.py
+      - run: python -m ui.scripts.playlist_sync
         env:
           BASE_URL_SHARE: ${{ secrets.BASE_URL_SHARE }}
           SERVICE_TOKEN: ${{ secrets.SERVICE_TOKEN }}

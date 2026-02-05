@@ -141,7 +141,8 @@ async def fetch_playlist_items_single(
     client: httpx.AsyncClient,
     api_key: str,
     playlist_id: str,
-    latest_saved_date: str = None,
+    latest_saved_date: str | None = None,
+    existing_video_ids: set[str] | None = None,
 ):
     items = []
     video_ids = []
@@ -172,9 +173,12 @@ async def fetch_playlist_items_single(
             latest_saved_date_dt = datetime.fromisoformat(latest_saved_date.replace("Z", "+00:00"))
 
             if latest_saved_date_dt and playlist_added < latest_saved_date_dt:
-                continue
+                break  # reached older videos, stop processing
 
             vid = snippet["resourceId"]["videoId"]
+
+            if existing_video_ids and vid in existing_video_ids:
+                continue  # already saved, skip entirely
 
             items.append(
                 {
@@ -217,6 +221,7 @@ async def fetch_playlist_items(
                     api_key,
                     p["playlist_id"],
                     p.get("latest_saved_date"),
+                    set(p.get("existing_video_ids", [])),
                 )
 
         tasks = [guarded_fetch(p) for p in playlists]
