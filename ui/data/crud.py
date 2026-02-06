@@ -272,46 +272,6 @@ def merge_embedded_docs(
 
 
 @with_user_from_token
-@invalidate_cache(keys=["playlists"])
-def update_video_anchors(
-    playlist_id: str,
-    video_id: str,
-    anchors: List[dict],
-    user=None,
-    **kwargs,
-):
-    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id), Playlist.owner_id == user.id).run()
-
-    if not playlist:
-        raise ValueError("Playlist not found or access denied")
-
-    def normalize_anchor_payload(a: dict) -> dict:
-        if "id" in a and "anchor_id" not in a:
-            a = {**a, "anchor_id": a.pop("id")}
-        return a
-
-    for i, video in enumerate(playlist.videos):
-        if video.video_id != video_id:
-            continue
-
-        merged_anchors = merge_embedded_docs(
-            existing_docs=video.anchors,
-            updated_docs=[Anchor(**normalize_anchor_payload(a)) for a in anchors],
-            id_field="anchor_id",
-            doc_cls=Anchor,
-        )
-
-        updated_fields = video.dict()
-        updated_fields["anchors"] = merged_anchors
-        playlist.videos[i] = Video(**updated_fields)
-        playlist.save()
-
-        return to_dicts(playlist)
-
-    raise ValueError("Video not found in playlist")
-
-
-@with_user_from_token
 @invalidate_cache(keys=["cliplists"])
 def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
     cliplist = Cliplist(

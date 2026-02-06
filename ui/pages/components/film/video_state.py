@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional  # All used in type annot
 
 from utils.dialog_puns import generate_funny_title
 from utils.user_context import User
-from utils.utils_api import load_video, save_video_anchors, save_video_metadata
+from utils.utils_api import load_video, save_video_metadata
 
 
 class VideoState:
@@ -84,8 +84,17 @@ class VideoState:
 
     def save_anchors(self):
         video = self.get_video()
-        video["anchors"] = sorted(self.anchor_draft, key=lambda a: a["start"])
-        _ = save_video_anchors(video, self.user.token)
+
+        video["anchors"] = sorted(
+            self.anchor_draft,
+            key=lambda a: a["start"],
+        )
+
+        # IMPORTANT: remove unrelated embedded fields
+        video.pop("clips", None)
+
+        _ = save_video_metadata(video, self.user.token)
+
         self._anchor_dirty = False
         self.refresh()
 
