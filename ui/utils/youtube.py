@@ -210,6 +210,7 @@ async def fetch_playlist_items(
         "_id": "...",
         "playlist_id": "...",
         "latest_saved_date": str | None
+        "existing_video_ids": list[str] | None
       }
     ]
     """
@@ -223,7 +224,7 @@ async def fetch_playlist_items(
                 return p, await fetch_playlist_items_single(
                     client,
                     p["playlist_id"],
-                    p.get("latest_saved_date"),
+                    p.get("latest_saved_date", None),
                     set(p.get("existing_video_ids", [])),
                 )
 
