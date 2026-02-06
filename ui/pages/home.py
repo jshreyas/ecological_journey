@@ -1,6 +1,6 @@
 import asyncio
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from data.crud import AuthError, load_playlists
 from dotenv import load_dotenv
@@ -8,7 +8,6 @@ from log import log
 from nicegui import ui
 from pages.components.home.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
-from utils.fetch_videos import fetch_playlist_items, fetch_playlist_metadata
 from utils.user_context import User, with_user_context
 from utils.utils import group_videos_by_day
 from utils.utils_api import (
@@ -19,6 +18,7 @@ from utils.utils_api import (
     load_playlists_for_user,
     load_videos,
 )
+from utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 load_dotenv()
 
@@ -30,14 +30,14 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
             playlist_verified = {"status": False}
             playlist_id_input = ui.input("YouTube Playlist ID").classes("w-full text-sm")
 
-            def verify_playlist():
+            async def verify_playlist():
                 playlist_id = playlist_id_input.value.strip()
                 if not playlist_id:
                     ui.notify("❌ Please enter a Playlist ID.", type="warning")
                     fetch_button.disable()
                     playlist_verified["status"] = False
                     return
-                metadata = fetch_playlist_metadata(playlist_id)
+                metadata = await fetch_playlist_metadata(playlist_id)
                 if metadata and "title" in metadata:
                     ui.notify(f'✅ Playlist verified: {metadata["title"]}', type="success")
                     fetch_button.enable()
@@ -51,26 +51,36 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 fetch_button.disable()
                 playlist_verified["status"] = False
 
-            def fetch_playlist_videos():
+            async def fetch_playlist_videos():
                 if not playlist_verified["status"]:
                     ui.notify("❌ Please verify the playlist first.", type="warning")
                     return
                 playlist_id = playlist_id_input.value.strip()
-                metadata = fetch_playlist_metadata(playlist_id)
+                metadata = await fetch_playlist_metadata(playlist_id)
                 playlist_name = metadata.get("title", playlist_id)
                 ui.notify(f"Fetching videos for playlist: {playlist_name}")
                 spinner = ui.spinner(size="lg").props("color=primary")
                 ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
 
-                def task():
-                    create_playlist(
-                        fetch_playlist_items(playlist_id),
+                async def task():
+                    playlist = create_playlist(
+                        [],
                         user.token if user else None,
                         playlist_name,
                         playlist_id,
                     )
+                    result = await sync_playlist(
+                        playlist_obj=playlist,
+                        token=user.token if user else None,
+                    )
                     spinner.set_visibility(False)
-                    ui.notify("✅ Playlist fetched and added successfully!")
+                    if result == SYNC_OK:
+                        ui.notify("✅ Playlist created and synced")
+                    elif result == SYNC_NOOP:
+                        ui.notify("ℹ️ Playlist added (no videos yet)")
+                    else:
+                        ui.notify("⚠️ Playlist added, sync failed")
+
                     refresh_playlists()
                     render_dashboard()
                     playlist_id_input.value = ""
@@ -115,19 +125,18 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
 
         def on_user_sync_click(
             parent,
-            playlist_id: str,
+            playlist_obj: dict,
             token: str,
-            playlist_name: str,
-            play_id: str,
         ):
+            playlist_id = playlist_obj["_id"]
+            playlist_name = playlist_obj["name"]
+
             async def run():
                 try:
                     log.info(f"User-initiated sync for playlist: {playlist_name} ({playlist_id})")
                     result = await sync_playlist(
-                        playlist_id=playlist_id,
+                        playlist_obj=playlist_obj,
                         token=token,
-                        playlist_name=playlist_name,
-                        play_id=play_id,
                     )
                     with parent:
                         if result == SYNC_OK:
@@ -149,13 +158,13 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
             log.info(f"Preparing to sync playlist: {playlist_name} ({playlist_id})")
             return run
 
-        def on_sync_click(parent, playlist_id, token, playlist_name, play_id):
+        def on_sync_click(parent, playlist_obj, token):
             spinner = ui.spinner(size="lg").props("color=primary")
             spinner.set_visibility(True)
 
             async def do_sync():
                 try:
-                    await on_user_sync_click(parent, playlist_id, token, playlist_name, play_id)()
+                    await on_user_sync_click(parent, playlist_obj, token)()
                 except Exception as e:
                     ui.notify(f"❌ Sync failed: {str(e)}")
                 finally:
@@ -174,9 +183,7 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                         if playlist["_id"] in owned_ids:
                             ui.button(
                                 icon="sync",
-                                on_click=lambda pid=playlist["_id"], name=playlist["name"], play_id=playlist[
-                                    "playlist_id"
-                                ]: on_sync_click(parent, pid, user.token, name, play_id),
+                                on_click=lambda playlist_obj=playlist: on_sync_click(parent, playlist_obj, user.token),
                             ).props("flat dense round color=primary").tooltip("Sync")
     # Always render the add playlist card at the end
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
@@ -489,32 +496,30 @@ SYNC_RETRY_SOON = "retry_soon"
 SYNC_ERROR = "error"
 
 
-# TODO: update to use youtube.py and clean up fetch_videos.py
 async def sync_playlist(
-    playlist_id: str,
+    playlist_obj: dict,
     token: str,
-    playlist_name: str,
-    play_id: str,
 ) -> str:
+    playlist_name = playlist_obj["name"]
     try:
-        existing_videos = load_videos(playlist_id)
+        existing_videos = load_videos(playlist_obj["_id"])
 
         if existing_videos:
-            latest_saved_date_str = max(video["date"] for video in existing_videos)
-            latest_saved_date = datetime.fromisoformat(latest_saved_date_str.replace("Z", "+00:00")) - timedelta(days=1)
-            existing_video_ids = {video["video_id"] for video in existing_videos}
+            latest_saved_date = max(video["date"] for video in existing_videos)
+            existing_video_ids = [video["video_id"] for video in existing_videos]
         else:
             latest_saved_date = None
             existing_video_ids = set()
 
-        latest_video_data = fetch_playlist_items(play_id, latest_saved_date)
-        new_video_data = [v for v in latest_video_data if v["video_id"] not in existing_video_ids]
-
+        playlist_obj["latest_saved_date"] = latest_saved_date
+        playlist_obj["existing_video_ids"] = existing_video_ids
+        new_video_data_dict = await fetch_playlist_items([playlist_obj])
+        new_video_data = new_video_data_dict[playlist_obj["_id"]]
         if not new_video_data:
             log.info(f"[{playlist_name}] No new videos")
             return SYNC_NOOP
 
-        create_video(new_video_data, token, playlist_id)
+        create_video(new_video_data, token, playlist_obj["_id"])
         log.info(f"[{playlist_name}] Synced {len(new_video_data)} videos")
         return SYNC_OK
 
