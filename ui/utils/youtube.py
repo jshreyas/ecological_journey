@@ -152,6 +152,10 @@ async def fetch_playlist_items_single(
     items = []
     video_ids = []
     page_token = None
+    latest_saved_date_dt = None
+
+    if latest_saved_date:
+        latest_saved_date_dt = datetime.fromisoformat(latest_saved_date.replace("Z", "+00:00"))
 
     while True:
         resp = await client.get(
@@ -175,8 +179,6 @@ async def fetch_playlist_items_single(
                 continue
 
             playlist_added = datetime.fromisoformat(snippet["publishedAt"].replace("Z", "+00:00"))
-            latest_saved_date_dt = datetime.fromisoformat(latest_saved_date.replace("Z", "+00:00"))
-
             if latest_saved_date_dt and playlist_added < latest_saved_date_dt:
                 break  # reached older videos, stop processing
 
