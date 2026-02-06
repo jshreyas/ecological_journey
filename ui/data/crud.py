@@ -186,7 +186,7 @@ def edit_video_in_playlist(
     **kwargs,
 ):
     playlist = Playlist.find_one(
-        Playlist.playlist_id == playlist_id,
+        Playlist.id == ObjectId(playlist_id),
         Playlist.owner_id == user.id,
     ).run()
 

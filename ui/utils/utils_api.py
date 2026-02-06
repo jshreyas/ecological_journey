@@ -103,15 +103,6 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
     return videos.get(video_id)
 
 
-def get_playlist_id_for_video(video_id: str) -> Optional[str]:
-    playlists = load_playlists()
-    for playlist in playlists:
-        for video in playlist.get("videos", []):
-            if video.get("video_id") == video_id:
-                return playlist.get("playlist_id")
-    return None
-
-
 def load_clips() -> List[Dict[str, Any]]:
     clips = []
     playlists = load_playlists()
@@ -190,8 +181,7 @@ def convert_video_metadata_to_raw_text(video: dict) -> str:
 
 
 def save_video_metadata(video_metadata: dict, token: str) -> bool:
-    playlist_id = get_playlist_id_for_video(video_metadata.get("video_id"))
-    return edit_video_in_playlist(playlist_id=playlist_id, updated_video=video_metadata, token=token)
+    return edit_video_in_playlist(playlist_id=video_metadata["playlist_id"], updated_video=video_metadata, token=token)
 
 
 def save_video_anchors(video_metadata: dict, token: str) -> bool:
