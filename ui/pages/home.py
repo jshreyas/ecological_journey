@@ -18,7 +18,7 @@ from utils.utils_api import (
     load_playlists_for_user,
     load_videos,
 )
-from utils.youtube import fetch_playlist_metadata
+from utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 load_dotenv()
 
@@ -62,17 +62,25 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 spinner = ui.spinner(size="lg").props("color=primary")
                 ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
 
-                def task():
-                    from utils.fetch_videos import fetch_playlist_items
-
-                    create_playlist(
-                        fetch_playlist_items(playlist_id),
+                async def task():
+                    playlist = create_playlist(
+                        [],
                         user.token if user else None,
                         playlist_name,
                         playlist_id,
                     )
+                    result = await sync_playlist(
+                        playlist_obj=playlist,
+                        token=user.token if user else None,
+                    )
                     spinner.set_visibility(False)
-                    ui.notify("✅ Playlist fetched and added successfully!")
+                    if result == SYNC_OK:
+                        ui.notify("✅ Playlist created and synced")
+                    elif result == SYNC_NOOP:
+                        ui.notify("ℹ️ Playlist added (no videos yet)")
+                    else:
+                        ui.notify("⚠️ Playlist added, sync failed")
+
                     refresh_playlists()
                     render_dashboard()
                     playlist_id_input.value = ""
@@ -492,8 +500,6 @@ async def sync_playlist(
     playlist_obj: dict,
     token: str,
 ) -> str:
-    from utils.youtube import fetch_playlist_items
-
     playlist_name = playlist_obj["name"]
     try:
         existing_videos = load_videos(playlist_obj["_id"])
