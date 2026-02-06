@@ -50,7 +50,13 @@ def calendar_container(grouped_videos_by_day):
 
                                     # Check if any are unreviewed
                                     any_unreviewed = any(
-                                        not (v.get("labels") or v.get("partners") or v.get("clips"))
+                                        not (
+                                            v.get("labels")
+                                            or v.get("partners")
+                                            or v.get("clips")
+                                            or v.get("anchors")
+                                            or v.get("notes")
+                                        )
                                         for v in playlist_videos
                                     )
 
