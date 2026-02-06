@@ -274,3 +274,43 @@ async def fetch_playlist_items(
             output[pid] = videos
 
         return output
+
+
+async def fetch_playlist_metadata(
+    playlist_id: str,
+    client: httpx.AsyncClient | None = None,
+) -> dict | None:
+    """
+    Fetch playlist snippet metadata using YouTube Data API.
+
+    Returns:
+      {
+        "title": str,
+        "description": str,
+        "publishedAt": str,
+        "channelTitle": str,
+        ...
+      }
+    or None if not found / inaccessible
+    """
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{BASE_URL}/playlists",
+                params={
+                    "part": "snippet",
+                    "id": playlist_id,
+                    "key": API_KEY,
+                },
+            )
+            resp.raise_for_status()
+
+            items = resp.json().get("items", [])
+            if not items:
+                return None
+
+            return items[0]["snippet"]
+
+        except httpx.HTTPError:
+            return None

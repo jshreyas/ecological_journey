@@ -8,7 +8,6 @@ from log import log
 from nicegui import ui
 from pages.components.home.calendar_component import calendar_container
 from utils.dialog_puns import caught_john_doe
-from utils.fetch_videos import fetch_playlist_metadata
 from utils.user_context import User, with_user_context
 from utils.utils import group_videos_by_day
 from utils.utils_api import (
@@ -19,6 +18,7 @@ from utils.utils_api import (
     load_playlists_for_user,
     load_videos,
 )
+from utils.youtube import fetch_playlist_metadata
 
 load_dotenv()
 
@@ -30,14 +30,14 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
             playlist_verified = {"status": False}
             playlist_id_input = ui.input("YouTube Playlist ID").classes("w-full text-sm")
 
-            def verify_playlist():
+            async def verify_playlist():
                 playlist_id = playlist_id_input.value.strip()
                 if not playlist_id:
                     ui.notify("❌ Please enter a Playlist ID.", type="warning")
                     fetch_button.disable()
                     playlist_verified["status"] = False
                     return
-                metadata = fetch_playlist_metadata(playlist_id)
+                metadata = await fetch_playlist_metadata(playlist_id)
                 if metadata and "title" in metadata:
                     ui.notify(f'✅ Playlist verified: {metadata["title"]}', type="success")
                     fetch_button.enable()
@@ -51,12 +51,12 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 fetch_button.disable()
                 playlist_verified["status"] = False
 
-            def fetch_playlist_videos():
+            async def fetch_playlist_videos():
                 if not playlist_verified["status"]:
                     ui.notify("❌ Please verify the playlist first.", type="warning")
                     return
                 playlist_id = playlist_id_input.value.strip()
-                metadata = fetch_playlist_metadata(playlist_id)
+                metadata = await fetch_playlist_metadata(playlist_id)
                 playlist_name = metadata.get("title", playlist_id)
                 ui.notify(f"Fetching videos for playlist: {playlist_name}")
                 spinner = ui.spinner(size="lg").props("color=primary")
