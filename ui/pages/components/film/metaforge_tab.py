@@ -489,9 +489,12 @@ class MetaforgeTab:
     def _finalize_save(self):
         """Finalize the save operation"""
         self.confirm_dialog.close()
-        log.info(f"Finalizing save...: {self.state['latest_cleaned']}")
+        video_to_save = self.state["latest_cleaned"]
+        video_to_save["playlist_id"] = self.video_state.get_video().get("playlist_id")
+        log.info(f"Finalizing save...: {video_to_save}")
         token = self.user.token if self.user else None
-        success = save_video_metadata(self.state["latest_cleaned"], token)
+        # import pdb; pdb.set_trace()
+        success = save_video_metadata(video_to_save, token)
         if success:
             ui.notify("✅ Filmdata published", type="positive")
             # Clear the state to prevent cumulative delta tracking
