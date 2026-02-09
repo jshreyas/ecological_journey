@@ -493,7 +493,6 @@ class MetaforgeTab:
         video_to_save["playlist_id"] = self.video_state.get_video().get("playlist_id")
         log.info(f"Finalizing save...: {video_to_save}")
         token = self.user.token if self.user else None
-        # import pdb; pdb.set_trace()
         success = save_video_metadata(video_to_save, token)
         if success:
             ui.notify("✅ Filmdata published", type="positive")
