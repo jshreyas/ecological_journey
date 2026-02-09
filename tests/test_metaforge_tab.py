@@ -34,9 +34,9 @@ class TestMetaforgeTab:
                 }
             ],
         }
-        self.video_state = VideoState(self.video_id)
         self.user = User(username="alice", token="tok123", id="id456")
-        self.metaforge_tab = MetaforgeTab(self.video_state, self.user)
+        self.video_state = VideoState(self.video_id, self.user)
+        self.metaforge_tab = MetaforgeTab(self.video_state)
 
     @patch("ui.pages.components.film.video_state.load_video")
     def test_init(self, mock_load_video):
@@ -46,7 +46,6 @@ class TestMetaforgeTab:
         assert self.metaforge_tab.video_state == self.video_state
         assert self.metaforge_tab.container is None
         assert self.metaforge_tab.editor_container["ref"] is None
-        assert self.metaforge_tab.on_publish is None
 
     @patch("ui.pages.components.film.video_state.load_video")
     def test_create_tab(self, mock_load_video):
@@ -160,7 +159,6 @@ class TestMetaforgeTab:
         mock_load_video.return_value = self.mock_video_data
 
         mock_callback = Mock()
-        self.metaforge_tab.on_publish = mock_callback
 
         test_metadata = {"title": "Test", "partners": ["Alice"]}
         self.metaforge_tab.handle_publish(test_metadata)

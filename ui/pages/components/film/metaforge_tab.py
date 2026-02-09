@@ -5,12 +5,10 @@ Handles the metaforge functionality for bulk editing
 
 import json
 import uuid
-from typing import Callable
 
 from log import log
 from nicegui import ui
 from utils.dialog_puns import generate_funny_title
-from utils.user_context import User
 from utils.utils_api import save_video_metadata
 
 from .video_state import VideoState
@@ -19,10 +17,9 @@ from .video_state import VideoState
 class MetaforgeTab:
     """Component for bulk editing video metadata"""
 
-    def __init__(self, video_state: VideoState, user: User | None = None, on_publish: Callable = None):
+    def __init__(self, video_state: VideoState):
         self.video_state = video_state
-        self.user = user
-        self.on_publish = on_publish
+        self.user = self.video_state.user
         self.container = None
         self.editor_container = {"ref": None}
         self.diff_area = None
@@ -492,9 +489,11 @@ class MetaforgeTab:
     def _finalize_save(self):
         """Finalize the save operation"""
         self.confirm_dialog.close()
-        log.info(f"Finalizing save...: {self.state['latest_cleaned']}")
+        video_to_save = self.state["latest_cleaned"]
+        video_to_save["playlist_id"] = self.video_state.get_video().get("playlist_id")
+        log.info(f"Finalizing save...: {video_to_save}")
         token = self.user.token if self.user else None
-        success = save_video_metadata(self.state["latest_cleaned"], token)
+        success = save_video_metadata(video_to_save, token)
         if success:
             ui.notify("✅ Filmdata published", type="positive")
             # Clear the state to prevent cumulative delta tracking
