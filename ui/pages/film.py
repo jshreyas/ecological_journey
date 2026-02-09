@@ -52,10 +52,9 @@ def film_page(user: User | None, video_id: str):
     navigation_tab = NavigationTab(video_state)
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
-    # TODO: cleanup user from all tabs since video_state has it
-    metaforge_tab = MetaforgeTab(video_state, user)
+    metaforge_tab = MetaforgeTab(video_state)
     filmboard_tab = FilmboardTab(video_state)
-    learnings_tab = LearningsTab(video_state, user)
+    learnings_tab = LearningsTab(video_state)
     anchor_tab = AnchorTab(video_state, on_play_anchor=player_controls_tab.play_at_time)
 
     clipboard_tab = ClipboardTab(

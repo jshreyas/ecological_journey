@@ -1,15 +1,14 @@
 from data.crud import create_learning, delete_learning, load_learnings, update_learning
 from nicegui import ui
-from utils.user_context import User
 from utils.utils import human_stamp
 
 from .video_state import VideoState
 
 
 class LearningsTab:
-    def __init__(self, video_state: VideoState, user: User | None = None):
+    def __init__(self, video_state: VideoState):
         self.video_state = video_state
-        self.user = user
+        self.user = self.video_state.user
         self.container = None
         self.text_input = None
         self.toolbar = [
