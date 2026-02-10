@@ -1,9 +1,16 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from data.crud import add_video_to_playlist, create_cliplist
 from data.crud import create_playlist as cp
 from data.crud import create_team as ct
-from data.crud import edit_video_in_playlist, load_cliplist, load_notion_latest, load_playlists, load_teams
+from data.crud import (
+    edit_video_in_playlist,
+    load_cliplist,
+    load_notion_latest,
+    load_playlist,
+    load_playlists,
+    load_teams,
+)
 from utils.cache import cache_get, cache_set
 from utils.utils import parse_query_expression
 
@@ -70,24 +77,32 @@ def format_duration(seconds: int) -> str:
 
 
 def load_videos(
-    playlist_id: Optional[str] = None, response_dict: bool = False
-) -> Union[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
-    """Load videos from playlists, optionally returning as a dictionary."""
+    playlist_id: Optional[str] = None,
+    response_dict: bool = False,
+):
     playlists = load_playlists()
     videos = []
-    for playlist in playlists:
-        if playlist_id is None or playlist.get("_id") == playlist_id:
-            for video in playlist.get("videos", []):
-                video["playlist_id"] = playlist.get("_id")
-                video["playlist_name"] = playlist.get("name")
-                video["playlist_color"] = playlist.get("color")
-                # Add human-readable duration to each video
-                video["duration_human"] = format_duration(video.get("duration_seconds", 0))
-                videos.append(video)
+
+    for pl in playlists:
+        if playlist_id and pl["_id"] != playlist_id:
+            continue
+
+        full = load_playlist(pl["_id"])
+        if not full:
+            continue
+
+        for video in full.get("videos", []):
+            enriched = {
+                **video,
+                "playlist_id": full["_id"],
+                "playlist_name": full["name"],
+                "playlist_color": full["color"],
+                "duration_human": format_duration(video.get("duration_seconds", 0)),
+            }
+            videos.append(enriched)
+
     videos.sort(key=lambda x: x.get("date", ""), reverse=True)
-    if response_dict:
-        return {video["video_id"]: video for video in videos if "video_id" in video}
-    return videos
+    return {v["video_id"]: v for v in videos} if response_dict else videos
 
 
 def load_video(video_id: str) -> Optional[Dict[str, Any]]:

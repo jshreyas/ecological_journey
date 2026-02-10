@@ -2,7 +2,7 @@ import os
 import threading
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import jwt
@@ -137,11 +137,27 @@ def trigger_notion_refresh():
     ui.notify("Started Notion tree generation in background", type="info")
 
 
-@cache_result("playlists", ttl_seconds=CACHE_TTL)
+@cache_result("playlists:index", ttl_seconds=CACHE_TTL)
 def load_playlists():
-    log.info("Loading playlists from database...")
     playlists = Playlist.find_all().run()
-    return to_dicts(playlists)
+    return [
+        {
+            "_id": str(p.id),
+            "name": p.name,
+            "color": p.color,
+            "owner_id": str(p.owner_id),
+            "team_id": str(p.team_id),
+            "playlist_id": p.playlist_id,
+            "video_count": len(p.videos),
+        }
+        for p in playlists
+    ]
+
+
+@cache_result(lambda playlist_id: f"playlist:{playlist_id}", ttl_seconds=CACHE_TTL)
+def load_playlist(playlist_id: str) -> Optional[Dict[str, Any]]:
+    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
+    return to_dicts(playlist) if playlist else None
 
 
 @with_user_from_token

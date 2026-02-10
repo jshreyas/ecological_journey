@@ -107,10 +107,12 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
     if not user:
         for playlist in load_playlists():
             with parent:
-                with ui.column().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md"):
-                    ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sd font-semibold")
+                with ui.column().classes("w-full p-2 border border-gray-300 rounded-lg bg-white shadow-md"):
                     with ui.row().classes("w-full justify-between items-center"):
-                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-xs text-gray-600")
+                        ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sm font-semibold")
+                        ui.element("div").classes(f"{playlist['color']} w-3 h-3 rounded-full")
+                    with ui.row().classes("w-full justify-between items-center"):
+                        ui.label(f"🎬 {playlist.get('video_count')}").classes("text-xs text-gray-600")
                         ui.button(
                             icon="sync",
                             on_click=lambda: caught_john_doe(),
@@ -179,7 +181,7 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                 with ui.column().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2"):
                     ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-md font-semibold")
                     with ui.row().classes("w-full justify-between items-center"):
-                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-sm text-gray-600")
+                        ui.label(f"🎬: {len(playlist.get('videos'))}").classes("text-sm text-gray-600")
                         if playlist["_id"] in owned_ids:
                             ui.button(
                                 icon="sync",
