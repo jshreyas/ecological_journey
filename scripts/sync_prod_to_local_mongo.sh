@@ -9,7 +9,7 @@ if [ -z "$PRD_MONGODB_URI" ]; then
 fi
 
 DB_NAME="ecological_journey"
-CONTAINER_NAME="ecological_mongo"
+CONTAINER_NAME="mongo"
 TEMP_DUMP_DIR=$(mktemp -d)
 
 # 📤 Step 1: Dump from production to temp dir
