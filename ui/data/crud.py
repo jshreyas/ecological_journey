@@ -179,6 +179,21 @@ def can_write_playlist(user: User, playlist: Playlist) -> bool:
     return playlist.owner_id == user.id
 
 
+@cache_result(lambda video_id: f"video:{video_id}", ttl_seconds=CACHE_TTL)
+def load_video(video_id: str) -> Optional[Dict[str, Any]]:
+    playlist = Playlist.find_one(Playlist.videos.video_id == video_id).run()
+    if not playlist:
+        return None
+
+    for video in playlist.videos:
+        if video.video_id == video_id:
+            v = video.dict()
+            v["playlist_id"] = str(playlist.id)
+            v["playlist_name"] = playlist.name
+            v["playlist_color"] = playlist.color
+            return v
+
+
 @with_user_from_token
 @invalidate_cache(keys=["playlists"])
 def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):

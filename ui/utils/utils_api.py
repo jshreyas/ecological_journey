@@ -105,12 +105,6 @@ def load_videos(
     return {v["video_id"]: v for v in videos} if response_dict else videos
 
 
-def load_video(video_id: str) -> Optional[Dict[str, Any]]:
-    """Return a single video dict by video_id, or None if not found."""
-    videos = load_videos(response_dict=True)
-    return videos.get(video_id)
-
-
 def load_clips() -> List[Dict[str, Any]]:
     clips = []
     playlists = load_playlists()
