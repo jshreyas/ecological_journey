@@ -25,7 +25,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
 
 
-@invalidate_cache(keys=["teams", "notion_tree", "playlists", "cliplists"])
+@invalidate_cache(keys=["teams", "notion_tree", "playlists:index", "cliplists"])
 def clear_cache() -> None:
     pass
 
@@ -39,7 +39,7 @@ def get_user_from_token(token: str):
             raise ValueError("User not found")
         return user
     except Exception as e:
-        log.info(f"Token error: {e}")
+        log.error(f"Token error: {e}")
         return None
 
 
@@ -87,7 +87,6 @@ def to_dicts(obj: Any) -> Any:
 
 @cache_result("teams", ttl_seconds=CACHE_TTL)
 def load_teams():
-    log.info("Loading teams from database...")
     teams = Team.find_all().run()
     return to_dicts(teams)
 
@@ -106,13 +105,11 @@ def create_team(name: str, user=None, **kwargs):
 
 @cache_result("notion_tree", ttl_seconds=CACHE_TTL)
 def load_notion():
-    log.info("Loading Notion data from database...")
     notion_data = Notion.find_all().run()
     return to_dicts(notion_data)
 
 
 def load_notion_latest():
-    log.info("Selecting latest Notion entry from loaded data...")
     all_notion = load_notion()
     if not all_notion:
         return None
@@ -122,11 +119,9 @@ def load_notion_latest():
 
 @invalidate_cache(keys=["notion_tree"])
 def generate_and_store_notion_tree():
-    log.info("Generating Notion tree...")
     tree = generate_tree()  # long-running blocking call
     notion = Notion(tree=tree)
     notion.insert()
-    log.info("Saved Notion tree to DB and cleared cache.")
 
 
 def trigger_notion_refresh():
@@ -161,7 +156,7 @@ def load_playlist(playlist_id: str) -> Optional[Dict[str, Any]]:
 
 
 @with_user_from_token
-@invalidate_cache(keys=["playlists"])
+@invalidate_cache(keys=["playlists:index"])
 def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], user=None, **kwargs):
     playlist = Playlist(
         name=name,
@@ -391,7 +386,7 @@ def create_access_token(data: dict):
 def login_user(email: str, password: str):
     user = load_user(email)
     if not user or not verify_password(password, user["hashed_password"]):
-        log.info("Incorrect email or password")
+        log.error("Incorrect email or password")
         return False
 
     token = create_access_token({"sub": str(user["_id"])})
@@ -404,7 +399,6 @@ def login_user(email: str, password: str):
 
 
 def load_feedback():
-    log.info("Loading feedback from database...")
     feedbacks = Feedback.find_all().run()
     return to_dicts(feedbacks)
 
@@ -418,7 +412,6 @@ def create_feedback(feedback: str):
 
 
 def _load_learnings():
-    log.info("Loading learnings from database...")
     learnings = Learnings.find_all().run()
     return to_dicts(learnings)
 
