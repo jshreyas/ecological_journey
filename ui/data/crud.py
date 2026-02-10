@@ -195,7 +195,12 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
 
 
 @with_user_from_token
-@invalidate_cache(keys=["playlists"])
+@invalidate_cache(
+    keys=lambda playlist_id, updated_video, **_: [
+        f"video:{updated_video['video_id']}",
+        f"playlist:{playlist_id}",
+    ]
+)
 def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):
 
     playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
@@ -209,7 +214,12 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
 
 # TODO: updates can be done by team members, not just owner
 @with_user_from_token
-@invalidate_cache(keys=["playlists"])
+@invalidate_cache(
+    keys=lambda playlist_id, updated_video, **_: [
+        f"video:{updated_video['video_id']}",
+        f"playlist:{playlist_id}",
+    ]
+)
 def edit_video_in_playlist(
     playlist_id: str,
     updated_video: Dict[str, Any],
