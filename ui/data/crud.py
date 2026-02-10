@@ -187,7 +187,7 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
 
     for video in playlist.videos:
         if video.video_id == video_id:
-            v = video.dict()
+            v = to_dicts(video)
             v["playlist_id"] = str(playlist.id)
             v["playlist_name"] = playlist.name
             v["playlist_color"] = playlist.color
