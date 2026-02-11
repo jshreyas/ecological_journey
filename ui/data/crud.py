@@ -213,6 +213,7 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
     keys=lambda playlist_id, updated_video, **_: [
         f"video:{updated_video['video_id']}",
         f"playlist:{playlist_id}",
+        "clips:index",
     ]
 )
 def edit_video_in_playlist(
@@ -321,7 +322,6 @@ def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
 
 @cache_result("cliplists", ttl_seconds=CACHE_TTL)
 def load_cliplists():
-    log.info("Loading cliplists from database...")
     cliplists = Cliplist.find_all().run()
     return to_dicts(cliplists)
 
