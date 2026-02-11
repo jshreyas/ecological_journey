@@ -15,4 +15,4 @@ RUN apt-get update && \
 COPY ui /app/ui
 COPY static /app/static
 
-CMD ["python", "ui/main.py"]
+CMD ["python", "-m", "ui.main"]

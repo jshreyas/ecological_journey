@@ -8,13 +8,14 @@ from uuid import uuid4
 import jwt
 from bson import ObjectId
 from bunnet import Document
-from data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
-from log import log
 from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
-from utils.cache import cache_result, invalidate_cache
-from utils.notion import generate_tree
+
+from ui.data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
+from ui.log import log
+from ui.utils.cache import cache_result, invalidate_cache
+from ui.utils.notion import generate_tree
 
 load_dotenv()
 SECRET_KEY = os.getenv("JWT_SECRET")

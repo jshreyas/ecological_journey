@@ -3,8 +3,9 @@ from datetime import datetime
 from functools import partial
 
 from nicegui import ui
-from utils.dialog_puns import caught_john_doe
-from utils.utils import navigate_to_film, parse_query_expression
+
+from ui.utils.dialog_puns import caught_john_doe
+from ui.utils.utils import navigate_to_film, parse_query_expression
 
 
 class QueryBuilder:

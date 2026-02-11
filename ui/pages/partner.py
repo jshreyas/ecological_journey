@@ -4,7 +4,8 @@ from collections import Counter, defaultdict
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from nicegui import ui
-from utils.utils_api import load_clips, load_playlists, load_videos
+
+from ui.utils.utils_api import load_clips, load_playlists, load_videos
 
 
 async def partner_details(request: Request):

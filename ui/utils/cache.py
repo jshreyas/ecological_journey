@@ -5,7 +5,8 @@ from typing import Any, Callable, Dict
 
 import requests
 from dotenv import load_dotenv
-from log import log
+
+from ui.log import log
 
 load_dotenv()
 

@@ -1,6 +1,7 @@
-from data.crud import create_learning, delete_learning, load_learnings, update_learning
 from nicegui import ui
-from utils.utils import human_stamp
+
+from ui.data.crud import create_learning, delete_learning, load_learnings, update_learning
+from ui.utils.utils import human_stamp
 
 from .video_state import VideoState
 

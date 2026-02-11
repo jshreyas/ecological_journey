@@ -1,9 +1,10 @@
 from nicegui import ui
-from utils.dialog_puns import in_progress
-from utils.user_context import User, with_user_context
-from utils.utils import format_time
-from utils.utils_api import get_filtered_clips
-from utils.video_player import VideoPlayer
+
+from ui.utils.dialog_puns import in_progress
+from ui.utils.user_context import User, with_user_context
+from ui.utils.utils import format_time
+from ui.utils.utils_api import get_filtered_clips
+from ui.utils.video_player import VideoPlayer
 
 playback_token = 0
 current_index = 0

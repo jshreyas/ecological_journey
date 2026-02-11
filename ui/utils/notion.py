@@ -1,8 +1,9 @@
 import os
 
 from dotenv import load_dotenv
-from log import log
 from notion_client import Client
+
+from ui.log import log
 
 load_dotenv()
 notion = Client(auth=os.getenv("NOTION_TOKEN"))

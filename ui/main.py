@@ -4,7 +4,15 @@ import sys
 from typing import Any, Dict, List
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from data.crud import (
+from dotenv import load_dotenv
+from fastapi import APIRouter, Header, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from nicegui import app, ui
+from structlog.contextvars import bind_contextvars
+
+from ui.data.crud import (
     add_video_to_playlist,
     clear_cache,
     create_access_token,
@@ -15,24 +23,17 @@ from data.crud import (
     load_teams,
     login_user,
 )
-from dotenv import load_dotenv
-from fastapi import APIRouter, Header, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from log import log
-from nicegui import app, ui
-from pages.about import about_page
-from pages.cliplists import cliplists_page
-from pages.clips import clips_page
-from pages.film import film_page
-from pages.films import films_page
-from pages.home import home_page
-from pages.notion import notion_page
-from pages.partner import partner_page
-from pages.playlist import playlist_page
-from structlog.contextvars import bind_contextvars
-from utils.dialog_puns import caught_john_doe, handle_backend_error
+from ui.log import log
+from ui.pages.about import about_page
+from ui.pages.cliplists import cliplists_page
+from ui.pages.clips import clips_page
+from ui.pages.film import film_page
+from ui.pages.films import films_page
+from ui.pages.home import home_page
+from ui.pages.notion import notion_page
+from ui.pages.partner import partner_page
+from ui.pages.playlist import playlist_page
+from ui.utils.dialog_puns import caught_john_doe, handle_backend_error
 
 sys.stdout.reconfigure(line_buffering=True)
 

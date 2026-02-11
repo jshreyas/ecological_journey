@@ -2,15 +2,16 @@ import asyncio
 from collections import Counter
 from datetime import datetime
 
-from data.crud import AuthError, load_playlists
 from dotenv import load_dotenv
-from log import log
 from nicegui import ui
-from pages.components.home.calendar_component import calendar_container
-from utils.dialog_puns import caught_john_doe
-from utils.user_context import User, with_user_context
-from utils.utils import group_videos_by_day
-from utils.utils_api import (
+
+from ui.data.crud import AuthError, load_playlists
+from ui.log import log
+from ui.pages.components.home.calendar_component import calendar_container
+from ui.utils.dialog_puns import caught_john_doe
+from ui.utils.user_context import User, with_user_context
+from ui.utils.utils import group_videos_by_day
+from ui.utils.utils_api import (
     create_playlist,
     create_team,
     create_video,
@@ -18,7 +19,7 @@ from utils.utils_api import (
     load_playlists_for_user,
     load_videos,
 )
-from utils.youtube import fetch_playlist_items, fetch_playlist_metadata
+from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 load_dotenv()
 # TODO: Refactor this file to separate concerns and reduce size.

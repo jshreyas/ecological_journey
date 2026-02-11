@@ -2,7 +2,8 @@ import re
 from uuid import uuid4
 
 from nicegui import events, ui
-from utils.dialog_puns import caught_john_doe
+
+from ui.utils.dialog_puns import caught_john_doe
 
 from .video_state import VideoState
 

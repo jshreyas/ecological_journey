@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from data.crud import load_cliplists
 from nicegui import ui
-from utils.user_context import User, with_user_context
-from utils.utils_api import get_filtered_clips
+
+from ui.data.crud import load_cliplists
+from ui.utils.user_context import User, with_user_context
+from ui.utils.utils_api import get_filtered_clips
 
 
 @with_user_context

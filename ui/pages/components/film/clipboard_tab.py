@@ -6,7 +6,8 @@ Handles the clipboard functionality for viewing and managing clips
 from typing import Callable
 
 from nicegui import ui
-from utils.utils import format_time
+
+from ui.utils.utils import format_time
 
 from .video_state import VideoState
 
