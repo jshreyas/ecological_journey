@@ -117,7 +117,7 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
             with ui.column().classes("w-full p-2 border border-gray-300 rounded-lg bg-white shadow-md"):
                 with ui.row().classes("w-full justify-between items-center"):
                     ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sm font-semibold")
-
+                    # TODO: playlist owner can change the color with color picker, update the playlist backend accordingly
                     ui.element("div").classes(f"{playlist['color']} w-3 h-3 rounded-full")
 
                 with ui.row().classes("w-full justify-between items-center"):
