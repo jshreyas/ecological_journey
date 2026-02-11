@@ -146,7 +146,7 @@ async def fetch_videos_metadata(
 
             # 🔥 Treat PT0S as incomplete sync
             if seconds <= 0:
-                log.info(f"[YT SYNC] Skipping video {vid} (duration={duration_raw}) " f"— likely still processing.")
+                log.error(f"[YT SYNC] Skipping video {vid} (duration={duration_raw}) " f"— likely still processing.")
                 continue
 
             results[vid] = {
