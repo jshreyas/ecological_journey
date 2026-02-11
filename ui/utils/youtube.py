@@ -8,6 +8,7 @@ import httpx
 import isodate
 import pytz
 from dotenv import load_dotenv
+from log import log
 
 load_dotenv()
 BASE_URL = "https://www.googleapis.com/youtube/v3"
@@ -135,9 +136,22 @@ async def fetch_videos_metadata(
 
         for item in resp.json().get("items", []):
             vid = item["id"]
+
+            duration_raw = item.get("contentDetails", {}).get("duration")
+            if not duration_raw:
+                log.warning(f"[YT SYNC] Missing duration for video {vid}")
+                continue
+
+            seconds = isodate.parse_duration(duration_raw).total_seconds()
+
+            # 🔥 Treat PT0S as incomplete sync
+            if seconds <= 0:
+                log.info(f"[YT SYNC] Skipping video {vid} (duration={duration_raw}) " f"— likely still processing.")
+                continue
+
             results[vid] = {
                 "upload_date": item["snippet"]["publishedAt"],
-                "duration_seconds": isodate.parse_duration(item["contentDetails"]["duration"]).total_seconds(),
+                "duration_seconds": seconds,
             }
 
     return results
