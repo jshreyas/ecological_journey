@@ -191,9 +191,10 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
 
 @with_user_from_token
 @invalidate_cache(
-    keys=lambda playlist_id, updated_video, **_: [
-        f"video:{updated_video['video_id']}",
+    keys=lambda playlist_id, new_videos, **_: [
         f"playlist:{playlist_id}",
+        "playlists:index",
+        *[f"video:{video['video_id']}" for video in new_videos],
     ]
 )
 def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):
