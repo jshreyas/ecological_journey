@@ -11,7 +11,7 @@ from data.crud import (
     load_playlists,
     load_teams,
 )
-from utils.cache import cache_get, cache_set
+from utils.cache import CACHE_TTL, cache_get, cache_result, cache_set
 from utils.utils import parse_query_expression
 
 
@@ -105,16 +105,24 @@ def load_videos(
     return {v["video_id"]: v for v in videos} if response_dict else videos
 
 
+@cache_result("clips:index", ttl_seconds=CACHE_TTL)
 def load_clips() -> List[Dict[str, Any]]:
     clips = []
-    playlists = load_playlists()
-    for playlist in playlists:
+
+    playlists_index = load_playlists()  # lightweight index
+
+    for playlist_meta in playlists_index:
+        playlist = load_playlist(playlist_meta["_id"])
+        if not playlist:
+            continue
+
         for video in playlist.get("videos", []):
-            if video.get("clips", []):
-                for clip in video["clips"]:
-                    partners = (clip.get("partners") or []) + (video.get("partners") or [])
-                    labels = (clip.get("labels") or []) + (video.get("labels") or [])
-                    clip_data = {
+            for clip in video.get("clips", []):
+                partners = (clip.get("partners") or []) + (video.get("partners") or [])
+                labels = (clip.get("labels") or []) + (video.get("labels") or [])
+
+                clips.append(
+                    {
                         "video_id": video["video_id"],
                         "playlist_id": playlist["_id"],
                         "playlist_name": playlist["name"],
@@ -129,7 +137,8 @@ def load_clips() -> List[Dict[str, Any]]:
                         "type": clip.get("type", "clip"),
                         "clip_id": clip.get("clip_id", ""),
                     }
-                    clips.append(clip_data)
+                )
+
     clips.sort(key=lambda x: x.get("date", ""), reverse=True)
     return clips
 
