@@ -25,6 +25,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
 
 
+# TODO: this doesnt invalidate granular caches yet, enhance it and decouple it from about page
 @invalidate_cache(keys=["teams", "notion_tree", "playlists:index", "cliplists"])
 def clear_cache() -> None:
     pass
