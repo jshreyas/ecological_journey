@@ -8,7 +8,8 @@ import httpx
 import isodate
 import pytz
 from dotenv import load_dotenv
-from log import log
+
+from ui.log import log
 
 load_dotenv()
 BASE_URL = "https://www.googleapis.com/youtube/v3"

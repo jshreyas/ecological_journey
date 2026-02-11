@@ -1,6 +1,7 @@
-from data.crud import clear_cache
 from nicegui import ui
-from utils.user_context import User, with_user_context
+
+from ui.data.crud import clear_cache
+from ui.utils.user_context import User, with_user_context
 
 
 @with_user_context

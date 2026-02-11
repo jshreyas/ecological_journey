@@ -1,9 +1,9 @@
 from typing import Any, Dict, List, Optional
 
-from data.crud import add_video_to_playlist, create_cliplist
-from data.crud import create_playlist as cp
-from data.crud import create_team as ct
-from data.crud import (
+from ui.data.crud import add_video_to_playlist, create_cliplist
+from ui.data.crud import create_playlist as cp
+from ui.data.crud import create_team as ct
+from ui.data.crud import (
     edit_video_in_playlist,
     load_cliplist,
     load_notion_latest,
@@ -11,8 +11,8 @@ from data.crud import (
     load_playlists,
     load_teams,
 )
-from utils.cache import CACHE_TTL, cache_get, cache_result, cache_set
-from utils.utils import parse_query_expression
+from ui.utils.cache import CACHE_TTL, cache_get, cache_result, cache_set
+from ui.utils.utils import parse_query_expression
 
 
 def get_notion_tree():

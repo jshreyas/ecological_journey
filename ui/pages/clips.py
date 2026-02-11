@@ -1,6 +1,6 @@
-from pages.components.media import render_media_page
-from utils.user_context import User, with_user_context
-from utils.utils_api import load_clips, save_cliplist
+from ui.pages.components.media import render_media_page
+from ui.utils.user_context import User, with_user_context
+from ui.utils.utils_api import load_clips, save_cliplist
 
 
 @with_user_context

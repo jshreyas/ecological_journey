@@ -4,10 +4,10 @@ VideoState class for centralized state management of video data
 
 from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
 
-from data.crud import load_video
-from utils.dialog_puns import generate_funny_title
-from utils.user_context import User
-from utils.utils_api import save_video_metadata
+from ui.data.crud import load_video
+from ui.utils.dialog_puns import generate_funny_title
+from ui.utils.user_context import User
+from ui.utils.utils_api import save_video_metadata
 
 
 class VideoState:
@@ -112,7 +112,7 @@ class VideoState:
 
     def get_anchor_control_panel(self):
         if self._anchor_control_panel is None:
-            from pages.components.film.anchor_control_panel import AnchorControlPanel
+            from ui.pages.components.film.anchor_control_panel import AnchorControlPanel
 
             self._anchor_control_panel = AnchorControlPanel(self)
         return self._anchor_control_panel

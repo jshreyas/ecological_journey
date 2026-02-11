@@ -1,9 +1,10 @@
 import os
 
 from bunnet import init_bunnet
-from data.models import Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from dotenv import load_dotenv
 from pymongo import MongoClient
+
+from ui.data.models import Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 
 load_dotenv()
 

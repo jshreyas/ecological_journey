@@ -4,18 +4,19 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import ui
-from pages.components.film.anchor_tab import AnchorTab
 
-# from pages.components.film.anchorboard_tab import AnchorboardTab
-from pages.components.film.clipboard_tab import ClipboardTab
-from pages.components.film.filmboard_tab import FilmboardTab
-from pages.components.film.learnings_tab import LearningsTab
-from pages.components.film.metaforge_tab import MetaforgeTab
-from pages.components.film.navigation_tab import NavigationTab
-from pages.components.film.player_controls_tab import PlayerControlsTab
-from pages.components.film.share_dialog_tab import ShareDialogTab
-from pages.components.film.video_state import VideoState
-from utils.user_context import User, with_user_context
+from ui.pages.components.film.anchor_tab import AnchorTab
+
+# from ui.pages.components.film.anchorboard_tab import AnchorboardTab
+from ui.pages.components.film.clipboard_tab import ClipboardTab
+from ui.pages.components.film.filmboard_tab import FilmboardTab
+from ui.pages.components.film.learnings_tab import LearningsTab
+from ui.pages.components.film.metaforge_tab import MetaforgeTab
+from ui.pages.components.film.navigation_tab import NavigationTab
+from ui.pages.components.film.player_controls_tab import PlayerControlsTab
+from ui.pages.components.film.share_dialog_tab import ShareDialogTab
+from ui.pages.components.film.video_state import VideoState
+from ui.utils.user_context import User, with_user_context
 
 load_dotenv()
 

@@ -6,10 +6,11 @@ Handles the metaforge functionality for bulk editing
 import json
 import uuid
 
-from log import log
 from nicegui import ui
-from utils.dialog_puns import generate_funny_title
-from utils.utils_api import save_video_metadata
+
+from ui.log import log
+from ui.utils.dialog_puns import generate_funny_title
+from ui.utils.utils_api import save_video_metadata
 
 from .video_state import VideoState
 
