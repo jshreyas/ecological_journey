@@ -21,6 +21,7 @@ from utils.utils_api import (
 from utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 load_dotenv()
+# TODO: Refactor this file to separate concerns and reduce size.
 
 
 def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
