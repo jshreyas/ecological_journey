@@ -10,6 +10,7 @@ from data.crud import (
     create_access_token,
     create_feedback,
     get_or_create_user,
+    load_playlist,
     load_playlists,
     load_teams,
     login_user,
@@ -396,7 +397,10 @@ def get_teams():
 
 
 @api_router.get("/playlists")
-def get_playlists():
+def get_playlists(full: bool = True):
+    if full:
+        # assemble full playlists from IDs
+        return [load_playlist(p["_id"]) for p in load_playlists()]
     return load_playlists()
 
 

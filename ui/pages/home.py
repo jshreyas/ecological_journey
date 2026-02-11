@@ -21,6 +21,7 @@ from utils.utils_api import (
 from utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 load_dotenv()
+# TODO: Refactor this file to separate concerns and reduce size.
 
 
 def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
@@ -104,30 +105,50 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
 
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
     parent.clear()
-    if not user:
-        for playlist in load_playlists():
-            with parent:
-                with ui.column().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md"):
-                    ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sd font-semibold")
-                    with ui.row().classes("w-full justify-between items-center"):
-                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-xs text-gray-600")
+
+    def render_playlist_card(
+        *,
+        parent,
+        playlist: dict,
+        show_sync: bool,
+        on_sync_click=None,
+    ):
+        with parent:
+            with ui.column().classes("w-full p-2 border border-gray-300 rounded-lg bg-white shadow-md"):
+                with ui.row().classes("w-full justify-between items-center"):
+                    ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sm font-semibold")
+
+                    ui.element("div").classes(f"{playlist['color']} w-3 h-3 rounded-full")
+
+                with ui.row().classes("w-full justify-between items-center"):
+                    ui.label(f"🎬 {playlist.get('video_count')}").classes("text-xs text-gray-600")
+
+                    if show_sync and on_sync_click:
                         ui.button(
                             icon="sync",
-                            on_click=lambda: caught_john_doe(),
+                            on_click=on_sync_click,
                         ).props(
                             "flat dense round color=primary"
                         ).tooltip("Sync")
+
+    # ---------- Guest (no user) ----------
+    if not user:
+        for playlist in load_playlists():
+            render_playlist_card(
+                parent=parent,
+                playlist=playlist,
+                show_sync=True,
+                on_sync_click=lambda: caught_john_doe(),
+            )
+
+    # ---------- Authenticated user ----------
     else:
         both = load_playlists_for_user(user.id)
         owned, member = both["owned"], both["member"]
         owned_ids = {pl["_id"] for pl in owned}
         all_playlists = owned + [p for p in member if p["_id"] not in owned_ids]
 
-        def on_user_sync_click(
-            parent,
-            playlist_obj: dict,
-            token: str,
-        ):
+        def on_user_sync_click(parent, playlist_obj: dict, token: str):
             playlist_id = playlist_obj["_id"]
             playlist_name = playlist_obj["name"]
 
@@ -138,16 +159,14 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
                         playlist_obj=playlist_obj,
                         token=token,
                     )
+
                     with parent:
                         if result == SYNC_OK:
                             ui.notify("Playlist synced successfully", type="positive")
-
                         elif result == SYNC_NOOP:
                             ui.notify("No new videos to sync", type="info")
-
                         elif result == SYNC_RETRY_SOON:
                             ui.notify("Upload still in progress — try again shortly", type="warning")
-
                         else:
                             ui.notify("Sync failed", type="negative")
 
@@ -175,17 +194,15 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
             ui.timer(0.1, lambda: asyncio.create_task(do_sync()), once=True)
 
         for playlist in all_playlists:
-            with parent:
-                with ui.column().classes("w-full p-4 border border-gray-300 rounded-lg bg-white shadow-md gap-2"):
-                    ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-md font-semibold")
-                    with ui.row().classes("w-full justify-between items-center"):
-                        ui.label(f"🎬 Videos: {len(playlist.get('videos'))}").classes("text-sm text-gray-600")
-                        if playlist["_id"] in owned_ids:
-                            ui.button(
-                                icon="sync",
-                                on_click=lambda playlist_obj=playlist: on_sync_click(parent, playlist_obj, user.token),
-                            ).props("flat dense round color=primary").tooltip("Sync")
-    # Always render the add playlist card at the end
+            is_owned = playlist["_id"] in owned_ids
+
+            render_playlist_card(
+                parent=parent,
+                playlist=playlist,
+                show_sync=is_owned,
+                on_sync_click=(lambda p=playlist: on_sync_click(parent, p, user.token) if is_owned else None),
+            )
+
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
 
 

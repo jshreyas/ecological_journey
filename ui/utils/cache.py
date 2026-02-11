@@ -1,7 +1,7 @@
 import json
 import os
 from functools import wraps
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict
 
 import requests
 from dotenv import load_dotenv
@@ -113,31 +113,41 @@ def cache_del(*keys):
 _cache: Dict[str, Any] = {}
 
 
-def cache_result(cache_key: str, ttl_seconds: int = 3600):
+def cache_result(cache_key, ttl_seconds: int = 3600):
+    """
+    cache_key can be:
+    - str
+    - callable(*args, **kwargs) -> str
+    """
+
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Check in-memory cache
             global _cache
-            if cache_key in _cache:
-                # log.info(f"Local cache hit for key: {cache_key}")
-                return _cache[cache_key]
 
-            # Check Redis cache
-            cached = cache_get(cache_key)
-            if cached:
-                log.info(f"Cache hit for key: {cache_key}")
-                _cache[cache_key] = cached
+            # 🔑 resolve key
+            key = cache_key(*args, **kwargs) if callable(cache_key) else cache_key
+
+            # In-memory cache
+            if key in _cache:
+                return _cache[key]
+
+            # Redis cache
+            cached = cache_get(key)
+            if cached is not None:
+                log.info(f"Cache hit for key: {key}")
+                _cache[key] = cached
                 return cached
-            log.info(f"Cache miss for key: {cache_key}")
 
-            # Call actual function
+            log.info(f"Cache miss for key: {key}")
+
+            # Compute
             data = func(*args, **kwargs)
 
-            log.info(f"Caching setting for key: {cache_key}")
-            # Set both caches
-            cache_set(cache_key, data, ttl_seconds)
-            _cache[cache_key] = data
+            # Store
+            cache_set(key, data, ttl_seconds)
+            _cache[key] = data
+
             return data
 
         return wrapper
@@ -145,16 +155,26 @@ def cache_result(cache_key: str, ttl_seconds: int = 3600):
     return decorator
 
 
-def invalidate_cache(keys: List[str]):
+def invalidate_cache(keys):
+    """
+    keys can be:
+    - list[str]
+    - callable(*args, **kwargs) -> list[str]
+    """
+
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
             global _cache
+
             result = func(*args, **kwargs)
-            for key in keys:
+
+            resolved_keys = keys(*args, **kwargs) if callable(keys) else keys
+            for key in resolved_keys:
                 _cache.pop(key, None)
                 cache_del(key)
                 log.info(f"Cache deleted for key: {key}")
+
             return result
 
         return wrapper

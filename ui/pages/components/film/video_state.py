@@ -4,9 +4,10 @@ VideoState class for centralized state management of video data
 
 from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
 
+from data.crud import load_video
 from utils.dialog_puns import generate_funny_title
 from utils.user_context import User
-from utils.utils_api import load_video, save_video_metadata
+from utils.utils_api import save_video_metadata
 
 
 class VideoState:

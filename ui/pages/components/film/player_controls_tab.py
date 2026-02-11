@@ -5,8 +5,8 @@ Handles the video player controls and playlist mode
 
 from typing import Callable
 
+from data.crud import load_video
 from nicegui import ui
-from utils.utils_api import load_video
 from utils.video_player import VideoPlayer
 
 from .video_state import VideoState

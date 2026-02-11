@@ -2,7 +2,7 @@ import os
 import threading
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import jwt
@@ -25,7 +25,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
 
 
-@invalidate_cache(keys=["teams", "notion_tree", "playlists", "cliplists"])
+@invalidate_cache(keys=["teams", "notion_tree", "playlists:index", "cliplists"])
 def clear_cache() -> None:
     pass
 
@@ -39,7 +39,7 @@ def get_user_from_token(token: str):
             raise ValueError("User not found")
         return user
     except Exception as e:
-        log.info(f"Token error: {e}")
+        log.error(f"Token error: {e}")
         return None
 
 
@@ -87,7 +87,6 @@ def to_dicts(obj: Any) -> Any:
 
 @cache_result("teams", ttl_seconds=CACHE_TTL)
 def load_teams():
-    log.info("Loading teams from database...")
     teams = Team.find_all().run()
     return to_dicts(teams)
 
@@ -106,13 +105,11 @@ def create_team(name: str, user=None, **kwargs):
 
 @cache_result("notion_tree", ttl_seconds=CACHE_TTL)
 def load_notion():
-    log.info("Loading Notion data from database...")
     notion_data = Notion.find_all().run()
     return to_dicts(notion_data)
 
 
 def load_notion_latest():
-    log.info("Selecting latest Notion entry from loaded data...")
     all_notion = load_notion()
     if not all_notion:
         return None
@@ -122,11 +119,9 @@ def load_notion_latest():
 
 @invalidate_cache(keys=["notion_tree"])
 def generate_and_store_notion_tree():
-    log.info("Generating Notion tree...")
     tree = generate_tree()  # long-running blocking call
     notion = Notion(tree=tree)
     notion.insert()
-    log.info("Saved Notion tree to DB and cleared cache.")
 
 
 def trigger_notion_refresh():
@@ -137,15 +132,31 @@ def trigger_notion_refresh():
     ui.notify("Started Notion tree generation in background", type="info")
 
 
-@cache_result("playlists", ttl_seconds=CACHE_TTL)
+@cache_result("playlists:index", ttl_seconds=CACHE_TTL)
 def load_playlists():
-    log.info("Loading playlists from database...")
     playlists = Playlist.find_all().run()
-    return to_dicts(playlists)
+    return [
+        {
+            "_id": str(p.id),
+            "name": p.name,
+            "color": p.color,
+            "owner_id": str(p.owner_id),
+            "team_id": str(p.team_id),
+            "playlist_id": p.playlist_id,
+            "video_count": len(p.videos),
+        }
+        for p in playlists
+    ]
+
+
+@cache_result(lambda playlist_id: f"playlist:{playlist_id}", ttl_seconds=CACHE_TTL)
+def load_playlist(playlist_id: str) -> Optional[Dict[str, Any]]:
+    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
+    return to_dicts(playlist) if playlist else None
 
 
 @with_user_from_token
-@invalidate_cache(keys=["playlists"])
+@invalidate_cache(keys=["playlists:index"])
 def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], user=None, **kwargs):
     playlist = Playlist(
         name=name,
@@ -163,8 +174,29 @@ def can_write_playlist(user: User, playlist: Playlist) -> bool:
     return playlist.owner_id == user.id
 
 
+@cache_result(lambda video_id: f"video:{video_id}", ttl_seconds=CACHE_TTL)
+def load_video(video_id: str) -> Optional[Dict[str, Any]]:
+    playlist = Playlist.find_one(Playlist.videos.video_id == video_id).run()
+    if not playlist:
+        return None
+
+    for video in playlist.videos:
+        if video.video_id == video_id:
+            v = to_dicts(video)
+            v["playlist_id"] = str(playlist.id)
+            v["playlist_name"] = playlist.name
+            v["playlist_color"] = playlist.color
+            return v
+
+
 @with_user_from_token
-@invalidate_cache(keys=["playlists"])
+@invalidate_cache(
+    keys=lambda playlist_id, new_videos, **_: [
+        f"playlist:{playlist_id}",
+        "playlists:index",
+        *[f"video:{video['video_id']}" for video in new_videos],
+    ]
+)
 def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):
 
     playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
@@ -178,7 +210,13 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
 
 # TODO: updates can be done by team members, not just owner
 @with_user_from_token
-@invalidate_cache(keys=["playlists"])
+@invalidate_cache(
+    keys=lambda playlist_id, updated_video, **_: [
+        f"video:{updated_video['video_id']}",
+        f"playlist:{playlist_id}",
+        "clips:index",
+    ]
+)
 def edit_video_in_playlist(
     playlist_id: str,
     updated_video: Dict[str, Any],
@@ -285,7 +323,6 @@ def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
 
 @cache_result("cliplists", ttl_seconds=CACHE_TTL)
 def load_cliplists():
-    log.info("Loading cliplists from database...")
     cliplists = Cliplist.find_all().run()
     return to_dicts(cliplists)
 
@@ -350,7 +387,7 @@ def create_access_token(data: dict):
 def login_user(email: str, password: str):
     user = load_user(email)
     if not user or not verify_password(password, user["hashed_password"]):
-        log.info("Incorrect email or password")
+        log.error("Incorrect email or password")
         return False
 
     token = create_access_token({"sub": str(user["_id"])})
@@ -363,7 +400,6 @@ def login_user(email: str, password: str):
 
 
 def load_feedback():
-    log.info("Loading feedback from database...")
     feedbacks = Feedback.find_all().run()
     return to_dicts(feedbacks)
 
@@ -377,7 +413,6 @@ def create_feedback(feedback: str):
 
 
 def _load_learnings():
-    log.info("Loading learnings from database...")
     learnings = Learnings.find_all().run()
     return to_dicts(learnings)
 
