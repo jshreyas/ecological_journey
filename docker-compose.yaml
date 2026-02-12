@@ -55,13 +55,6 @@ services:
     command: ["python", "-m", "ui.main"]
     tty: true
     stdin_open: true
-    develop:
-      watch:
-        - action: sync
-          path: ./ui
-          target: /app
-        - action: rebuild
-          path: ./requirements.txt
     networks:
       - ecological-network
 
