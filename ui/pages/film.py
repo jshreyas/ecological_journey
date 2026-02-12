@@ -56,7 +56,12 @@ def film_page(user: User | None, video_id: str):
     metaforge_tab = MetaforgeTab(video_state)
     filmboard_tab = FilmboardTab(video_state)
     learnings_tab = LearningsTab(video_state)
-    anchor_tab = AnchorTab(video_state, on_play_anchor=player_controls_tab.play_at_time)
+    anchor_tab = AnchorTab(
+        video_state,
+        on_play_anchor=player_controls_tab.play_at_time,
+        on_play_clip=player_controls_tab.play_clip,
+        on_share_clip=share_dialog_tab.share_clip,
+    )
 
     clipboard_tab = ClipboardTab(
         video_state,

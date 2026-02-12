@@ -13,10 +13,19 @@ PARTNER_REGEX = re.compile(r"@([^\s#]+)")
 
 class AnchorTab:
 
-    def __init__(self, video_state: VideoState, on_play_anchor):
+    def __init__(
+        self,
+        video_state: VideoState,
+        on_play_anchor,
+        on_play_clip=None,
+        on_share_clip=None,
+    ):
+
         self.video_state = video_state
         self.container = None
         self.on_play_anchor = on_play_anchor
+        self.on_play_clip = on_play_clip
+        self.on_share_clip = on_share_clip
 
         self.video_state.add_refresh_callback(self.refresh)
 
@@ -48,8 +57,9 @@ class AnchorTab:
         columns = [
             {"name": "play", "label": "", "field": "play"},
             {"name": "time", "label": "Time", "field": "_time"},
+            {"name": "end", "label": "End", "field": "_end_time"},
             {"name": "description", "label": "Notes", "field": "description"},
-            {"name": "delete", "label": "", "field": "delete"},
+            {"name": "actions", "label": "", "field": "actions"},
         ]
 
         # build rows: first row is the video description (single-column),
@@ -60,7 +70,39 @@ class AnchorTab:
             "description": self.video_state.video_description_draft or "",
             "_dirty": self.video_state.is_video_description_dirty,
         }
-        combined_rows = [video_row] + list(self.video_state.anchor_draft)
+        # ---- normalize anchors ----
+        anchor_rows = []
+        for anchor in self.video_state.anchor_draft:
+            anchor.setdefault("_type", "anchor")
+            anchor_rows.append(anchor)
+
+        # ---- normalize clips ----
+        clip_rows = []
+        video = self.video_state.get_video()
+        for clip in video.get("clips", []):
+            description = clip.get("description", "").strip()
+
+            # 🔥 auto-fill description if empty but labels/partners exist
+            if not description:
+                labels = clip.get("labels", [])
+                partners = clip.get("partners", [])
+                description = " ".join([f"#{lab}" for lab in labels] + [f"@{par}" for par in partners])
+
+            clip_rows.append(
+                {
+                    "id": clip["clip_id"],
+                    "_type": "clip",
+                    "_clip": clip,  # 🔥 full original clip reference
+                    "start": clip["start"],
+                    "end": clip["end"],
+                    "_time": self._format_time(clip["start"]),
+                    "_end_time": self._format_time(clip["end"]),
+                    "description": description,
+                    "_dirty": False,
+                }
+            )
+
+        combined_rows = [video_row] + anchor_rows + clip_rows
 
         self.table = (
             ui.table(
@@ -159,21 +201,22 @@ class AnchorTab:
                 </q-tr>
 
                 <!-- MAIN ROW -->
-                <q-tr v-else :props="props" :class="props.row._dirty ? 'text-primary' : ''">
+                <q-tr v-else :props="props">
 
                     <!-- play -->
                     <q-td auto-width>
                         <q-btn
                             color="green"
                             dense flat icon="play_arrow"
-                            @click="() => $parent.$emit('play', props.row.id)"
+                            @click="() => $parent.$emit('play', props.row)"
                         />
                     </q-td>
 
-                    <!-- time -->
+                    <!-- start time -->
                     <q-td>
                         {{ props.row._time }}
                         <q-popup-edit
+                            v-if="props.row._type === 'anchor'"
                             v-model="props.row._time"
                             v-slot="scope"
                             @update:model-value="() => $parent.$emit('edit', props.row)"
@@ -186,88 +229,67 @@ class AnchorTab:
                             />
                         </q-popup-edit>
                     </q-td>
-                        <!-- DESCRIPTION (inline chips replacing #labels and @partners) -->
-                        <q-td>
 
-                        <!-- inline rendered description -->
+                    <!-- end time (clip only) -->
+                    <q-td>
+                        <div v-if="props.row._type === 'clip'">
+                            {{ props.row._end_time }}
+                        </div>
+                    </q-td>
+
+                    <!-- description -->
+                    <q-td>
                         <div style="white-space: pre-wrap; line-height: 1.6;">
-                                <template
+                            <template
                                 v-for="(part, idx) in props.row.description.split(/(#[^\s#@]+|@[^\s#@]+)/g)"
                                 :key="idx"
-                                >
-                                <!-- LABEL CHIP -->
+                            >
                                 <q-chip
-                                        v-if="part.startsWith('#')"
-                                        dense
-                                        size="sm"
-                                        outline
-                                        color="primary"
-                                        icon="label"
-                                        class="q-mr-xs"
-                                >
-                                        {{ part.slice(1) }}
-                                </q-chip>
-
-                                <!-- PARTNER CHIP -->
-                                <q-chip
-                                        v-else-if="part.startsWith('@')"
-                                        dense
-                                        outline
-                                        size="sm"
-                                        icon="person"
-                                        color="primary"
-                                        class="q-mr-xs"
-                                >
-                                        {{ part.slice(1) }}
-                                </q-chip>
-
-                                <!-- normal text -->
-                                <span v-else>
-                                        {{ part }}
-                                </span>
-                                </template>
-                        </div>
-
-                        <!-- editor -->
-                        <q-popup-edit
-                                v-model="props.row.description"
-                                v-slot="scope"
-                                @update:model-value="() => $parent.$emit('edit', props.row)"
-                        >
-                                <div class="row q-gutter-sm">
-                                <div class="col">
-                                    <q-input
-                                    v-model="scope.value"
-                                    type="textarea"
-                                    dense
-                                    autogrow
-                                    autofocus
-                                    placeholder="use #labels and @partners inline"
-                                    />
-                                </div>
-                                <div class="col-auto justify-end">
-                                    <q-btn
-                                    dense
-                                    flat
+                                    v-if="part.startsWith('#')"
+                                    dense size="sm" outline
                                     color="primary"
-                                    icon="send"
-                                    @click="scope.set"
-                                    />
-                                </div>
-                                </div>
-                        </q-popup-edit>
-                        </q-td>
+                                    icon="label"
+                                    class="q-mr-xs"
+                                >
+                                    {{ part.slice(1) }}
+                                </q-chip>
 
-                    <!-- delete -->
+                                <q-chip
+                                    v-else-if="part.startsWith('@')"
+                                    dense size="sm" outline
+                                    color="primary"
+                                    icon="person"
+                                    class="q-mr-xs"
+                                >
+                                    {{ part.slice(1) }}
+                                </q-chip>
+
+                                <span v-else>{{ part }}</span>
+                            </template>
+                        </div>
+                    </q-td>
+
+                    <!-- actions -->
                     <q-td auto-width>
+
+                        <!-- share (clip only) -->
                         <q-btn
-                            color="red"
+                            v-if="props.row._type === 'clip'"
+                            dense flat icon="share"
+                            color="primary"
+                            @click="() => $parent.$emit('share', props.row)"
+                        />
+
+                        <!-- delete -->
+                        <q-btn
                             dense flat icon="delete"
+                            color="red"
                             @click="() => $parent.$emit('delete', props.row.id)"
                         />
                     </q-td>
 
                 </q-tr>
+
                 """,
         )
 
@@ -292,6 +314,19 @@ class AnchorTab:
             self.refresh()
 
         def on_play(e: events.GenericEventArguments):
+            row = e.args
+            if row["_type"] == "anchor":
+                self.on_play_anchor(row["start"])
+            else:
+                if self.on_play_clip:
+                    self.on_play_clip(row["_clip"])
+
+        def on_share(e: events.GenericEventArguments):
+            row = e.args
+            if row["_type"] == "clip" and self.on_share_clip:
+                self.on_share_clip(row["_clip"])
+
+        def _on_play(e: events.GenericEventArguments):
             anchor_id = e.args
             for anchor in self.video_state.anchor_draft:
                 if anchor["id"] == anchor_id:
@@ -321,6 +356,7 @@ class AnchorTab:
 
         self.table.on("edit", on_edit)
         self.table.on("play", on_play)
+        self.table.on("share", on_share)
         self.table.on("delete", on_delete)
         self.table.on("edit-video-description", on_edit_video_description)
 
