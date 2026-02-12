@@ -56,8 +56,7 @@ class AnchorTab:
         # ---------- table ----------
         columns = [
             {"name": "play", "label": "", "field": "play"},
-            {"name": "time", "label": "Time", "field": "_time"},
-            {"name": "end", "label": "End", "field": "_end_time"},
+            {"name": "timestamp", "label": "Timestamp", "field": "timestamp"},
             {"name": "description", "label": "Notes", "field": "description"},
             {"name": "actions", "label": "", "field": "actions"},
         ]
@@ -92,7 +91,7 @@ class AnchorTab:
                 {
                     "id": clip["clip_id"],
                     "_type": "clip",
-                    "_clip": clip,  # 🔥 full original clip reference
+                    "_clip": clip,
                     "start": clip["start"],
                     "end": clip["end"],
                     "_time": self._format_time(clip["start"]),
@@ -201,92 +200,160 @@ class AnchorTab:
                 </q-tr>
 
                 <!-- MAIN ROW -->
-                <q-tr v-else :props="props">
+                <q-tr
+                v-else
+                :props="props"
+                :class="props.row._dirty ? 'text-primary' : ''"
+                >
 
-                    <!-- play -->
-                    <q-td auto-width>
-                        <q-btn
-                            color="green"
-                            dense flat icon="play_arrow"
-                            @click="() => $parent.$emit('play', props.row)"
+                <!-- PLAY -->
+                <q-td auto-width>
+                    <q-btn
+                    dense flat icon="play_arrow"
+                    color="green"
+                    @click="() => $parent.$emit('play', props.row)"
+                    />
+                </q-td>
+
+                <!-- TIMESTAMP COLUMN -->
+                <q-td>
+
+                    <!-- ANCHOR -->
+                    <div v-if="props.row._type === 'anchor'">
+                    {{ props.row._time }}
+                    <q-popup-edit
+                        v-model="props.row._time"
+                        v-slot="scope"
+                        @update:model-value="() => $parent.$emit('edit', props.row)"
+                    >
+                        <q-input
+                        v-model="scope.value"
+                        dense autofocus
+                        placeholder="m:ss"
+                        @keyup.enter="scope.set"
                         />
-                    </q-td>
+                    </q-popup-edit>
+                    </div>
 
-                    <!-- start time -->
-                    <q-td>
+                    <!-- CLIP -->
+                    <div v-else class="column">
+
+                    <!-- START -->
+                    <div>
+                        <div>
                         {{ props.row._time }}
                         <q-popup-edit
-                            v-if="props.row._type === 'anchor'"
                             v-model="props.row._time"
                             v-slot="scope"
                             @update:model-value="() => $parent.$emit('edit', props.row)"
                         >
                             <q-input
-                                v-model="scope.value"
-                                dense autofocus
-                                placeholder="m:ss"
-                                @keyup.enter="scope.set"
+                            v-model="scope.value"
+                            dense autofocus
+                            placeholder="m:ss"
+                            @keyup.enter="scope.set"
                             />
                         </q-popup-edit>
-                    </q-td>
-
-                    <!-- end time (clip only) -->
-                    <q-td>
-                        <div v-if="props.row._type === 'clip'">
-                            {{ props.row._end_time }}
                         </div>
-                    </q-td>
+                    </div>
 
-                    <!-- description -->
-                    <q-td>
-                        <div style="white-space: pre-wrap; line-height: 1.6;">
-                            <template
-                                v-for="(part, idx) in props.row.description.split(/(#[^\s#@]+|@[^\s#@]+)/g)"
-                                :key="idx"
-                            >
-                                <q-chip
-                                    v-if="part.startsWith('#')"
-                                    dense size="sm" outline
-                                    color="primary"
-                                    icon="label"
-                                    class="q-mr-xs"
-                                >
-                                    {{ part.slice(1) }}
-                                </q-chip>
-
-                                <q-chip
-                                    v-else-if="part.startsWith('@')"
-                                    dense size="sm" outline
-                                    color="primary"
-                                    icon="person"
-                                    class="q-mr-xs"
-                                >
-                                    {{ part.slice(1) }}
-                                </q-chip>
-
-                                <span v-else>{{ part }}</span>
-                            </template>
+                    <!-- END -->
+                    <div class="q-mt-xs">
+                        <div>
+                        {{ props.row._end_time }}
+                        <q-popup-edit
+                            v-model="props.row._end_time"
+                            v-slot="scope"
+                            @update:model-value="() => $parent.$emit('edit', props.row)"
+                        >
+                            <q-input
+                            v-model="scope.value"
+                            dense autofocus
+                            placeholder="m:ss"
+                            @keyup.enter="scope.set"
+                            />
+                        </q-popup-edit>
                         </div>
-                    </q-td>
+                    </div>
 
-                    <!-- actions -->
-                    <q-td auto-width>
+                    </div>
 
-                        <!-- share (clip only) -->
-                        <q-btn
-                            v-if="props.row._type === 'clip'"
-                            dense flat icon="share"
-                            color="primary"
-                            @click="() => $parent.$emit('share', props.row)"
+                </q-td>
+
+                <!-- DESCRIPTION -->
+                <q-td>
+
+                    <div style="white-space: pre-wrap; line-height: 1.6;">
+                    <template
+                        v-for="(part, idx) in props.row.description.split(/(#[^\s#@]+|@[^\s#@]+)/g)"
+                        :key="idx"
+                    >
+                        <q-chip
+                        v-if="part.startsWith('#')"
+                        dense size="sm" outline
+                        color="primary"
+                        icon="label"
+                        class="q-mr-xs"
+                        >
+                        {{ part.slice(1) }}
+                        </q-chip>
+
+                        <q-chip
+                        v-else-if="part.startsWith('@')"
+                        dense size="sm" outline
+                        color="primary"
+                        icon="person"
+                        class="q-mr-xs"
+                        >
+                        {{ part.slice(1) }}
+                        </q-chip>
+
+                        <span v-else>{{ part }}</span>
+                    </template>
+                    </div>
+
+                    <q-popup-edit
+                    v-model="props.row.description"
+                    v-slot="scope"
+                    @update:model-value="() => $parent.$emit('edit', props.row)"
+                    >
+                    <div class="row q-gutter-sm">
+                        <div class="col">
+                        <q-input
+                            v-model="scope.value"
+                            type="textarea"
+                            dense
+                            autogrow
+                            autofocus
+                            placeholder="use #labels and @partners"
                         />
+                        </div>
+                        <div class="col-auto justify-end">
+                        <q-btn dense flat color="primary" icon="send" @click="scope.set" />
+                        </div>
+                    </div>
+                    </q-popup-edit>
 
-                        <!-- delete -->
-                        <q-btn
-                            dense flat icon="delete"
-                            color="red"
-                            @click="() => $parent.$emit('delete', props.row.id)"
-                        />
-                    </q-td>
+                </q-td>
+
+                <!-- ACTIONS -->
+                <q-td auto-width>
+
+                    <!-- SHARE -->
+                    <q-btn
+                    dense flat icon="share"
+                    color="primary"
+                    @click="() => $parent.$emit('share', props.row)"
+                    />
+
+                    <!-- DELETE -->
+                    <q-btn
+                    dense flat icon="delete"
+                    color="red"
+                    @click="() => $parent.$emit('delete', props.row)"
+                    />
+
+                </q-td>
 
                 </q-tr>
 
@@ -295,6 +362,20 @@ class AnchorTab:
 
         # ---------- handlers ----------
         def on_edit(e: events.GenericEventArguments):
+            row = dict(e.args)
+            row_id = row["id"]
+
+            # Mark dirty
+            for r in self.table.rows:
+                if r["id"] == row_id:
+                    r.update(row)
+                    r["_dirty"] = True
+                    break
+
+            ui.notify("Row edited (unsaved)", type="info")
+            self.refresh()
+
+        def _on_edit(e: events.GenericEventArguments):
             payload = dict(e.args)
             anchor_id = payload.pop("id")
 
@@ -307,11 +388,18 @@ class AnchorTab:
             self.video_state.mark_anchor_dirty()
             self.refresh()
 
-        def on_delete(e: events.GenericEventArguments):
+        def _on_delete(e: events.GenericEventArguments):
             anchor_id = e.args
             self.video_state.anchor_draft[:] = [a for a in self.video_state.anchor_draft if a["id"] != anchor_id]
             self.video_state.mark_anchor_dirty()
             self.refresh()
+
+        def on_delete(e: events.GenericEventArguments):
+            row = e.args
+            if row["_type"] == "clip":
+                ui.notify(f"Delete clicked for {row['_type']}", type="warning")
+            else:
+                ui.notify(f"Delete clicked for {row}", type="warning")
 
         def on_play(e: events.GenericEventArguments):
             row = e.args
@@ -323,8 +411,11 @@ class AnchorTab:
 
         def on_share(e: events.GenericEventArguments):
             row = e.args
-            if row["_type"] == "clip" and self.on_share_clip:
-                self.on_share_clip(row["_clip"])
+            if row["_type"] == "clip":
+                if self.on_share_clip:
+                    self.on_share_clip(row["_clip"])
+            else:
+                ui.notify("Share for anchor clicked (stub)", type="info")
 
         def _on_play(e: events.GenericEventArguments):
             anchor_id = e.args
@@ -358,6 +449,7 @@ class AnchorTab:
         self.table.on("play", on_play)
         self.table.on("share", on_share)
         self.table.on("delete", on_delete)
+
         self.table.on("edit-video-description", on_edit_video_description)
 
         # ---------- footer ----------
