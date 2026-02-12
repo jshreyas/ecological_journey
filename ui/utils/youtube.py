@@ -187,6 +187,8 @@ async def fetch_playlist_items_single(
         resp.raise_for_status()
         data = resp.json()
 
+        page_has_newer_video = False
+
         for item in data.get("items", []):
             snippet = item["snippet"]
 
@@ -194,13 +196,18 @@ async def fetch_playlist_items_single(
                 continue
 
             playlist_added = datetime.fromisoformat(snippet["publishedAt"].replace("Z", "+00:00"))
-            if latest_saved_date_dt and playlist_added < latest_saved_date_dt:
-                break  # reached older videos, stop processing
 
             vid = snippet["resourceId"]["videoId"]
 
+            # Skip already saved
             if existing_video_ids and vid in existing_video_ids:
-                continue  # already saved, skip entirely
+                continue
+
+            # Skip old videos (DO NOT break)
+            if latest_saved_date_dt and playlist_added < latest_saved_date_dt:
+                continue
+
+            page_has_newer_video = True
 
             items.append(
                 {
@@ -211,7 +218,16 @@ async def fetch_playlist_items_single(
             video_ids.append(vid)
 
         page_token = data.get("nextPageToken")
+
+        # Optimization:
+        # If no videos in this page were newer AND no next page → stop
         if not page_token:
+            break
+
+        # If the entire page was older than latest_saved_date
+        # AND we already processed some newer pages before,
+        # then it's safe to stop.
+        if latest_saved_date_dt and not page_has_newer_video:
             break
 
     return items, video_ids
