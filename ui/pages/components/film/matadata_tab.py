@@ -11,6 +11,7 @@ LABEL_REGEX = re.compile(r"#([^\s#]+)")
 PARTNER_REGEX = re.compile(r"@([^\s#]+)")
 
 
+# TODO: Clip creation? or Anchor to Clip?
 class MatadataTab:
 
     def __init__(
@@ -404,7 +405,6 @@ class MatadataTab:
         self.table.on("play", on_play)
         self.table.on("share", on_share)
         self.table.on("delete", on_delete)
-
         self.table.on("edit-video-description", on_edit_video_description)
 
         # ---------- footer ----------
@@ -422,6 +422,7 @@ class MatadataTab:
         ui.notify("Unsaved changes cleared", type="info")
 
     def _save(self):
+        # TODO: check if dirty flags are true, only then call save_video_metadata()
         try:
             self.video_state.save_video_metadata()
         except ValueError as e:
