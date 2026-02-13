@@ -19,23 +19,18 @@ class VideoState:
         self._video_data: Optional[Dict[str, Any]] = None
         self._refresh_callbacks: List[Callable] = []
         self.conversation: List[Dict[str, Any]] = []
-        # 👇 controllers
-        self._anchor_control_panel = None
 
-        # 👇 anchors
         self.anchor_draft: list[dict] | None = None
-        self._anchor_dirty: bool = False
-        # temporary UI-only fields
+        self.clip_draft: list[dict] | None = None
+        self._metadata_dirty: bool = False
+
         self.video_description_draft = None
         self.is_video_description_dirty = False
 
         self.tabber = None
         self.init_anchor_draft()
+        self.init_clip_draft()
         self.init_video_description_draft()
-
-    def get_video_notes(self) -> list[dict]:
-        video = self.get_video()
-        return video.get("notes", [])
 
     def init_video_description_draft(self):
         if self.video_description_draft is None:
@@ -59,26 +54,28 @@ class VideoState:
             }
         )
 
-        self._anchor_dirty = True
+        self._metadata_dirty = True
         self.refresh()
 
-    def get_anchors(self) -> list[dict]:
-        video = self.get_video()
-        return video.get("anchors", [])
+    def init_clip_draft(self):
+        if self.clip_draft is None:
+            source = self.get_clips()
+            self.clip_draft = [c.copy() for c in source]
+            self._metadata_dirty = False
 
     def init_anchor_draft(self):
         if self.anchor_draft is None:
             source = self.get_anchors()
             self.anchor_draft = [a.copy() for a in source]
-            self._anchor_dirty = False
+            self._metadata_dirty = False
 
     def reload_anchors(self):
         source = self.get_anchors()
         self.anchor_draft = [a.copy() for a in source]
-        self._anchor_dirty = False
+        self._metadata_dirty = False
 
     def mark_anchor_dirty(self):
-        self._anchor_dirty = True
+        self._metadata_dirty = True
 
     def save_anchors(self):
         video = self.get_video()
@@ -93,7 +90,7 @@ class VideoState:
 
         _ = save_video_metadata(video, self.user.token)
 
-        self._anchor_dirty = False
+        self._metadata_dirty = False
         self.refresh()
 
     def save_video_description(self, video_metadata: dict):
@@ -145,6 +142,8 @@ class VideoState:
         """Get labels from current video data"""
         return self.get_video().get("labels", [])
 
-    def get_notes(self) -> str:
-        """Get notes from current video data"""
+    def get_video_notes(self) -> str:
         return self.get_video().get("notes", "")
+
+    def get_anchors(self) -> list[dict]:
+        return self.get_video().get("anchors", [])

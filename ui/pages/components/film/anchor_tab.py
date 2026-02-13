@@ -68,7 +68,7 @@ class AnchorTab:
             "id": "__video_description__",
             "_is_video_description": True,
             "description": self.video_state.video_description_draft or "",
-            "_dirty": self.video_state.is_video_description_dirty,
+            "_dirty": False,
         }
         # ---- normalize anchors ----
         anchor_rows = []
@@ -437,7 +437,7 @@ class AnchorTab:
                 "Save",
                 on_click=caught_john_doe if not self.video_state.user else self._save,
             ).props("color=black")
-            save_btn.bind_enabled_from(self.video_state, "_anchor_dirty")
+            save_btn.bind_enabled_from(self.video_state, "_metadata_dirty")
 
     def _clear_unsaved(self):
         self.video_state.reload_anchors()
