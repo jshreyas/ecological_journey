@@ -342,7 +342,7 @@ class AnchorTab:
                     <!-- SHARE -->
                     <q-btn
                     dense flat icon="share"
-                    color="primary"
+                    color="accent"
                     @click="() => $parent.$emit('share', props.row)"
                     />
 
