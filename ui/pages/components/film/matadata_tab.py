@@ -11,8 +11,8 @@ LABEL_REGEX = re.compile(r"#([^\s#]+)")
 PARTNER_REGEX = re.compile(r"@([^\s#]+)")
 
 
-# TODO: This doesnt hold only anchors anymore, update name, and dependant variables
-class AnchorTab:
+# TODO: Clip creation? or Anchor to Clip?
+class MatadataTab:
 
     def __init__(
         self,
@@ -39,71 +39,62 @@ class AnchorTab:
             return
         self.container.clear()
         with self.container:
-            self._create_metaforge_ui()
+            self._create_metadata_ui()
 
-    def _create_metaforge_ui(self):
+    def _create_metadata_ui(self):
 
-        # ---------- normalize anchors ----------
+        video_row = {
+            "id": "__video_description__",
+            "_is_video_description": True,
+            "description": self.video_state.video_description_draft or "",
+            "_dirty": self.video_state.video_description_dirty,
+        }
+        anchor_rows = []
+        clip_rows = []
         for anchor in self.video_state.anchor_draft:
             anchor.setdefault("id", str(uuid4()))
             anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
             anchor.setdefault("description", anchor.get("description", ""))
-
-            anchor.setdefault("_expand", False)
             anchor.setdefault("_dirty", False)
+            anchor.setdefault("_type", "anchor")
+            anchor_rows.append(anchor)
 
         self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
 
-        # ---------- table ----------
+        for clip in self.video_state.clip_draft:
+            clip.setdefault("id", str(uuid4()))
+            clip.setdefault("_time", self._format_time(clip.get("start", 0)))
+            clip.setdefault("_end_time", self._format_time(clip.get("end", 0)))
+            clip.setdefault("_type", "clip")
+            clip.setdefault("_dirty", False)
+
+            description = (clip.get("description") or "").strip()
+            labels = clip.get("labels", []) or []
+            partners = clip.get("partners", []) or []
+
+            # Only append missing tags
+            missing_labels = [lab for lab in labels if f"#{lab}" not in description]
+
+            missing_partners = [par for par in partners if f"@{par}" not in description]
+
+            if missing_labels or missing_partners:
+                append_text = " ".join([f"#{lab}" for lab in missing_labels] + [f"@{par}" for par in missing_partners])
+
+                if description:
+                    description = f"{description}\n{append_text}"
+                else:
+                    description = append_text
+
+            clip.setdefault("description", description)
+            clip_rows.append(clip)
+
+        combined_rows = [video_row] + anchor_rows + clip_rows
         columns = [
             {"name": "play", "label": "", "field": "play"},
             {"name": "timestamp", "label": "Timestamp", "field": "timestamp"},
             {"name": "description", "label": "Notes", "field": "description"},
             {"name": "actions", "label": "", "field": "actions"},
         ]
-
-        # build rows: first row is the video description (single-column),
-        # followed by the anchor draft rows
-        video_row = {
-            "id": "__video_description__",
-            "_is_video_description": True,
-            "description": self.video_state.video_description_draft or "",
-            "_dirty": self.video_state.is_video_description_dirty,
-        }
-        # ---- normalize anchors ----
-        anchor_rows = []
-        for anchor in self.video_state.anchor_draft:
-            anchor.setdefault("_type", "anchor")
-            anchor_rows.append(anchor)
-
-        # ---- normalize clips ----
-        clip_rows = []
-        video = self.video_state.get_video()
-        for clip in video.get("clips", []):
-            description = clip.get("description", "").strip()
-
-            # 🔥 auto-fill description if empty but labels/partners exist
-            if not description:
-                labels = clip.get("labels", [])
-                partners = clip.get("partners", [])
-                description = " ".join([f"#{lab}" for lab in labels] + [f"@{par}" for par in partners])
-
-            clip_rows.append(
-                {
-                    "id": clip["clip_id"],
-                    "_type": "clip",
-                    "_clip": clip,
-                    "start": clip["start"],
-                    "end": clip["end"],
-                    "_time": self._format_time(clip["start"]),
-                    "_end_time": self._format_time(clip["end"]),
-                    "description": description,
-                    "_dirty": False,
-                }
-            )
-
-        combined_rows = [video_row] + anchor_rows + clip_rows
-
         self.table = (
             ui.table(
                 columns=columns,
@@ -373,8 +364,7 @@ class AnchorTab:
                     r["_dirty"] = True
                     break
 
-            ui.notify("Row edited (unsaved)", type="info")
-            self.video_state.mark_anchor_dirty()
+            self.video_state.mark_metadata_dirty()
             self.refresh()
 
         def on_delete(e: events.GenericEventArguments):
@@ -383,7 +373,7 @@ class AnchorTab:
                 ui.notify(f"Delete clicked for {row['_type']}", type="warning")
             else:
                 self.video_state.anchor_draft[:] = [a for a in self.video_state.anchor_draft if a["id"] != row["id"]]
-                self.video_state.mark_anchor_dirty()
+                self.video_state.mark_metadata_dirty()
                 self.refresh()
 
         def on_play(e: events.GenericEventArguments):
@@ -392,42 +382,29 @@ class AnchorTab:
                 self.on_play_anchor(row["start"])
             else:
                 if self.on_play_clip:
-                    self.on_play_clip(row["_clip"])
+                    self.on_play_clip(row)
 
         def on_share(e: events.GenericEventArguments):
             row = e.args
             if row["_type"] == "clip":
                 if self.on_share_clip:
-                    self.on_share_clip(row["_clip"])
+                    self.on_share_clip(row)
             else:
                 ui.notify("Share for anchor clicked (stub)", type="info")
 
         def on_edit_video_description(e: events.GenericEventArguments):
             value = e.args
 
-            # 1️⃣ update centralized state
             self.video_state.video_description_draft = value
-            self.video_state.is_video_description_dirty = True
+            self.video_state.video_description_dirty = True
+            self.video_state._metadata_dirty = True
 
-            # 2️⃣ update synthetic row immediately
-            for row in self.table.rows:
-                if row.get("_is_video_description"):
-                    row["description"] = value
-                    row["_dirty"] = True
-                    break
-
-            self.video_state.mark_anchor_dirty()
-
-            ui.notify(self.video_state.video_description_draft, type="info")
-
-            # optional but safe
             self.refresh()
 
         self.table.on("edit", on_edit)
         self.table.on("play", on_play)
         self.table.on("share", on_share)
         self.table.on("delete", on_delete)
-
         self.table.on("edit-video-description", on_edit_video_description)
 
         # ---------- footer ----------
@@ -437,57 +414,27 @@ class AnchorTab:
                 "Save",
                 on_click=caught_john_doe if not self.video_state.user else self._save,
             ).props("color=black")
-            save_btn.bind_enabled_from(self.video_state, "_anchor_dirty")
+            save_btn.bind_enabled_from(self.video_state, "_metadata_dirty")
 
     def _clear_unsaved(self):
-        self.video_state.reload_anchors()
+        self.video_state.reload_metadata()
         self.refresh()
         ui.notify("Unsaved changes cleared", type="info")
 
     def _save(self):
-        # TODO: combine video descirption and anchors save into single API call
-        for anchor in self.video_state.anchor_draft:
-
-            # time
-            try:
-                m, s = anchor["_time"].split(":")
-                anchor["start"] = int(m) * 60 + int(s)
-            except Exception:
-                ui.notify(
-                    f"Invalid time format for anchor '{anchor.get('_time', '')}'",
-                    type="warning",
-                )
-                return
-
-            # extract labels from description
-            desc = anchor.get("description", "")
-            anchor["labels"] = list(set(LABEL_REGEX.findall(desc)))
-            anchor["partners"] = list(set(PARTNER_REGEX.findall(desc)))
-
-            anchor.pop("_time", None)
-            anchor.pop("_dirty", None)
-
-        self.video_state.save_anchors()
-
-        if self.video_state.is_video_description_dirty:
-            self.video_state.is_video_description_dirty = False
-            video_metadata = {}
-            # extract labels from description
-            video_desc = self.video_state.video_description_draft
-            video_metadata["notes"] = video_desc
-            video_metadata["labels"] = list(set(LABEL_REGEX.findall(video_desc)))
-            video_metadata["partners"] = list(set(PARTNER_REGEX.findall(video_desc)))
-
-            self.video_state.save_video_description(video_metadata)
-
-            # rebuild UI so description row shows saved state
-            self.refresh()
-
-        for anchor in self.video_state.anchor_draft:
-            anchor["_dirty"] = False
+        # TODO: check if dirty flags are true, only then call save_video_metadata()
+        try:
+            self.video_state.save_video_metadata()
+        except ValueError as e:
+            ui.notify(str(e), type="warning")
+            return
 
         ui.notify("Film metadata saved", type="positive")
 
     def _format_time(self, t: int) -> str:
-        m, s = divmod(t, 60)
-        return f"{m}:{s:02d}"
+        hours, remainder = divmod(t, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{seconds:02d}"
+        return f"{minutes}:{seconds:02d}"

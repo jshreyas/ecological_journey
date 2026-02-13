@@ -190,7 +190,9 @@ def render_video_card(v, show_clips_count):
         ui.label(f"📂 {v['playlist_name']}").classes("text-xs text-primary")
 
         if show_clips_count:
-            ui.label(f"🎬 {len(v.get('clips', []))}").classes("text-xs")
+            with ui.row().classes("justify-between w-full"):
+                ui.label(f"⚓ {len(v.get('anchors', []))}").classes("text-xs")
+                ui.label(f"🎬 {len(v.get('clips', []))}").classes("text-xs")
 
 
 def render_media_page(

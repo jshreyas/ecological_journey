@@ -80,7 +80,7 @@ class FilmboardTab:
                 ui.label(f"🏷️ {labels_html}").classes("text-xs")
                 with ui.row().classes("w-full gap-2 justify-between"):
                     ui.label(f"📂 {v['playlist_name']}").classes("text-xs text-primary")
-                    ui.label(f"🎬 {len(v.get('clips', 0))}").classes("text-xs")
+                    ui.label(f"⚓ {len(v.get('anchors', 0))}  🎬 {len(v.get('clips', 0))}").classes("text-xs")
 
     def _handle_video_click(self, video_id):
         """Handle video click"""

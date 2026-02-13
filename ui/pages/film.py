@@ -5,9 +5,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 from nicegui import ui
 
-from ui.pages.components.film.anchor_tab import AnchorTab
 from ui.pages.components.film.filmboard_tab import FilmboardTab
 from ui.pages.components.film.learnings_tab import LearningsTab
+from ui.pages.components.film.matadata_tab import MatadataTab
 from ui.pages.components.film.metaforge_tab import MetaforgeTab
 from ui.pages.components.film.navigation_tab import NavigationTab
 from ui.pages.components.film.player_controls_tab import PlayerControlsTab
@@ -53,7 +53,7 @@ def film_page(user: User | None, video_id: str):
     metaforge_tab = MetaforgeTab(video_state)
     filmboard_tab = FilmboardTab(video_state)
     learnings_tab = LearningsTab(video_state)
-    anchor_tab = AnchorTab(
+    metadata_tab = MatadataTab(
         video_state,
         on_play_anchor=player_controls_tab.play_at_time,
         on_play_clip=player_controls_tab.play_clip,
@@ -74,7 +74,7 @@ def film_page(user: User | None, video_id: str):
                 with ui.tabs().classes("w-full") as tabs:
                     one = ui.tab("Metadata", label="", icon="description").classes("w-full bg-primary text-black")
                     two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
-                    five = ui.tab("Control Panel", label="", icon="bookmark").classes("w-full bg-primary text-black")
+                    five = ui.tab("Control Panel", label="", icon="bookmarks").classes("w-full bg-primary text-black")
                 with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
@@ -82,8 +82,8 @@ def film_page(user: User | None, video_id: str):
                     with ui.tab_panel(two):
                         chat_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         learnings_tab.create_tab(chat_container)
-                    with ui.tab_panel(five) as anchortab_container:
-                        anchor_tab.create_tab(anchortab_container)
+                    with ui.tab_panel(five) as metadata_tab_container:
+                        metadata_tab.create_tab(metadata_tab_container)
                 video_state.tabber = tabs
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
