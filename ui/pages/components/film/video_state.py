@@ -23,25 +23,10 @@ class VideoState:
         self.anchor_draft: list[dict] | None = None
         self.clip_draft: list[dict] | None = None
         self._metadata_dirty: bool = False
-
-        self.video_description_draft = None
-        self.is_video_description_dirty = False
+        self.video_description_draft: str = None
 
         self.tabber = None
-        self.init_anchor_draft()
-        self.init_clip_draft()
-        self.init_video_description_draft()
-
-    def init_video_description_draft(self):
-        if self.video_description_draft is None:
-            source = self.get_video_notes()
-            self.video_description_draft = source
-            self.is_video_description_dirty = False
-
-    def reload_video_description(self):
-        source = self.get_video_notes()
-        self.video_description_draft = source
-        self.is_video_description_dirty = False
+        self.reload_metadata()
 
     def add_anchor_at_time(self, t: float):
         t = int(t)
@@ -57,24 +42,13 @@ class VideoState:
         self._metadata_dirty = True
         self.refresh()
 
-    def init_clip_draft(self):
-        if self.clip_draft is None:
-            source = self.get_clips()
-            self.clip_draft = [c.copy() for c in source]
-            self._metadata_dirty = False
-
-    def init_anchor_draft(self):
-        if self.anchor_draft is None:
-            source = self.get_anchors()
-            self.anchor_draft = [a.copy() for a in source]
-            self._metadata_dirty = False
-
-    def reload_anchors(self):
-        source = self.get_anchors()
-        self.anchor_draft = [a.copy() for a in source]
+    def reload_metadata(self):
+        self.anchor_draft = [a.copy() for a in self.get_anchors()]
+        self.clip_draft = [c.copy() for c in self.get_clips()]
+        self.video_description_draft = self.get_video_notes()
         self._metadata_dirty = False
 
-    def mark_anchor_dirty(self):
+    def mark_metadata_dirty(self):
         self._metadata_dirty = True
 
     def save_anchors(self):
@@ -93,6 +67,7 @@ class VideoState:
         self._metadata_dirty = False
         self.refresh()
 
+    # TODO: replace this to do a single metadata save
     def save_video_description(self, video_metadata: dict):
         video = self.get_video()
         video["notes"] = video_metadata.get("notes", "")
@@ -101,7 +76,6 @@ class VideoState:
         video.pop("clips")
         video.pop("anchors")
         _ = save_video_metadata(video, self.user.token)
-        self.is_video_description_dirty = False
         self.refresh()
 
     def get_video(self) -> Optional[Dict[str, Any]]:

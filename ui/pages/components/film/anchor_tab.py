@@ -62,27 +62,20 @@ class AnchorTab:
         self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
 
         for clip in self.video_state.clip_draft:
+            clip.setdefault("id", str(uuid4()))
+            clip.setdefault("_time", self._format_time(clip.get("start", 0)))
+            clip.setdefault("_end_time", self._format_time(clip.get("end", 0)))
+            clip.setdefault("_type", "clip")
+            clip.setdefault("_dirty", False)
+
             description = clip.get("description", "").strip()
+            labels = clip.get("labels", [])
+            partners = clip.get("partners", [])
 
-            # 🔥 auto-fill description if empty but labels/partners exist
-            if not description:
-                labels = clip.get("labels", [])
-                partners = clip.get("partners", [])
-                description = " ".join([f"#{lab}" for lab in labels] + [f"@{par}" for par in partners])
-
-            clip_rows.append(
-                {
-                    "id": clip["clip_id"],
-                    "_type": "clip",
-                    "_clip": clip,
-                    "start": clip["start"],
-                    "end": clip["end"],
-                    "_time": self._format_time(clip["start"]),
-                    "_end_time": self._format_time(clip["end"]),
-                    "description": description,
-                    "_dirty": False,
-                }
-            )
+            append_to_description = " ".join([f"#{lab}" for lab in labels] + [f"@{par}" for par in partners])
+            description = f"{description}\n{append_to_description}" if append_to_description else description
+            clip.setdefault("description", description)
+            clip_rows.append(clip)
 
         combined_rows = [video_row] + anchor_rows + clip_rows
         columns = [
@@ -361,7 +354,7 @@ class AnchorTab:
                     break
 
             ui.notify("Row edited (unsaved)", type="info")
-            self.video_state.mark_anchor_dirty()
+            self.video_state.mark_metadata_dirty()
             self.refresh()
 
         def on_delete(e: events.GenericEventArguments):
@@ -370,7 +363,7 @@ class AnchorTab:
                 ui.notify(f"Delete clicked for {row['_type']}", type="warning")
             else:
                 self.video_state.anchor_draft[:] = [a for a in self.video_state.anchor_draft if a["id"] != row["id"]]
-                self.video_state.mark_anchor_dirty()
+                self.video_state.mark_metadata_dirty()
                 self.refresh()
 
         def on_play(e: events.GenericEventArguments):
@@ -394,7 +387,6 @@ class AnchorTab:
 
             # 1️⃣ update centralized state
             self.video_state.video_description_draft = value
-            self.video_state.is_video_description_dirty = True
 
             # 2️⃣ update synthetic row immediately
             for row in self.table.rows:
@@ -403,7 +395,7 @@ class AnchorTab:
                     row["_dirty"] = True
                     break
 
-            self.video_state.mark_anchor_dirty()
+            self.video_state.mark_metadata_dirty()
 
             ui.notify(self.video_state.video_description_draft, type="info")
 
@@ -427,7 +419,7 @@ class AnchorTab:
             save_btn.bind_enabled_from(self.video_state, "_metadata_dirty")
 
     def _clear_unsaved(self):
-        self.video_state.reload_anchors()
+        self.video_state.reload_metadata()
         self.refresh()
         ui.notify("Unsaved changes cleared", type="info")
 
@@ -456,20 +448,20 @@ class AnchorTab:
 
         self.video_state.save_anchors()
 
-        if self.video_state.is_video_description_dirty:
-            self.video_state.is_video_description_dirty = False
-            video_metadata = {}
-            # extract labels from description
-            video_desc = self.video_state.video_description_draft
-            video_metadata["notes"] = video_desc
-            video_metadata["labels"] = list(set(LABEL_REGEX.findall(video_desc)))
-            video_metadata["partners"] = list(set(PARTNER_REGEX.findall(video_desc)))
+        # TODO: perform a single metadata save
+        ##
+        video_metadata = {}
+        # extract labels from description
+        video_desc = self.video_state.video_description_draft
+        video_metadata["notes"] = video_desc
+        video_metadata["labels"] = list(set(LABEL_REGEX.findall(video_desc)))
+        video_metadata["partners"] = list(set(PARTNER_REGEX.findall(video_desc)))
 
-            self.video_state.save_video_description(video_metadata)
+        self.video_state.save_video_description(video_metadata)
 
-            # rebuild UI so description row shows saved state
-            self.refresh()
-
+        # rebuild UI so description row shows saved state
+        self.refresh()
+        ##
         for anchor in self.video_state.anchor_draft:
             anchor["_dirty"] = False
 
