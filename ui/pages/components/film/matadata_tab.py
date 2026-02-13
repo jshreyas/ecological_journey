@@ -38,9 +38,9 @@ class MatadataTab:
             return
         self.container.clear()
         with self.container:
-            self._create_metaforge_ui()
+            self._create_metadata_ui()
 
-    def _create_metaforge_ui(self):
+    def _create_metadata_ui(self):
 
         video_row = {
             "id": "__video_description__",
@@ -381,13 +381,13 @@ class MatadataTab:
                 self.on_play_anchor(row["start"])
             else:
                 if self.on_play_clip:
-                    self.on_play_clip(row["_clip"])
+                    self.on_play_clip(row)
 
         def on_share(e: events.GenericEventArguments):
             row = e.args
             if row["_type"] == "clip":
                 if self.on_share_clip:
-                    self.on_share_clip(row["_clip"])
+                    self.on_share_clip(row)
             else:
                 ui.notify("Share for anchor clicked (stub)", type="info")
 
