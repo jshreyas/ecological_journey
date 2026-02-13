@@ -68,12 +68,23 @@ class AnchorTab:
             clip.setdefault("_type", "clip")
             clip.setdefault("_dirty", False)
 
-            description = clip.get("description", "").strip()
-            labels = clip.get("labels", [])
-            partners = clip.get("partners", [])
+            description = (clip.get("description") or "").strip()
+            labels = clip.get("labels", []) or []
+            partners = clip.get("partners", []) or []
 
-            append_to_description = " ".join([f"#{lab}" for lab in labels] + [f"@{par}" for par in partners])
-            description = f"{description}\n{append_to_description}" if append_to_description else description
+            # Only append missing tags
+            missing_labels = [lab for lab in labels if f"#{lab}" not in description]
+
+            missing_partners = [par for par in partners if f"@{par}" not in description]
+
+            if missing_labels or missing_partners:
+                append_text = " ".join([f"#{lab}" for lab in missing_labels] + [f"@{par}" for par in missing_partners])
+
+                if description:
+                    description = f"{description}\n{append_text}"
+                else:
+                    description = append_text
+
             clip.setdefault("description", description)
             clip_rows.append(clip)
 

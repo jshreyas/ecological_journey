@@ -56,105 +56,6 @@ class VideoState:
     def mark_metadata_dirty(self):
         self._metadata_dirty = True
 
-    def save_anchors(self):
-        video = self.get_video()
-
-        video["anchors"] = sorted(
-            self.anchor_draft,
-            key=lambda a: a["start"],
-        )
-
-        # IMPORTANT: remove unrelated embedded fields
-        video.pop("clips", None)
-
-        _ = save_video_metadata(video, self.user.token)
-
-        self._metadata_dirty = False
-        self.refresh()
-
-    # TODO: replace this to do a single metadata save
-    def save_video_description(self, video_metadata: dict):
-        video = self.get_video()
-        video["notes"] = video_metadata.get("notes", "")
-        video["partners"] = video_metadata.get("partners", [])
-        video["labels"] = video_metadata.get("labels", [])
-        video.pop("clips")
-        video.pop("anchors")
-        _ = save_video_metadata(video, self.user.token)
-        self.refresh()
-        from re import compile
-
-        LABEL_REGEX = compile(r"#([^\s#]+)")
-        PARTNER_REGEX = compile(r"@([^\s#]+)")
-
-        video = self.get_video()
-
-        # ---------- VIDEO LEVEL ----------
-        notes = self.video_description_draft or ""
-        video["notes"] = notes
-        video["labels"] = list(set(LABEL_REGEX.findall(notes)))
-        video["partners"] = list(set(PARTNER_REGEX.findall(notes)))
-
-        # ---------- ANCHORS ----------
-        cleaned_anchors = []
-        for anchor in self.anchor_draft:
-
-            try:
-                m, s = anchor["_time"].split(":")
-                start = int(m) * 60 + int(s)
-            except Exception:
-                raise ValueError(f"Invalid time format for anchor '{anchor.get('_time', '')}'")
-
-            desc = anchor.get("description", "")
-
-            cleaned_anchors.append(
-                {
-                    "start": start,
-                    "title": anchor.get("title", ""),
-                    "description": desc,
-                    "labels": list(set(LABEL_REGEX.findall(desc))),
-                    "partners": list(set(PARTNER_REGEX.findall(desc))),
-                }
-            )
-
-        video["anchors"] = sorted(cleaned_anchors, key=lambda a: a["start"])
-
-        # ---------- CLIPS ----------
-        cleaned_clips = []
-        for clip in self.clip_draft:
-
-            try:
-                m, s = clip["_time"].split(":")
-                start = int(m) * 60 + int(s)
-            except Exception:
-                raise ValueError(f"Invalid start time format for clip '{clip.get('_time', '')}'")
-
-            try:
-                m, s = clip["_end_time"].split(":")
-                end = int(m) * 60 + int(s)
-            except Exception:
-                raise ValueError(f"Invalid end time format for clip '{clip.get('_end_time', '')}'")
-
-            desc = clip.get("description", "")
-
-            cleaned_clips.append(
-                {
-                    "start": start,
-                    "end": end,
-                    "description": desc,
-                    "labels": list(set(LABEL_REGEX.findall(desc))),
-                    "partners": list(set(PARTNER_REGEX.findall(desc))),
-                }
-            )
-
-        video["clips"] = cleaned_clips
-
-        # ---------- SAVE ----------
-        _ = save_video_metadata(video, self.user.token)
-
-        self._metadata_dirty = False
-        self.refresh()
-
     def get_video(self) -> Optional[Dict[str, Any]]:
         """Get video data, loading from API if not cached"""
         if self._video_data is None:
@@ -200,32 +101,33 @@ class VideoState:
         return self.get_video().get("anchors", [])
 
     def save_video_metadata(self):
-        import re
-
-        LABEL_REGEX = re.compile(r"#([^\s#]+)")
-        PARTNER_REGEX = re.compile(r"@([^\s#]+)")
-
         video = self.get_video()
+        duration = video.get("duration_seconds")
 
         # ---------- VIDEO LEVEL ----------
         notes = self.video_description_draft or ""
         video["notes"] = notes
-        video["labels"] = list(set(LABEL_REGEX.findall(notes)))
-        video["partners"] = list(set(PARTNER_REGEX.findall(notes)))
+        labels, partners = self._extract_labels_partners(notes)
+        video["labels"] = labels
+        video["partners"] = partners
 
         # ---------- ANCHORS ----------
         for anchor in self.anchor_draft:
 
-            # Convert time
             if "_time" in anchor:
-                anchor["start"] = self._parse_timestamp(anchor["_time"], f"anchor '{anchor.get('title', '')}'")
+                anchor["start"] = self._parse_timestamp(
+                    anchor["_time"],
+                    f"anchor '{anchor.get('title', '')}'",
+                )
 
-            # Parse labels / partners
+            if anchor.get("start") is not None:
+                self._validate_anchor_time(anchor.get("start"), duration, f"anchor '{anchor.get('title', '')}'")
+
             desc = anchor.get("description", "")
-            anchor["labels"] = list(set(LABEL_REGEX.findall(desc)))
-            anchor["partners"] = list(set(PARTNER_REGEX.findall(desc)))
+            labels, partners = self._extract_labels_partners(desc)
+            anchor["labels"] = labels
+            anchor["partners"] = partners
 
-            # Clean UI-only fields
             anchor.pop("_time", None)
             anchor.pop("_dirty", None)
             anchor.pop("_type", None)
@@ -238,19 +140,25 @@ class VideoState:
         # ---------- CLIPS ----------
         for clip in self.clip_draft:
 
-            # Convert start
+            context = f"clip '{clip.get('title', '')}'"
+
             if "_time" in clip:
-                clip["start"] = self._parse_timestamp(clip["_time"], f"clip start '{clip.get('title', '')}'")
+                clip["start"] = self._parse_timestamp(clip["_time"], f"{context} start")
 
             if "_end_time" in clip:
-                clip["end"] = self._parse_timestamp(clip["_end_time"], f"clip end '{clip.get('title', '')}'")
+                clip["end"] = self._parse_timestamp(clip["_end_time"], f"{context} end")
 
-            # Parse labels / partners
+            start = clip.get("start")
+            end = clip.get("end")
+
+            if start is not None and end is not None:
+                self._validate_clip_times(start, end, duration, context)
+
             desc = clip.get("description", "")
-            clip["labels"] = list(set(LABEL_REGEX.findall(desc)))
-            clip["partners"] = list(set(PARTNER_REGEX.findall(desc)))
+            labels, partners = self._extract_labels_partners(desc)
+            clip["labels"] = labels
+            clip["partners"] = partners
 
-            # Clean UI-only fields
             clip.pop("_time", None)
             clip.pop("_end_time", None)
             clip.pop("_dirty", None)
@@ -288,3 +196,26 @@ class VideoState:
             return hours * 3600 + minutes * 60 + seconds
 
         raise ValueError(f"Invalid time format for {context}: '{value}'")
+
+    def _extract_labels_partners(self, text: str):
+        import re
+
+        LABEL_REGEX = re.compile(r"#([^\s#]+)")
+        PARTNER_REGEX = re.compile(r"@([^\s#]+)")
+
+        return (
+            list(set(LABEL_REGEX.findall(text or ""))),
+            list(set(PARTNER_REGEX.findall(text or ""))),
+        )
+
+    def _validate_clip_times(self, start: int, end: int, duration: int, context: str):
+        if end <= start:
+            raise ValueError(f"{context}: end time must be greater than start time")
+
+        if duration is not None and end > duration:
+            raise ValueError(f"{context}: end time exceeds video duration")
+
+    def _validate_anchor_time(self, start: int, duration: int, context: str):
+
+        if duration is not None and start > duration:
+            raise ValueError(f"{context}: start time exceeds video duration")
