@@ -11,8 +11,7 @@ LABEL_REGEX = re.compile(r"#([^\s#]+)")
 PARTNER_REGEX = re.compile(r"@([^\s#]+)")
 
 
-# TODO: This doesnt hold only anchors anymore, update name, and dependant variables
-class AnchorTab:
+class MatadataTab:
 
     def __init__(
         self,
