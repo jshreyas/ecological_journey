@@ -2,12 +2,15 @@
 VideoState class for centralized state management of video data
 """
 
+import re
 from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
 
 from ui.data.crud import load_video
 from ui.utils.dialog_puns import generate_funny_title
 from ui.utils.user_context import User
 from ui.utils.utils_api import save_video_metadata
+
+TIME_PATTERN = re.compile(r"^(\d+:[0-5]\d:[0-5]\d|\d+:[0-5]\d)$")
 
 
 class VideoState:
@@ -215,11 +218,7 @@ class VideoState:
 
             # Convert time
             if "_time" in anchor:
-                try:
-                    m, s = anchor["_time"].split(":")
-                    anchor["start"] = int(m) * 60 + int(s)
-                except Exception:
-                    raise ValueError(f"Invalid time format for anchor '{anchor.get('_time', '')}'")
+                anchor["start"] = self._parse_timestamp(anchor["_time"], f"anchor '{anchor.get('title', '')}'")
 
             # Parse labels / partners
             desc = anchor.get("description", "")
@@ -241,19 +240,10 @@ class VideoState:
 
             # Convert start
             if "_time" in clip:
-                try:
-                    m, s = clip["_time"].split(":")
-                    clip["start"] = int(m) * 60 + int(s)
-                except Exception:
-                    raise ValueError(f"Invalid start time format for clip '{clip.get('_time', '')}'")
+                clip["start"] = self._parse_timestamp(clip["_time"], f"clip start '{clip.get('title', '')}'")
 
-            # Convert end
             if "_end_time" in clip:
-                try:
-                    m, s = clip["_end_time"].split(":")
-                    clip["end"] = int(m) * 60 + int(s)
-                except Exception:
-                    raise ValueError(f"Invalid end time format for clip '{clip.get('_end_time', '')}'")
+                clip["end"] = self._parse_timestamp(clip["_end_time"], f"clip end '{clip.get('title', '')}'")
 
             # Parse labels / partners
             desc = clip.get("description", "")
@@ -282,3 +272,19 @@ class VideoState:
             clip["_dirty"] = False
 
         self.refresh()
+
+    def _parse_timestamp(self, value: str, context: str) -> int:
+        if not isinstance(value, str) or not TIME_PATTERN.fullmatch(value):
+            raise ValueError(f"Invalid time format for {context}: '{value}'. " "Expected mm:ss or hh:mm:ss")
+
+        parts = list(map(int, value.split(":")))
+
+        if len(parts) == 2:
+            minutes, seconds = parts
+            return minutes * 60 + seconds
+
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+            return hours * 3600 + minutes * 60 + seconds
+
+        raise ValueError(f"Invalid time format for {context}: '{value}'")

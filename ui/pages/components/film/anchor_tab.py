@@ -353,7 +353,6 @@ class AnchorTab:
                     r["_dirty"] = True
                     break
 
-            ui.notify("Row edited (unsaved)", type="info")
             self.video_state.mark_metadata_dirty()
             self.refresh()
 
@@ -422,5 +421,9 @@ class AnchorTab:
         ui.notify("Film metadata saved", type="positive")
 
     def _format_time(self, t: int) -> str:
-        m, s = divmod(t, 60)
-        return f"{m}:{s:02d}"
+        hours, remainder = divmod(t, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{seconds:02d}"
+        return f"{minutes}:{seconds:02d}"
