@@ -448,7 +448,7 @@ class AnchorTab:
                 "Save",
                 on_click=caught_john_doe if not self.video_state.user else self._save,
             ).props("color=black")
-            save_btn.bind_enabled_from(self.video_state, "is_anchor_dirty")
+            save_btn.bind_enabled_from(self.video_state, "_anchor_dirty")
 
     def _clear_unsaved(self):
         self.video_state.reload_anchors()
