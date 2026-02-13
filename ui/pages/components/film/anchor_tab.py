@@ -43,43 +43,25 @@ class AnchorTab:
 
     def _create_metaforge_ui(self):
 
-        # ---------- normalize anchors ----------
-        for anchor in self.video_state.anchor_draft:
-            anchor.setdefault("id", str(uuid4()))
-            anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
-            anchor.setdefault("description", anchor.get("description", ""))
-
-            anchor.setdefault("_expand", False)
-            anchor.setdefault("_dirty", False)
-
-        self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
-
-        # ---------- table ----------
-        columns = [
-            {"name": "play", "label": "", "field": "play"},
-            {"name": "timestamp", "label": "Timestamp", "field": "timestamp"},
-            {"name": "description", "label": "Notes", "field": "description"},
-            {"name": "actions", "label": "", "field": "actions"},
-        ]
-
-        # build rows: first row is the video description (single-column),
-        # followed by the anchor draft rows
         video_row = {
             "id": "__video_description__",
             "_is_video_description": True,
             "description": self.video_state.video_description_draft or "",
             "_dirty": False,
         }
-        # ---- normalize anchors ----
         anchor_rows = []
+        clip_rows = []
         for anchor in self.video_state.anchor_draft:
+            anchor.setdefault("id", str(uuid4()))
+            anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
+            anchor.setdefault("description", anchor.get("description", ""))
+            anchor.setdefault("_dirty", False)
             anchor.setdefault("_type", "anchor")
             anchor_rows.append(anchor)
 
-        # ---- normalize clips ----
-        clip_rows = []
-        video = self.video_state.get_video()
-        for clip in video.get("clips", []):
+        self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
+
+        for clip in self.video_state.clip_draft:
             description = clip.get("description", "").strip()
 
             # 🔥 auto-fill description if empty but labels/partners exist
@@ -103,7 +85,12 @@ class AnchorTab:
             )
 
         combined_rows = [video_row] + anchor_rows + clip_rows
-
+        columns = [
+            {"name": "play", "label": "", "field": "play"},
+            {"name": "timestamp", "label": "Timestamp", "field": "timestamp"},
+            {"name": "description", "label": "Notes", "field": "description"},
+            {"name": "actions", "label": "", "field": "actions"},
+        ]
         self.table = (
             ui.table(
                 columns=columns,
