@@ -11,6 +11,7 @@ LABEL_REGEX = re.compile(r"#([^\s#]+)")
 PARTNER_REGEX = re.compile(r"@([^\s#]+)")
 
 
+# TODO: This doesnt hold only anchors anymore, update name, and dependant variables
 class AnchorTab:
 
     def __init__(
@@ -373,18 +374,6 @@ class AnchorTab:
                     break
 
             ui.notify("Row edited (unsaved)", type="info")
-            self.refresh()
-
-        def _on_edit(e: events.GenericEventArguments):
-            payload = dict(e.args)
-            anchor_id = payload.pop("id")
-
-            for anchor in self.video_state.anchor_draft:
-                if anchor["id"] == anchor_id:
-                    anchor.update(payload)
-                    anchor["_dirty"] = True
-                    break
-
             self.video_state.mark_anchor_dirty()
             self.refresh()
 
