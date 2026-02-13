@@ -74,7 +74,7 @@ def film_page(user: User | None, video_id: str):
                 with ui.tabs().classes("w-full") as tabs:
                     one = ui.tab("Metadata", label="", icon="description").classes("w-full bg-primary text-black")
                     two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
-                    five = ui.tab("Control Panel", label="", icon="bookmark").classes("w-full bg-primary text-black")
+                    five = ui.tab("Control Panel", label="", icon="bookmarks").classes("w-full bg-primary text-black")
                 with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
                     with ui.tab_panel(one):
                         metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
