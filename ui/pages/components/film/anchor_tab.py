@@ -388,18 +388,14 @@ class AnchorTab:
             self.video_state.mark_anchor_dirty()
             self.refresh()
 
-        def _on_delete(e: events.GenericEventArguments):
-            anchor_id = e.args
-            self.video_state.anchor_draft[:] = [a for a in self.video_state.anchor_draft if a["id"] != anchor_id]
-            self.video_state.mark_anchor_dirty()
-            self.refresh()
-
         def on_delete(e: events.GenericEventArguments):
             row = e.args
             if row["_type"] == "clip":
                 ui.notify(f"Delete clicked for {row['_type']}", type="warning")
             else:
-                ui.notify(f"Delete clicked for {row}", type="warning")
+                self.video_state.anchor_draft[:] = [a for a in self.video_state.anchor_draft if a["id"] != row["id"]]
+                self.video_state.mark_anchor_dirty()
+                self.refresh()
 
         def on_play(e: events.GenericEventArguments):
             row = e.args
@@ -416,13 +412,6 @@ class AnchorTab:
                     self.on_share_clip(row["_clip"])
             else:
                 ui.notify("Share for anchor clicked (stub)", type="info")
-
-        def _on_play(e: events.GenericEventArguments):
-            anchor_id = e.args
-            for anchor in self.video_state.anchor_draft:
-                if anchor["id"] == anchor_id:
-                    self.on_play_anchor(anchor["start"])
-                    break
 
         def on_edit_video_description(e: events.GenericEventArguments):
             value = e.args
