@@ -47,7 +47,7 @@ class AnchorTab:
             "id": "__video_description__",
             "_is_video_description": True,
             "description": self.video_state.video_description_draft or "",
-            "_dirty": False,
+            "_dirty": self.video_state.video_description_dirty,
         }
         anchor_rows = []
         clip_rows = []
@@ -385,21 +385,10 @@ class AnchorTab:
         def on_edit_video_description(e: events.GenericEventArguments):
             value = e.args
 
-            # 1️⃣ update centralized state
             self.video_state.video_description_draft = value
+            self.video_state.video_description_dirty = True
+            self.video_state._metadata_dirty = True
 
-            # 2️⃣ update synthetic row immediately
-            for row in self.table.rows:
-                if row.get("_is_video_description"):
-                    row["description"] = value
-                    row["_dirty"] = True
-                    break
-
-            self.video_state.mark_metadata_dirty()
-
-            ui.notify(self.video_state.video_description_draft, type="info")
-
-            # optional but safe
             self.refresh()
 
         self.table.on("edit", on_edit)
@@ -424,74 +413,12 @@ class AnchorTab:
         ui.notify("Unsaved changes cleared", type="info")
 
     def _save(self):
-        # TODO: combine video descirption and anchors save into single API call
-        for anchor in self.video_state.anchor_draft:
-            try:
-                m, s = anchor["_time"].split(":")
-                anchor["start"] = int(m) * 60 + int(s)
-            except Exception:
-                ui.notify(
-                    f"Invalid time format for anchor '{anchor.get('_time', '')}'",
-                    type="warning",
-                )
-                return
+        try:
+            self.video_state.save_video_metadata()
+        except ValueError as e:
+            ui.notify(str(e), type="warning")
+            return
 
-            # extract labels from description
-            desc = anchor.get("description", "")
-            anchor["labels"] = list(set(LABEL_REGEX.findall(desc)))
-            anchor["partners"] = list(set(PARTNER_REGEX.findall(desc)))
-
-            anchor.pop("_time", None)
-            anchor.pop("_dirty", None)
-
-        for clip in self.video_state.clip_draft:
-            try:
-                m, s = clip["_time"].split(":")
-                clip["start"] = int(m) * 60 + int(s)
-            except Exception:
-                ui.notify(
-                    f"Invalid time format for clip '{clip.get('_time', '')}'",
-                    type="warning",
-                )
-                return
-            try:
-                m, s = clip["_end_time"].split(":")
-                clip["end"] = int(m) * 60 + int(s)
-            except Exception:
-                ui.notify(
-                    f"Invalid end time format for clip '{clip.get('_end_time', '')}'",
-                    type="warning",
-                )
-                return
-
-            # extract labels from description
-            desc = clip.get("description", "")
-            clip["labels"] = list(set(LABEL_REGEX.findall(desc)))
-            clip["partners"] = list(set(PARTNER_REGEX.findall(desc)))
-
-            clip.pop("_time", None)
-            clip.pop("_end_time", None)
-            clip.pop("_dirty", None)
-
-        # self.video_state.save_anchors()
-
-        video_metadata = {}
-        # extract labels from description
-        video_desc = self.video_state.video_description_draft
-        video_metadata["notes"] = video_desc
-        video_metadata["labels"] = list(set(LABEL_REGEX.findall(video_desc)))
-        video_metadata["partners"] = list(set(PARTNER_REGEX.findall(video_desc)))
-
-        # self.video_state.save_video_description(video_metadata)
-        self.video_state.save_video_metadata()
-
-        # rebuild UI so description row shows saved state
-        self.refresh()
-        ##
-        for anchor in self.video_state.anchor_draft:
-            anchor["_dirty"] = False
-        for clip in self.video_state.clip_draft:
-            clip["_dirty"] = False
         ui.notify("Film metadata saved", type="positive")
 
     def _format_time(self, t: int) -> str:
