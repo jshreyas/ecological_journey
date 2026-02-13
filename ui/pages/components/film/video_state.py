@@ -22,8 +22,8 @@ class VideoState:
 
         self.anchor_draft: list[dict] | None = None
         self.clip_draft: list[dict] | None = None
-        self._metadata_dirty: bool = False
         self.video_description_draft: str = None
+        self._metadata_dirty: bool = False
 
         self.tabber = None
         self.reload_metadata()
@@ -77,6 +77,9 @@ class VideoState:
         video.pop("anchors")
         _ = save_video_metadata(video, self.user.token)
         self.refresh()
+
+    def save_video_metadata(self):
+        pass
 
     def get_video(self) -> Optional[Dict[str, Any]]:
         """Get video data, loading from API if not cached"""
