@@ -4,7 +4,6 @@ Integration tests for tab components working together
 
 from unittest.mock import Mock, patch
 
-from ui.pages.components.film.metaforge_tab import MetaforgeTab
 from ui.pages.components.film.share_dialog_tab import ShareDialogTab
 from ui.pages.components.film.video_state import VideoState
 
@@ -44,11 +43,9 @@ class TestComponentsIntegration:
         mock_load_videos.return_value = [self.mock_video_data]
 
         # Create components
-        metaforge_tab = MetaforgeTab(self.video_state)
         share_dialog_tab = ShareDialogTab(self.video_state)
 
         # Verify all components use the same video state
-        assert metaforge_tab.video_state == self.video_state
         assert share_dialog_tab.video_state == self.video_state
 
     @patch("ui.pages.components.film.video_state.load_video")
@@ -59,13 +56,11 @@ class TestComponentsIntegration:
         mock_load_videos.return_value = [self.mock_video_data]
 
         # Create components
-        metaforge_tab = MetaforgeTab(self.video_state)
         share_dialog_tab = ShareDialogTab(self.video_state)
 
         # Verify refresh callbacks are registered (using private attribute)
         # Only components that need to refresh when video state changes register callbacks
         assert len(self.video_state._refresh_callbacks) == 5
-        assert metaforge_tab.refresh in self.video_state._refresh_callbacks
         assert share_dialog_tab.refresh in self.video_state._refresh_callbacks
 
         # These components don't register callbacks as they load data independently
@@ -82,15 +77,12 @@ class TestComponentsIntegration:
         mock_filmdata_refresh = Mock()
         mock_clipper_refresh = Mock()
         mock_clipboard_refresh = Mock()
-        mock_metaforge_refresh = Mock()
         mock_share_dialog_refresh = Mock()
 
         # Create components and replace their refresh methods
-        metaforge_tab = MetaforgeTab(self.video_state)
         share_dialog_tab = ShareDialogTab(self.video_state)
 
         # Replace the refresh methods with mocks
-        metaforge_tab.refresh = mock_metaforge_refresh
         share_dialog_tab.refresh = mock_share_dialog_refresh
 
         # Update the callbacks in video state to use the mocked methods
@@ -100,7 +92,6 @@ class TestComponentsIntegration:
                 mock_filmdata_refresh,
                 mock_clipper_refresh,
                 mock_clipboard_refresh,
-                mock_metaforge_refresh,
                 mock_share_dialog_refresh,
             ]
         )
@@ -112,5 +103,4 @@ class TestComponentsIntegration:
         mock_filmdata_refresh.assert_called_once()
         mock_clipper_refresh.assert_called_once()
         mock_clipboard_refresh.assert_called_once()
-        mock_metaforge_refresh.assert_called_once()
         mock_share_dialog_refresh.assert_called_once()

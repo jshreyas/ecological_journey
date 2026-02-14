@@ -8,7 +8,6 @@ from nicegui import ui
 from ui.pages.components.film.filmboard_tab import FilmboardTab
 from ui.pages.components.film.learnings_tab import LearningsTab
 from ui.pages.components.film.matadata_tab import MatadataTab
-from ui.pages.components.film.metaforge_tab import MetaforgeTab
 from ui.pages.components.film.navigation_tab import NavigationTab
 from ui.pages.components.film.player_controls_tab import PlayerControlsTab
 from ui.pages.components.film.share_dialog_tab import ShareDialogTab
@@ -50,7 +49,6 @@ def film_page(user: User | None, video_id: str):
     navigation_tab = NavigationTab(video_state)
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
-    metaforge_tab = MetaforgeTab(video_state)
     filmboard_tab = FilmboardTab(video_state)
     learnings_tab = LearningsTab(video_state)
     metadata_tab = MatadataTab(
@@ -72,13 +70,9 @@ def film_page(user: User | None, video_id: str):
                     player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
             with splitter.after:
                 with ui.tabs().classes("w-full") as tabs:
-                    one = ui.tab("Metadata", label="", icon="description").classes("w-full bg-primary text-black")
                     two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
                     five = ui.tab("Control Panel", label="", icon="bookmarks").classes("w-full bg-primary text-black")
                 with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
-                    with ui.tab_panel(one):
-                        metaforge_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
-                        metaforge_tab.create_tab(metaforge_container)
                     with ui.tab_panel(two):
                         chat_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         learnings_tab.create_tab(chat_container)
