@@ -184,13 +184,6 @@ def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
     return result
 
 
-def convert_video_metadata_to_raw_text(video: dict) -> str:
-    partners_line = " ".join(f"@{p}" for p in video.get("partners", []))
-    labels_line = " ".join(f"#{label}" for label in video.get("labels", []))
-    notes = video.get("notes", "")
-    return "\n".join(filter(None, [partners_line, labels_line, notes]))
-
-
 def save_video_metadata(video_metadata: dict, token: str) -> bool:
     return edit_video_in_playlist(playlist_id=video_metadata["playlist_id"], updated_video=video_metadata, token=token)
 
