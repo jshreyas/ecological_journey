@@ -249,3 +249,29 @@ class VideoState:
 
         self._metadata_dirty = True
         self.refresh()
+
+    def convert_clip_to_anchor(self, clip_id: str):
+        clip = next((c for c in self.clip_draft if c.get("id") == clip_id), None)
+        if not clip:
+            return
+
+        start = clip.get("start")
+
+        # Remove clip
+        self.clip_draft = [c for c in self.clip_draft if c.get("id") != clip_id]
+
+        # Add anchor back
+        self.anchor_draft.append(
+            {
+                "id": clip_id,
+                "start": start,
+                "title": clip.get("title"),
+                "description": clip.get("description", ""),
+                "partners": clip.get("partners", []),
+                "labels": clip.get("labels", []),
+                "_dirty": True,
+            }
+        )
+
+        self._metadata_dirty = True
+        self.refresh()

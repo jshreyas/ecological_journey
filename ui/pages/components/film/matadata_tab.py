@@ -88,7 +88,17 @@ class MatadataTab:
             clip.setdefault("description", description)
             clip_rows.append(clip)
 
-        combined_rows = [video_row] + anchor_rows + clip_rows
+        # Ensure drafts are sorted internally (no regression)
+        self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
+        self.video_state.clip_draft.sort(key=lambda c: c.get("start", 0))
+
+        # Combine anchors + clips
+        time_rows = anchor_rows + clip_rows
+
+        # Sort unified by numeric start time
+        time_rows.sort(key=lambda r: r.get("start", 0))
+
+        combined_rows = [video_row] + time_rows
         columns = [
             {"name": "play", "label": "", "field": "play"},
             {"name": "timestamp", "label": "Timestamp", "field": "timestamp"},
@@ -212,8 +222,9 @@ class MatadataTab:
 
                     <!-- ANCHOR -->
 
-                    <div v-if="props.row._type === 'anchor'" class="row items-center q-gutter-xs">
+                    <div v-if="props.row._type === 'anchor'" class="column">
 
+                    <!-- START -->
                     <div>
                         {{ props.row._time }}
                         <q-popup-edit
@@ -230,13 +241,19 @@ class MatadataTab:
                         </q-popup-edit>
                     </div>
 
-                    <!-- Convert to clip button -->
-                    <q-btn
-                        dense flat
-                        icon="content_cut"
-                        color="purple"
-                        @click="() => $parent.$emit('convert', props.row)"
-                    />
+                    <!-- subtle add-end line -->
+                    <div
+                        class="q-mt-xs"
+                        style="
+                        height: 2px;
+                        background: rgba(0,0,0,0.15);
+                        cursor: pointer;
+                        transition: background 0.2s ease;
+                        "
+                        @mouseenter="$event.target.style.background='rgba(128,0,128,0.5)'"
+                        @mouseleave="$event.target.style.background='rgba(0,0,0,0.15)'"
+                        @click="() => $parent.$emit('toggle-clip', props.row)"
+                    ></div>
 
                     </div>
 
@@ -246,40 +263,50 @@ class MatadataTab:
 
                     <!-- START -->
                     <div>
-                        <div>
                         {{ props.row._time }}
                         <q-popup-edit
-                            v-model="props.row._time"
-                            v-slot="scope"
-                            @update:model-value="() => $parent.$emit('edit', props.row)"
+                        v-model="props.row._time"
+                        v-slot="scope"
+                        @update:model-value="() => $parent.$emit('edit', props.row)"
                         >
-                            <q-input
+                        <q-input
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
                             @keyup.enter="scope.set"
-                            />
+                        />
                         </q-popup-edit>
-                        </div>
                     </div>
+
+                    <!-- subtle remove-end line -->
+                    <div
+                        class="q-mt-xs"
+                        style="
+                        height: 2px;
+                        background: rgba(128,0,128,0.3);
+                        cursor: pointer;
+                        transition: background 0.2s ease;
+                        "
+                        @mouseenter="$event.target.style.background='rgba(128,0,128,0.8)'"
+                        @mouseleave="$event.target.style.background='rgba(128,0,128,0.3)'"
+                        @click="() => $parent.$emit('toggle-clip', props.row)"
+                    ></div>
 
                     <!-- END -->
                     <div class="q-mt-xs">
-                        <div>
                         {{ props.row._end_time }}
                         <q-popup-edit
-                            v-model="props.row._end_time"
-                            v-slot="scope"
-                            @update:model-value="() => $parent.$emit('edit', props.row)"
+                        v-model="props.row._end_time"
+                        v-slot="scope"
+                        @update:model-value="() => $parent.$emit('edit', props.row)"
                         >
-                            <q-input
+                        <q-input
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
                             @keyup.enter="scope.set"
-                            />
+                        />
                         </q-popup-edit>
-                        </div>
                     </div>
 
                     </div>
@@ -414,31 +441,36 @@ class MatadataTab:
             self.video_state._metadata_dirty = True
             self.refresh()
 
-        async def on_convert(e: events.GenericEventArguments):
+        async def on_toggle_clip(e: events.GenericEventArguments):
             row = e.args
 
-            try:
+            # ---------- ANCHOR → CLIP ----------
+            if row["_type"] == "anchor":
                 current_time = await ui.run_javascript("window.getYTCurrentTime();")
                 if current_time is None:
                     ui.notify("Player not ready", type="warning")
                     return
 
-                self.video_state.convert_anchor_to_clip(
-                    anchor_id=row["id"],
-                    end_time=int(current_time),
-                )
+                try:
+                    self.video_state.convert_anchor_to_clip(
+                        anchor_id=row["id"],
+                        end_time=int(current_time),
+                    )
+                    ui.notify("Converted to clip", type="positive")
+                except ValueError as err:
+                    ui.notify(str(err), type="warning")
 
-                ui.notify("Anchor converted to clip", type="positive")
-
-            except ValueError as err:
-                ui.notify(str(err), type="warning")
+            # ---------- CLIP → ANCHOR ----------
+            else:
+                self.video_state.convert_clip_to_anchor(row["id"])
+                ui.notify("Converted to anchor", type="info")
 
         self.table.on("edit", on_edit)
         self.table.on("play", on_play)
         self.table.on("share", on_share)
         self.table.on("delete", on_delete)
         self.table.on("edit-video-description", on_edit_video_description)
-        self.table.on("convert", on_convert)
+        self.table.on("toggle-clip", on_toggle_clip)
 
         # ---------- footer ----------
         with ui.row().classes("justify-end gap-2 mt-4"):
