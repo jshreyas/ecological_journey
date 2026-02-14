@@ -211,21 +211,35 @@ class MatadataTab:
                 <q-td>
 
                     <!-- ANCHOR -->
-                    <div v-if="props.row._type === 'anchor'">
-                    {{ props.row._time }}
-                    <q-popup-edit
+
+                    <div v-if="props.row._type === 'anchor'" class="row items-center q-gutter-xs">
+
+                    <div>
+                        {{ props.row._time }}
+                        <q-popup-edit
                         v-model="props.row._time"
                         v-slot="scope"
                         @update:model-value="() => $parent.$emit('edit', props.row)"
-                    >
+                        >
                         <q-input
-                        v-model="scope.value"
-                        dense autofocus
-                        placeholder="m:ss"
-                        @keyup.enter="scope.set"
+                            v-model="scope.value"
+                            dense autofocus
+                            placeholder="m:ss"
+                            @keyup.enter="scope.set"
                         />
-                    </q-popup-edit>
+                        </q-popup-edit>
                     </div>
+
+                    <!-- Convert to clip button -->
+                    <q-btn
+                        dense flat
+                        icon="content_cut"
+                        color="purple"
+                        @click="() => $parent.$emit('convert', props.row)"
+                    />
+
+                    </div>
+
 
                     <!-- CLIP -->
                     <div v-else class="column">
@@ -398,14 +412,33 @@ class MatadataTab:
             self.video_state.video_description_draft = value
             self.video_state.video_description_dirty = True
             self.video_state._metadata_dirty = True
-
             self.refresh()
+
+        async def on_convert(e: events.GenericEventArguments):
+            row = e.args
+
+            try:
+                current_time = await ui.run_javascript("window.getYTCurrentTime();")
+                if current_time is None:
+                    ui.notify("Player not ready", type="warning")
+                    return
+
+                self.video_state.convert_anchor_to_clip(
+                    anchor_id=row["id"],
+                    end_time=int(current_time),
+                )
+
+                ui.notify("Anchor converted to clip", type="positive")
+
+            except ValueError as err:
+                ui.notify(str(err), type="warning")
 
         self.table.on("edit", on_edit)
         self.table.on("play", on_play)
         self.table.on("share", on_share)
         self.table.on("delete", on_delete)
         self.table.on("edit-video-description", on_edit_video_description)
+        self.table.on("convert", on_convert)
 
         # ---------- footer ----------
         with ui.row().classes("justify-end gap-2 mt-4"):

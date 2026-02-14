@@ -4,6 +4,7 @@ VideoState class for centralized state management of video data
 
 import re
 from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
+from uuid import uuid4
 
 from ui.data.crud import load_video
 from ui.utils.dialog_puns import generate_funny_title
@@ -219,3 +220,30 @@ class VideoState:
 
         if duration is not None and start > duration:
             raise ValueError(f"{context}: start time exceeds video duration")
+
+    def convert_anchor_to_clip(self, anchor_id: str, end_time: int):
+        anchor = next((a for a in self.anchor_draft if a["id"] == anchor_id), None)
+        if not anchor:
+            return
+
+        start = anchor.get("start")
+        if end_time <= start:
+            raise ValueError("End time must be greater than start time")
+
+        # Remove anchor
+        self.anchor_draft = [a for a in self.anchor_draft if a["id"] != anchor_id]
+
+        # Create clip from anchor
+        new_clip = {
+            "clip_id": str(uuid4()),
+            "start": start,
+            "end": end_time,
+            "title": anchor.get("title"),
+            "description": anchor.get("description", ""),
+            "_dirty": True,
+        }
+
+        self.clip_draft.append(new_clip)
+
+        self._metadata_dirty = True
+        self.refresh()
