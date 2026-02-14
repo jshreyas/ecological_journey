@@ -411,11 +411,13 @@ class MatadataTab:
         def on_delete(e: events.GenericEventArguments):
             row = e.args
             if row["_type"] == "clip":
-                ui.notify(f"Delete clicked for {row['_type']}", type="warning")
+                self.video_state.clip_draft[:] = [c for c in self.video_state.clip_draft if c.get("id") != row["id"]]
             else:
-                self.video_state.anchor_draft[:] = [a for a in self.video_state.anchor_draft if a["id"] != row["id"]]
-                self.video_state.mark_metadata_dirty()
-                self.refresh()
+                self.video_state.anchor_draft[:] = [
+                    a for a in self.video_state.anchor_draft if a.get("id") != row["id"]
+                ]
+            self.video_state.mark_metadata_dirty()
+            self.refresh()
 
         def on_play(e: events.GenericEventArguments):
             row = e.args
