@@ -240,6 +240,8 @@ class VideoState:
             "end": end_time,
             "title": anchor.get("title"),
             "description": anchor.get("description", ""),
+            "partners": anchor.get("partners", []),
+            "labels": anchor.get("labels", []),
             "_dirty": True,
         }
 
