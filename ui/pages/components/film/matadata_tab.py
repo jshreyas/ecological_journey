@@ -395,6 +395,7 @@ class MatadataTab:
 
         # ---------- handlers ----------
         def on_edit(e: events.GenericEventArguments):
+            # TODO: on editing timestamps for clips and anchors, playing it before saving and after editing timestamps are not honored
             row = dict(e.args)
             row_id = row["id"]
 
