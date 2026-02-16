@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 
 from nicegui import ui
@@ -15,7 +16,6 @@ def search_page(user: User | None):
 
     user_id = user.id if user else "default_user"
 
-    # Ensure index exists
     index_service.build_and_cache_index()
     index_data = index_service.get_active_index()
 
@@ -25,17 +25,46 @@ def search_page(user: User | None):
 
     rows_data = index_data["rows"]
 
+    # ----------------------------------------
+    # Columns
+    # ----------------------------------------
+
     columns = [
         {"name": "title", "label": "Title", "field": "title"},
         {"name": "type", "label": "Type", "field": "type"},
-        {"name": "duration", "label": "Duration", "field": "duration"},
+        {"name": "duration_seconds", "label": "Duration (s)", "field": "duration_seconds"},
         {"name": "description", "label": "Description", "field": "description"},
     ]
 
-    search_query = {"value": "*"}
+    # ----------------------------------------
+    # Default Template
+    # ----------------------------------------
+
+    DEFAULT_TEMPLATE = "@playlist any\n" "@type video clip anchor\n" "@search *"
+
+    search_query = {"value": DEFAULT_TEMPLATE}
 
     # ----------------------------------------
-    # Date Sticky Marker Logic
+    # Query Parsing
+    # ----------------------------------------
+
+    def parse_query_template(text: str):
+        lines = text.splitlines()
+        parsed = {"playlist": None, "type": None, "search": None}
+
+        for line in lines:
+            line = line.strip()
+            if line.startswith("@playlist"):
+                parsed["playlist"] = line.replace("@playlist", "").strip()
+            elif line.startswith("@type"):
+                parsed["type"] = line.replace("@type", "").strip().split()
+            elif line.startswith("@search"):
+                parsed["search"] = line.replace("@search", "").strip()
+
+        return parsed
+
+    # ----------------------------------------
+    # Date Markers
     # ----------------------------------------
 
     def apply_date_markers(results):
@@ -50,143 +79,201 @@ def search_page(user: User | None):
         return results
 
     # ----------------------------------------
-    # Search Execution
+    # Search Logic
     # ----------------------------------------
 
     def perform_search():
 
-        q = search_query["value"].strip().lower()
+        start_time = time.time()
+        raw_query = search_query["value"].strip()
+        parsed = parse_query_template(raw_query)
+        cache_key = raw_query.lower()
 
-        # Wildcard = show all
-        if q == "*" or not q:
-            result_rows = list(rows_data.values())
+        cached = query_cache.get(user_id, cache_key)
+
+        if cached:
+            result_ids = cached["ids"]
+            result_rows = [rows_data[rid] for rid in result_ids if rid in rows_data]
+            metrics = cached["metrics"]
         else:
-            cached = query_cache.get(user_id, q)
-            if cached:
-                result_rows = [rows_data[rid] for rid in cached if rid in rows_data]
-            else:
+            result_rows = list(rows_data.values())
+
+            if parsed["playlist"]:
+                playlist_text = parsed["playlist"].lower()
+                result_rows = [r for r in result_rows if playlist_text in r["playlist"].lower()]
+
+            if parsed["type"]:
+                result_rows = [r for r in result_rows if r["type"] in parsed["type"]]
+
+            if parsed["search"] and parsed["search"] != "*":
+                search_text = parsed["search"].lower()
                 result_rows = [
                     r
-                    for r in rows_data.values()
-                    if q in r["title"].lower() or q in r["description"].lower() or q in r["playlist"].lower()
+                    for r in result_rows
+                    if search_text in r["title"].lower() or search_text in r["description"].lower()
                 ]
-                query_cache.set(
-                    user_id,
-                    q,
-                    [r["id"] for r in result_rows],
-                )
 
-        result_rows.sort(key=lambda x: x["date"], reverse=True)
+            result_rows.sort(key=lambda x: x["date"], reverse=True)
+
+            metrics = {
+                "training_days": len(set(r["date"] for r in result_rows)),
+                "playlists": len(set(r["playlist"] for r in result_rows)),
+                "videos": len([r for r in result_rows if r["type"] == "video"]),
+                "anchors": len([r for r in result_rows if r["type"] == "anchor"]),
+                "clips": len([r for r in result_rows if r["type"] == "clip"]),
+                "query_time": f"{int((time.time() - start_time)*1000)}ms",
+            }
+
+            query_cache.set(
+                user_id,
+                cache_key,
+                {
+                    "ids": [r["id"] for r in result_rows],
+                    "metrics": metrics,
+                },
+            )
 
         result_rows = apply_date_markers(result_rows)
 
-        footer = {
-            "id": "__footer__",
-            "_is_footer": True,
-            "title": f"{len(result_rows)} results for '{q}'",
-        }
+        # Build unified table rows
+        table.rows = (
+            [
+                {
+                    "id": "__search__",
+                    "_is_search": True,
+                    "query": raw_query,
+                }
+            ]
+            + result_rows
+            + [
+                {
+                    "id": "__footer__",
+                    "_is_footer": True,
+                    "metrics": metrics,
+                }
+            ]
+        )
 
-        header = {
-            "id": "__header__",
-            "_is_footer": True,
-            "title": q,
-        }
-
-        table.rows = [header] + result_rows + [footer]
         table.update()
 
     # ----------------------------------------
     # UI
     # ----------------------------------------
 
-    with ui.column().classes("w-full"):
-
-        seed_queries = ["*", "open mats", "heroes", "armbar", "sparring"]
-
-        with ui.row():
-            for seed in seed_queries:
-                ui.button(
-                    seed,
-                    on_click=lambda s=seed: set_seed_query(s),
-                )
-
-        table = ui.table(
+    table = (
+        ui.table(
             columns=columns,
             rows=[],
             row_key="id",
-        ).classes("w-full")
-
-        # ----------------------------------------
-        # Embedded Search Row (INSIDE TABLE)
-        # ----------------------------------------
-
-        query_input = ui.input(
-            value="*",
-            placeholder="Search...",
-            on_change=lambda e: update_query(e.value),
-        ).classes("w-full")
-
-        def update_query(value):
-            search_query["value"] = value
-            perform_search()
-
-        def set_seed_query(value):
-            query_input.value = value
-            search_query["value"] = value
-            perform_search()
-
-        table.add_slot(
-            "top-row",
-            """
-            <q-tr>
-              <q-td colspan="100%">
-                <div id="query-slot"></div>
-              </q-td>
-            </q-tr>
-            """,
         )
+        .props("hide-header")
+        .classes("w-full my-sticky-table")
+        .style("height:75vh")
+    )
 
-        # Mount the input into slot
-        query_input.move(table)
+    # ----------------------------------------
+    # Body Slot (Search Row + Results + Footer)
+    # ----------------------------------------
 
-        # ----------------------------------------
-        # Proper Body Rendering
-        # ----------------------------------------
+    table.add_slot(
+        "body",
+        r"""
+        <!-- SEARCH ROW -->
+        <q-tr v-if="props.row._is_search" class="bg-grey-2">
+          <q-td colspan="100%">
+            <div style="white-space: pre-wrap; cursor: pointer;">
+              {{ props.row.query }}
+            </div>
 
-        table.add_slot(
-            "body",
-            """
-            <q-tr v-if="props.row._is_footer">
-                <q-td colspan="100%" class="text-grey-6 text-sm text-center">
-                    {{ props.row.title }}
-                </q-td>
-            </q-tr>
-
-            <q-tr v-else>
-
-                <q-td>
-                    <div v-if="props.row._is_date_start"
-                         class="text-grey-5 text-xs q-mb-xs">
-                        {{ props.row._date_label }}
+            <q-popup-edit
+              v-model="props.row.query"
+              v-slot="scope"
+              @update:model-value="(val) => $parent.$emit('search-update', val)"
+            >
+            <div class="row q-gutter-sm">
+                        <div class="col">
+                        <q-input
+                            v-model="scope.value"
+                            type="textarea"
+                            dense
+                            autogrow
+                            autofocus
+                            placeholder="@playlist any\n@type video clip\n@search *"
+                        />
+                        </div>
+                        <div class="col-auto justify-end">
+                        <q-btn dense flat color="primary" icon="send" @click="scope.set" />
+                        </div>
                     </div>
-                    {{ props.row.title }}
-                </q-td>
+            </q-popup-edit>
+          </q-td>
+        </q-tr>
 
-                <q-td>
-                    {{ props.row.type }}
-                </q-td>
+        <!-- FOOTER ROW -->
+        <q-tr v-else-if="props.row._is_footer" class="bg-grey-3">
+          <q-td colspan="100%" class="text-center text-grey-8 text-sm">
+            Training Days: {{ props.row.metrics.training_days }} |
+            Playlists: {{ props.row.metrics.playlists }} |
+            Videos: {{ props.row.metrics.videos }} |
+            Anchors: {{ props.row.metrics.anchors }} |
+            Clips: {{ props.row.metrics.clips }} |
+            Query time: {{ props.row.metrics.query_time }}
+          </q-td>
+        </q-tr>
 
-                <q-td>
-                    {{ props.row.duration || '' }}
-                </q-td>
+        <!-- NORMAL ROW -->
+        <q-tr v-else>
+          <q-td>
+            <div v-if="props.row._is_date_start"
+                 class="text-grey-5 text-xs q-mb-xs">
+              {{ props.row._date_label }}
+            </div>
+            {{ props.row.title }}
+          </q-td>
 
-                <q-td>
-                    {{ props.row.description }}
-                </q-td>
+          <q-td>{{ props.row.type }}</q-td>
 
-            </q-tr>
-            """,
-        )
+          <q-td>{{ props.row.duration_seconds || '' }}</q-td>
 
-    # Run default wildcard search on load
+          <q-td>{{ props.row.description }}</q-td>
+        </q-tr>
+        """,
+    )
+
+    # ----------------------------------------
+    # Sticky CSS
+    # ----------------------------------------
+
+    ui.add_head_html(
+        """
+    <style>
+    .my-sticky-table {
+        height: 75vh;
+    }
+    .my-sticky-table tbody tr:first-child td {
+        position: sticky;
+        top: 0;
+        background: #f5f5f5;
+        z-index: 2;
+    }
+    .my-sticky-table tbody tr:last-child td {
+        position: sticky;
+        bottom: 0;
+        background: #eeeeee;
+        z-index: 2;
+    }
+    </style>
+    """
+    )
+
+    # ----------------------------------------
+    # Event Listener
+    # ----------------------------------------
+
+    def handle_search_update(e):
+        search_query["value"] = e.args
+        perform_search()
+
+    table.on("search-update", handle_search_update)
+
     perform_search()
