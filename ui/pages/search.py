@@ -6,16 +6,7 @@ from nicegui import ui
 from ui.utils.query_cache_service import QueryCacheService
 from ui.utils.search_index_service import SearchIndexService
 from ui.utils.user_context import User, with_user_context
-
-
-# TODO: _format_time() is duplicated, move to utils
-def _format_time(t: int) -> str:
-    hours, remainder = divmod(t, 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    if hours > 0:
-        return f"{hours}:{minutes:02d}:{seconds:02d}"
-    return f"{minutes}:{seconds:02d}"
+from ui.utils.utils import format_time
 
 
 @with_user_context
@@ -176,7 +167,7 @@ def search_page(user: User | None):
             if r["type"] == "anchor":
                 r["duration"] = ""
             else:
-                r["duration"] = _format_time(int(r["duration"]))
+                r["duration"] = format_time(int(r["duration"]))
             r["_type"] = r["type"]
 
             # If only one type returned → flat
