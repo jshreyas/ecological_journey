@@ -29,18 +29,42 @@ def search_page(user: User | None):
     # Columns
     # ----------------------------------------
 
+    # columns = [
+    #     {"name": "title", "label": "Title", "field": "title"},
+    #     {"name": "type", "label": "Type", "field": "type"},
+    #     {"name": "duration_seconds", "label": "Duration (s)", "field": "duration_seconds"},
+    #     {"name": "description", "label": "Description", "field": "description"},
+    # ]
+
     columns = [
-        {"name": "title", "label": "Title", "field": "title"},
-        {"name": "type", "label": "Type", "field": "type"},
-        {"name": "duration_seconds", "label": "Duration (s)", "field": "duration_seconds"},
-        {"name": "description", "label": "Description", "field": "description"},
+        {
+            "name": "title",
+            "label": "Title",
+            "field": "title",
+            "align": "left",
+            "style": "width: 35%;",
+        },
+        {
+            "name": "duration_seconds",
+            "label": "Duration (s)",
+            "field": "duration_seconds",
+            "align": "left",
+            "style": "width: 15%;",
+        },
+        {
+            "name": "description",
+            "label": "Description",
+            "field": "description",
+            "align": "left",
+            "style": "width: 50%;",
+        },
     ]
 
     # ----------------------------------------
     # Default Template
     # ----------------------------------------
 
-    DEFAULT_TEMPLATE = "@playlist any\n" "@type video clip anchor\n" "@search *"
+    DEFAULT_TEMPLATE = "@playlist a\n" "@type video clip anchor\n" "@search *"
 
     search_query = {"value": DEFAULT_TEMPLATE}
 
@@ -135,6 +159,22 @@ def search_page(user: User | None):
 
         result_rows = apply_date_markers(result_rows)
 
+        # add tree metadata (MVP simple: flat unless mixed types)
+        types_present = set(r["type"] for r in result_rows)
+
+        for r in result_rows:
+            r["_type"] = r["type"]
+
+            # If only one type returned → flat
+            if len(types_present) == 1:
+                r["_level"] = 0
+            else:
+                # Video higher level
+                if r["type"] == "video":
+                    r["_level"] = 0
+                else:
+                    r["_level"] = 1
+
         # Build unified table rows
         table.rows = (
             [
@@ -168,7 +208,7 @@ def search_page(user: User | None):
         )
         .props("hide-header")
         .classes("w-full my-sticky-table")
-        .style("height:75vh")
+        .style("height:85vh")
     )
 
     # ----------------------------------------
@@ -211,7 +251,7 @@ def search_page(user: User | None):
 
         <!-- FOOTER ROW -->
         <q-tr v-else-if="props.row._is_footer" class="bg-grey-3">
-          <q-td colspan="100%" class="text-center text-grey-8 text-sm">
+          <q-td colspan="100%" class="text-left text-grey-8 text-sm">
             Training Days: {{ props.row.metrics.training_days }} |
             Playlists: {{ props.row.metrics.playlists }} |
             Videos: {{ props.row.metrics.videos }} |
@@ -223,19 +263,49 @@ def search_page(user: User | None):
 
         <!-- NORMAL ROW -->
         <q-tr v-else>
-          <q-td>
+        <q-td>
+
+            <!-- DATE GROUP LABEL -->
             <div v-if="props.row._is_date_start"
-                 class="text-grey-5 text-xs q-mb-xs">
-              {{ props.row._date_label }}
+                class="text-grey-5 text-xs q-mb-xs">
+            {{ props.row._date_label }}
             </div>
-            {{ props.row.title }}
-          </q-td>
 
-          <q-td>{{ props.row.type }}</q-td>
+            <!-- TREE INDENTATION -->
+            <div class="row items-center">
 
-          <q-td>{{ props.row.duration_seconds || '' }}</q-td>
+            <!-- INDENT -->
+            <div :style="{ width: (props.row._level * 24) + 'px' }"></div>
 
-          <q-td>{{ props.row.description }}</q-td>
+            <!-- ICON BY TYPE -->
+            <q-icon
+                v-if="props.row._type === 'video'"
+                name="movie"
+                color="primary"
+                class="q-mr-sm"
+            />
+            <q-icon
+                v-else-if="props.row._type === 'anchor'"
+                name="anchor"
+                color="orange"
+                class="q-mr-sm"
+            />
+            <q-icon
+                v-else-if="props.row._type === 'clip'"
+                name="content_cut"
+                color="green"
+                class="q-mr-sm"
+            />
+
+            <!-- TITLE -->
+            <div>{{ props.row.title }}</div>
+
+            </div>
+        </q-td>
+
+        <q-td>{{ props.row.duration_seconds || '' }}</q-td>
+
+        <q-td colspan="50%">{{ props.row.description }}</q-td>
         </q-tr>
         """,
     )
