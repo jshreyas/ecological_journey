@@ -8,6 +8,16 @@ from ui.utils.search_index_service import SearchIndexService
 from ui.utils.user_context import User, with_user_context
 
 
+# TODO: _format_time() is duplicated, move to utils
+def _format_time(t: int) -> str:
+    hours, remainder = divmod(t, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes}:{seconds:02d}"
+
+
 @with_user_context
 def search_page(user: User | None):
 
@@ -32,7 +42,7 @@ def search_page(user: User | None):
     # columns = [
     #     {"name": "title", "label": "Title", "field": "title"},
     #     {"name": "type", "label": "Type", "field": "type"},
-    #     {"name": "duration_seconds", "label": "Duration (s)", "field": "duration_seconds"},
+    #     {"name": "duration", "label": "Duration (s)", "field": "duration"},
     #     {"name": "description", "label": "Description", "field": "description"},
     # ]
 
@@ -45,9 +55,9 @@ def search_page(user: User | None):
             "style": "width: 35%;",
         },
         {
-            "name": "duration_seconds",
+            "name": "duration",
             "label": "Duration (s)",
-            "field": "duration_seconds",
+            "field": "duration",
             "align": "left",
             "style": "width: 15%;",
         },
@@ -163,6 +173,10 @@ def search_page(user: User | None):
         types_present = set(r["type"] for r in result_rows)
 
         for r in result_rows:
+            if r["type"] == "anchor":
+                r["duration"] = ""
+            else:
+                r["duration"] = _format_time(int(r["duration"]))
             r["_type"] = r["type"]
 
             # If only one type returned → flat
@@ -303,7 +317,7 @@ def search_page(user: User | None):
             </div>
         </q-td>
 
-        <q-td>{{ props.row.duration_seconds || '' }}</q-td>
+        <q-td>{{ props.row.duration || '' }}</q-td>
 
         <q-td colspan="50%">{{ props.row.description }}</q-td>
         </q-tr>

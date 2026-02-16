@@ -100,7 +100,7 @@ class SearchIndexService:
             "date": video["date"],
             "start": start,
             "end": end,
-            "duration": (end - start) if end else video.get("duration"),
+            "duration": (end - start) if end else video.get("duration_seconds"),
             "description": child.get("description") if child else video.get("description", ""),
             "labels": child.get("labels", []) if child else video.get("labels", []),
             "partners": child.get("partners", []) if child else video.get("partners", []),
