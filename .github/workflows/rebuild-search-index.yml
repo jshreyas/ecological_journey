@@ -23,3 +23,5 @@ jobs:
       - run: python -m ui.scripts.rebuild_search_index
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
