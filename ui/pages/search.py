@@ -11,6 +11,7 @@ from ui.utils.utils import format_time, navigate_to_film
 
 @with_user_context
 def search_page(user: User | None):
+    # TODO: page taking time to load in local with all db; add pagination?
     # TODO: componentize this page: table state, table layout, query parsing, search logic, date grouping, cache layering, etc.
     index_service = SearchIndexService()
     query_cache = QueryCacheService()
@@ -200,8 +201,9 @@ def search_page(user: User | None):
             rows=[],
             row_key="id",
         )
-        # .props("hide-header")
-        .classes("w-full my-sticky-table").style("height:85vh")
+        .props("hide-header")
+        .classes("w-full my-sticky-table")
+        .style("height:85vh")
     )
 
     table.add_slot(
