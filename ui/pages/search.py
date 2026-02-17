@@ -11,7 +11,7 @@ from ui.utils.utils import format_time
 
 @with_user_context
 def search_page(user: User | None):
-
+    # TODO: componentize this page: table state, table layout, query parsing, search logic, date grouping, cache layering, etc.
     index_service = SearchIndexService()
     query_cache = QueryCacheService()
 
@@ -57,17 +57,9 @@ def search_page(user: User | None):
         },
     ]
 
-    # ----------------------------------------
-    # Default Template
-    # ----------------------------------------
-
     DEFAULT_TEMPLATE = "@playlist a\n" "@type video clip anchor\n" "@search *"
 
     search_query = {"value": DEFAULT_TEMPLATE}
-
-    # ----------------------------------------
-    # Query Parsing
-    # ----------------------------------------
 
     def parse_query_template(text: str):
         lines = text.splitlines()
@@ -84,10 +76,6 @@ def search_page(user: User | None):
 
         return parsed
 
-    # ----------------------------------------
-    # Date Markers
-    # ----------------------------------------
-
     def apply_date_markers(results):
         last_date = None
         for r in results:
@@ -99,10 +87,7 @@ def search_page(user: User | None):
                 r["_is_date_start"] = False
         return results
 
-    # ----------------------------------------
-    # Search Logic
-    # ----------------------------------------
-
+    # TODO: Enhance search with nlp
     def perform_search():
 
         start_time = time.time()
@@ -111,7 +96,7 @@ def search_page(user: User | None):
         cache_key = raw_query.lower()
 
         cached = query_cache.get(user_id, cache_key)
-
+        # TODO: ability to use cache=disable for devtesting
         if cached:
             result_ids = cached["ids"]
             result_rows = [rows_data[rid] for rid in result_ids if rid in rows_data]
@@ -209,10 +194,6 @@ def search_page(user: User | None):
 
         table.update()
 
-    # ----------------------------------------
-    # UI
-    # ----------------------------------------
-
     table = (
         ui.table(
             columns=columns,
@@ -222,10 +203,6 @@ def search_page(user: User | None):
         # .props("hide-header")
         .classes("w-full my-sticky-table").style("height:85vh")
     )
-
-    # ----------------------------------------
-    # Body Slot (Search Row + Results + Footer)
-    # ----------------------------------------
 
     table.add_slot(
         "body",
@@ -326,10 +303,6 @@ def search_page(user: User | None):
         """,
     )
 
-    # ----------------------------------------
-    # Sticky CSS
-    # ----------------------------------------
-
     ui.add_head_html(
         """
     <style>
@@ -351,10 +324,6 @@ def search_page(user: User | None):
     </style>
     """
     )
-
-    # ----------------------------------------
-    # Event Listener
-    # ----------------------------------------
 
     def handle_search_update(e):
         search_query["value"] = e.args

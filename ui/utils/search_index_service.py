@@ -13,15 +13,12 @@ INDEX_TTL_SECONDS = 60 * 60 * 24  # 24 hours
 class SearchIndexService:
     ACTIVE_INDEX_POINTER = "search:active_index"
 
-    # -----------------------------------------
-    # PUBLIC
-    # -----------------------------------------
-
     def build_and_cache_index(self) -> str:
         videos = load_videos()
         db_hash = self._compute_db_state_hash(videos)
         index_key = f"search:index:{db_hash}"
 
+        # TODO: ability to use cache=disable for devtesting
         existing = cache_get(index_key)
         if existing:
             log.info(f"Search index already exists for hash {db_hash}")
@@ -48,10 +45,6 @@ class SearchIndexService:
         if active:
             cache_del(active)
         cache_del(self.ACTIVE_INDEX_POINTER)
-
-    # -----------------------------------------
-    # INTERNAL
-    # -----------------------------------------
 
     def _compute_db_state_hash(self, videos: List[Dict]) -> str:
         raw = json.dumps(
