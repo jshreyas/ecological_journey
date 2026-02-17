@@ -6,7 +6,7 @@ from nicegui import ui
 from ui.utils.query_cache_service import QueryCacheService
 from ui.utils.search_index_service import SearchIndexService
 from ui.utils.user_context import User, with_user_context
-from ui.utils.utils import format_time
+from ui.utils.utils import format_time, navigate_to_film
 
 
 @with_user_context
@@ -43,7 +43,7 @@ def search_page(user: User | None):
         },
         {
             "name": "duration",
-            "label": "Duration (s)",
+            "label": "Duration",
             "field": "duration",
             "align": "left",
             "style": "width: 15%;",
@@ -57,7 +57,7 @@ def search_page(user: User | None):
         },
     ]
 
-    DEFAULT_TEMPLATE = "@playlist a\n" "@type video clip anchor\n" "@search *"
+    DEFAULT_TEMPLATE = "@playlist \n" "@type video clip anchor\n" "@search *"
 
     search_query = {"value": DEFAULT_TEMPLATE}
 
@@ -253,7 +253,7 @@ def search_page(user: User | None):
         <!-- NORMAL ROW -->
         <q-tr v-else>
         <!-- THUMBNAIL -->
-        <q-td style="width:80px; padding:6px;">
+        <q-td style="width:80px; padding:6px; cursor: pointer;" @click="() => $parent.$emit('play', props.row)">
             <img v-if="props.row.thumbnail" :src="props.row.thumbnail" style="width:72px; height:40px; object-fit:cover; border-radius:4px;" />
         </q-td>
         <q-td>
@@ -329,6 +329,11 @@ def search_page(user: User | None):
         search_query["value"] = e.args
         perform_search()
 
-    table.on("search-update", handle_search_update)
+    def on_play(e):
+        row = e.args
+        navigate_to_film(row["video_id"])
+        ui.notify(f"Playing {row['type']} - {row['title']}")
 
+    table.on("search-update", handle_search_update)
+    table.on("play", on_play)
     perform_search()
