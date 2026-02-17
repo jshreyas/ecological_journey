@@ -4,6 +4,7 @@ from uuid import uuid4
 from nicegui import events, ui
 
 from ui.utils.dialog_puns import caught_john_doe
+from ui.utils.utils import format_time
 
 from .video_state import VideoState
 
@@ -53,7 +54,7 @@ class MatadataTab:
         clip_rows = []
         for anchor in self.video_state.anchor_draft:
             anchor.setdefault("id", str(uuid4()))
-            anchor.setdefault("_time", self._format_time(anchor.get("start", 0)))
+            anchor.setdefault("_time", format_time(anchor.get("start", 0)))
             anchor.setdefault("description", anchor.get("description", ""))
             anchor.setdefault("_dirty", False)
             anchor.setdefault("_type", "anchor")
@@ -63,8 +64,8 @@ class MatadataTab:
 
         for clip in self.video_state.clip_draft:
             clip.setdefault("id", str(uuid4()))
-            clip.setdefault("_time", self._format_time(clip.get("start", 0)))
-            clip.setdefault("_end_time", self._format_time(clip.get("end", 0)))
+            clip.setdefault("_time", format_time(clip.get("start", 0)))
+            clip.setdefault("_end_time", format_time(clip.get("end", 0)))
             clip.setdefault("_type", "clip")
             clip.setdefault("_dirty", False)
 
@@ -395,6 +396,7 @@ class MatadataTab:
 
         # ---------- handlers ----------
         def on_edit(e: events.GenericEventArguments):
+            # TODO: on editing timestamps for clips and anchors, playing it before saving and after editing timestamps are not honored
             row = dict(e.args)
             row_id = row["id"]
 
@@ -497,11 +499,3 @@ class MatadataTab:
             return
 
         ui.notify("Film metadata saved", type="positive")
-
-    def _format_time(self, t: int) -> str:
-        hours, remainder = divmod(t, 3600)
-        minutes, seconds = divmod(remainder, 60)
-
-        if hours > 0:
-            return f"{hours}:{minutes:02d}:{seconds:02d}"
-        return f"{minutes}:{seconds:02d}"

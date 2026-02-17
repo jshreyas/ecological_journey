@@ -12,10 +12,13 @@ def navigate_to_film(video_id, clip_id=None):
     ui.navigate.to(url)
 
 
-def format_time(seconds):
-    minutes = seconds // 60
-    sec = seconds % 60
-    return f"{int(minutes):02}:{int(sec):02}"
+def format_time(t: int) -> str:
+    hours, remainder = divmod(t, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes}:{seconds:02d}"
 
 
 # --- Helper: Group videos by YYYY-MM-DD ---

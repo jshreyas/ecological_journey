@@ -28,11 +28,11 @@ from ui.pages.about import about_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.clips import clips_page
 from ui.pages.film import film_page
-from ui.pages.films import films_page
 from ui.pages.home import home_page
 from ui.pages.notion import notion_page
 from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
+from ui.pages.search import search_page
 from ui.utils.dialog_puns import caught_john_doe, handle_backend_error
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -179,7 +179,7 @@ def setup_navbar(title: str = "Ecological Journey"):
         with ui.element("div").classes("flex-1 overflow-x-auto no-scrollbar flex justify-center"):
             with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
                 ui.element("div").classes("w-[40px] shrink-0")
-                nav_button("Films", "/films")
+                nav_button("Search", "/search")
                 nav_button("Clips", "/clips")
                 nav_button("Cliplists", "/cliplists")
                 # nav_button("Partners", "/partners")
@@ -312,10 +312,10 @@ def _():
     setup_footer()
 
 
-@ui.page("/films")
+@ui.page("/search")
 def _():
     ecological_layout()
-    films_page()
+    search_page()
     setup_footer()
 
 
