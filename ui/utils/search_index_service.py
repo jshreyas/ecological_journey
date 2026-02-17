@@ -72,11 +72,11 @@ class SearchIndexService:
 
         for v in videos:
             date_key = v["date"][:10]
+            # Always add a video-level row (so videos with anchors/clips are represented)
+            row = self._make_row(v, "video", None, None)
+            self._index_row(row, rows, index, date_key)
 
-            if not v.get("anchors") and not v.get("clips"):
-                row = self._make_row(v, "video", None, None)
-                self._index_row(row, rows, index, date_key)
-
+            # Then add anchors and clips as separate rows
             for a in v.get("anchors", []):
                 row = self._make_row(v, "anchor", a["start"], None, a)
                 self._index_row(row, rows, index, date_key)
@@ -89,6 +89,8 @@ class SearchIndexService:
 
     def _make_row(self, video, type_, start, end, child=None):
         row_id = f"{type_}_{video['video_id']}_{start or 0}"
+        # Thumbnail: prefer provided thumbnail_url, otherwise try YouTube pattern
+        thumbnail = video.get("thumbnail_url") or f"https://i.ytimg.com/vi/{video['video_id']}/hqdefault.jpg"
 
         return {
             "id": row_id,
@@ -101,9 +103,10 @@ class SearchIndexService:
             "start": start,
             "end": end,
             "duration": (end - start) if end else video.get("duration_seconds"),
-            "description": child.get("description") if child else video.get("description", ""),
+            "description": child.get("description") if child else video.get("notes", ""),
             "labels": child.get("labels", []) if child else video.get("labels", []),
             "partners": child.get("partners", []) if child else video.get("partners", []),
+            "thumbnail": thumbnail,
         }
 
     def _index_row(self, row, rows, index, date_key):

@@ -26,18 +26,14 @@ def search_page(user: User | None):
 
     rows_data = index_data["rows"]
 
-    # ----------------------------------------
-    # Columns
-    # ----------------------------------------
-
-    # columns = [
-    #     {"name": "title", "label": "Title", "field": "title"},
-    #     {"name": "type", "label": "Type", "field": "type"},
-    #     {"name": "duration", "label": "Duration (s)", "field": "duration"},
-    #     {"name": "description", "label": "Description", "field": "description"},
-    # ]
-
     columns = [
+        {
+            "name": "thumbnail",
+            "label": "Thumbnail",
+            "field": "thumbnail",
+            "align": "left",
+            "style": "width: 80px;",
+        },
         {
             "name": "title",
             "label": "Title",
@@ -164,10 +160,22 @@ def search_page(user: User | None):
         types_present = set(r["type"] for r in result_rows)
 
         for r in result_rows:
+            r["thumbnail"] = f"https://img.youtube.com/vi/{r['video_id']}/0.jpg"
+            if not r["description"]:
+                r["description"] = ""
             if r["type"] == "anchor":
                 r["duration"] = ""
-            else:
-                r["duration"] = format_time(int(r["duration"]))
+            elif r["type"] == "video":
+                # Why is this happenening even after cache is being cleared?
+                if isinstance(r["duration"], str):
+                    pass
+                else:
+                    r["duration"] = format_time(int(r["duration"]))
+            elif r["type"] == "clip":
+                if isinstance(r["duration"], str):
+                    pass
+                else:
+                    r["duration"] = format_time(int(r["duration"]))
             r["_type"] = r["type"]
 
             # If only one type returned → flat
@@ -211,9 +219,8 @@ def search_page(user: User | None):
             rows=[],
             row_key="id",
         )
-        .props("hide-header")
-        .classes("w-full my-sticky-table")
-        .style("height:85vh")
+        # .props("hide-header")
+        .classes("w-full my-sticky-table").style("height:85vh")
     )
 
     # ----------------------------------------
@@ -268,6 +275,10 @@ def search_page(user: User | None):
 
         <!-- NORMAL ROW -->
         <q-tr v-else>
+        <!-- THUMBNAIL -->
+        <q-td style="width:80px; padding:6px;">
+            <img v-if="props.row.thumbnail" :src="props.row.thumbnail" style="width:72px; height:40px; object-fit:cover; border-radius:4px;" />
+        </q-td>
         <q-td>
 
             <!-- DATE GROUP LABEL -->
