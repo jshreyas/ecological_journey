@@ -11,8 +11,7 @@ from ui.utils.utils import format_time, navigate_to_film
 
 @with_user_context
 def search_page(user: User | None):
-    # TODO: page taking time to load in local with all db; add pagination?
-    # TODO: componentize this page: table state, table layout, query parsing, search logic, date grouping, cache layering, etc.
+
     index_service = SearchIndexService()
     query_cache = QueryCacheService()
 
@@ -27,20 +26,24 @@ def search_page(user: User | None):
 
     rows_data = index_data["rows"]
 
-    columns = [
+    # -------------------------
+    # RESULT TABLE COLUMNS
+    # -------------------------
+
+    result_columns = [
         {
             "name": "thumbnail",
             "label": "Thumbnail",
             "field": "thumbnail",
             "align": "left",
-            "style": "width: 80px;",
+            "style": "width:80px;",
         },
         {
             "name": "title",
             "label": "Title",
             "field": "title",
             "align": "left",
-            "style": "width: 35%;",
+            "style": "width: 40%;",
         },
         {
             "name": "duration",
@@ -58,9 +61,14 @@ def search_page(user: User | None):
         },
     ]
 
-    DEFAULT_TEMPLATE = "@playlist \n" "@type video clip anchor\n" "@search *"
+    DEFAULT_TEMPLATE = "@playlist \n@type video clip anchor\n@search *"
 
     search_query = {"value": DEFAULT_TEMPLATE}
+    metrics_state = {"value": {}}
+
+    # -------------------------
+    # QUERY PARSING
+    # -------------------------
 
     def parse_query_template(text: str):
         lines = text.splitlines()
@@ -88,16 +96,112 @@ def search_page(user: User | None):
                 r["_is_date_start"] = False
         return results
 
-    # TODO: Enhance search with nlp
+    # -------------------------
+    # SEARCH + METADATA WRAPPER
+    # -------------------------
+    with ui.column().classes("w-full").style("height:85vh"):
+
+        # SEARCH INPUT
+        query_input = (
+            ui.textarea(
+                value=search_query["value"],
+                placeholder="@playlist \n@type video clip anchor\n@search *",
+            )
+            .props("autogrow dense outlined")
+            .classes("w-full")
+        )
+        # METADATA FOOTER
+        metadata_label = ui.label("").classes("text-grey-8 text-sm")
+        # RESULTS TABLE
+        # -------------------------
+        # INNER RESULTS TABLE
+        # -------------------------
+
+        results_table = (
+            ui.table(
+                columns=result_columns,
+                rows=[],
+                row_key="id",
+                pagination={"rowsPerPage": 50},
+            )
+            .props("hide-header")
+            .classes("w-full")
+            .style("height:85vh")
+        )
+
+        results_table.add_slot(
+            "body",
+            r"""
+            <q-tr>
+
+                <!-- THUMBNAIL -->
+                <q-td style="width:90px; min-width:90px; padding:6px; cursor:pointer;"
+                    @click="() => $parent.$emit('play', props.row)">
+                    <q-img
+                        v-if="props.row.thumbnail"
+                        :src="props.row.thumbnail"
+                        style="width:72px; height:40px; border-radius:4px;"
+                        fit="cover"
+                        loading="lazy"
+                        transition="none"
+                    />
+                </q-td>
+
+                <q-td>
+                    <div v-if="props.row._is_date_start"
+                        class="text-grey-5 text-xs q-mb-xs">
+                        {{ props.row._date_label }}
+                    </div>
+
+                    <div class="row items-center">
+
+                        <div :style="{ width: (props.row._level * 24) + 'px' }"></div>
+
+                        <q-icon
+                            v-if="props.row._type === 'video'"
+                            name="movie"
+                            color="primary"
+                            class="q-mr-sm"
+                        />
+                        <q-icon
+                            v-else-if="props.row._type === 'anchor'"
+                            name="anchor"
+                            color="orange"
+                            class="q-mr-sm"
+                        />
+                        <q-icon
+                            v-else-if="props.row._type === 'clip'"
+                            name="content_cut"
+                            color="green"
+                            class="q-mr-sm"
+                        />
+
+                        <div>{{ props.row.title }}</div>
+                    </div>
+                </q-td>
+
+                <q-td>{{ props.row.duration || '' }}</q-td>
+                <q-td style="max-width:50%; overflow:auto; white-space:normal;">{{ props.row.description }}</q-td>
+
+            </q-tr>
+            """,
+        )
+
+    # -------------------------
+    # SEARCH EXECUTION
+    # -------------------------
+
     def perform_search():
 
         start_time = time.time()
-        raw_query = search_query["value"].strip()
+        raw_query = query_input.value.strip()
+        search_query["value"] = raw_query
+
         parsed = parse_query_template(raw_query)
         cache_key = raw_query.lower()
 
         cached = query_cache.get(user_id, cache_key)
-        # TODO: ability to use cache=disable for devtesting
+
         if cached:
             result_ids = cached["ids"]
             result_rows = [rows_data[rid] for rid in result_ids if rid in rows_data]
@@ -142,200 +246,55 @@ def search_page(user: User | None):
 
         result_rows = apply_date_markers(result_rows)
 
-        # add tree metadata (MVP simple: flat unless mixed types)
         types_present = set(r["type"] for r in result_rows)
 
         for r in result_rows:
             r["thumbnail"] = f"https://img.youtube.com/vi/{r['video_id']}/0.jpg"
+
             if not r["description"]:
                 r["description"] = ""
+
             if r["type"] == "anchor":
                 r["duration"] = ""
-            elif r["type"] == "video":
-                # Why is this happenening even after cache is being cleared?
-                if isinstance(r["duration"], str):
-                    pass
-                else:
+            else:
+                if not isinstance(r["duration"], str):
                     r["duration"] = format_time(int(r["duration"]))
-            elif r["type"] == "clip":
-                if isinstance(r["duration"], str):
-                    pass
-                else:
-                    r["duration"] = format_time(int(r["duration"]))
+
             r["_type"] = r["type"]
 
-            # If only one type returned → flat
             if len(types_present) == 1:
                 r["_level"] = 0
             else:
-                # Video higher level
-                if r["type"] == "video":
-                    r["_level"] = 0
-                else:
-                    r["_level"] = 1
+                r["_level"] = 0 if r["type"] == "video" else 1
 
-        # Build unified table rows
-        table.rows = (
-            [
-                {
-                    "id": "__search__",
-                    "_is_search": True,
-                    "query": raw_query,
-                }
-            ]
-            + result_rows
-            + [
-                {
-                    "id": "__footer__",
-                    "_is_footer": True,
-                    "metrics": metrics,
-                }
-            ]
+        # 🔥 Only update INNER table
+        results_table.rows = result_rows
+        results_table.update()
+
+        # 🔥 Reset to first page on new search
+        results_table.props("pagination.page=1")
+
+        metrics_state["value"] = metrics
+
+        metadata_label.set_text(
+            f"Training Days: {metrics['training_days']} | "
+            f"Playlists: {metrics['playlists']} | "
+            f"Videos: {metrics['videos']} | "
+            f"Anchors: {metrics['anchors']} | "
+            f"Clips: {metrics['clips']} | "
+            f"Query time: {metrics['query_time']}"
         )
 
-        table.update()
-
-    table = (
-        ui.table(
-            columns=columns,
-            rows=[],
-            row_key="id",
-        )
-        .props("hide-header")
-        .classes("w-full my-sticky-table")
-        .style("height:85vh")
-    )
-
-    table.add_slot(
-        "body",
-        r"""
-        <!-- SEARCH ROW -->
-        <q-tr v-if="props.row._is_search" class="bg-grey-2">
-          <q-td colspan="100%">
-            <div style="white-space: pre-wrap; cursor: pointer;">
-              {{ props.row.query }}
-            </div>
-
-            <q-popup-edit
-              v-model="props.row.query"
-              v-slot="scope"
-              @update:model-value="(val) => $parent.$emit('search-update', val)"
-            >
-            <div class="row q-gutter-sm">
-                        <div class="col">
-                        <q-input
-                            v-model="scope.value"
-                            type="textarea"
-                            dense
-                            autogrow
-                            autofocus
-                            placeholder="@playlist any\n@type video clip\n@search *"
-                        />
-                        </div>
-                        <div class="col-auto justify-end">
-                        <q-btn dense flat color="primary" icon="send" @click="scope.set" />
-                        </div>
-                    </div>
-            </q-popup-edit>
-          </q-td>
-        </q-tr>
-
-        <!-- FOOTER ROW -->
-        <q-tr v-else-if="props.row._is_footer" class="bg-grey-3">
-          <q-td colspan="100%" class="text-left text-grey-8 text-sm">
-            Training Days: {{ props.row.metrics.training_days }} |
-            Playlists: {{ props.row.metrics.playlists }} |
-            Videos: {{ props.row.metrics.videos }} |
-            Anchors: {{ props.row.metrics.anchors }} |
-            Clips: {{ props.row.metrics.clips }} |
-            Query time: {{ props.row.metrics.query_time }}
-          </q-td>
-        </q-tr>
-
-        <!-- NORMAL ROW -->
-        <q-tr v-else>
-        <!-- THUMBNAIL -->
-        <q-td style="width:80px; padding:6px; cursor: pointer;" @click="() => $parent.$emit('play', props.row)">
-            <img v-if="props.row.thumbnail" :src="props.row.thumbnail" style="width:72px; height:40px; object-fit:cover; border-radius:4px;" />
-        </q-td>
-        <q-td>
-
-            <!-- DATE GROUP LABEL -->
-            <div v-if="props.row._is_date_start"
-                class="text-grey-5 text-xs q-mb-xs">
-            {{ props.row._date_label }}
-            </div>
-
-            <!-- TREE INDENTATION -->
-            <div class="row items-center">
-
-            <!-- INDENT -->
-            <div :style="{ width: (props.row._level * 24) + 'px' }"></div>
-
-            <!-- ICON BY TYPE -->
-            <q-icon
-                v-if="props.row._type === 'video'"
-                name="movie"
-                color="primary"
-                class="q-mr-sm"
-            />
-            <q-icon
-                v-else-if="props.row._type === 'anchor'"
-                name="anchor"
-                color="orange"
-                class="q-mr-sm"
-            />
-            <q-icon
-                v-else-if="props.row._type === 'clip'"
-                name="content_cut"
-                color="green"
-                class="q-mr-sm"
-            />
-
-            <!-- TITLE -->
-            <div>{{ props.row.title }}</div>
-
-            </div>
-        </q-td>
-
-        <q-td>{{ props.row.duration || '' }}</q-td>
-
-        <q-td colspan="50%">{{ props.row.description }}</q-td>
-        </q-tr>
-        """,
-    )
-
-    ui.add_head_html(
-        """
-    <style>
-    .my-sticky-table {
-        height: 75vh;
-    }
-    .my-sticky-table tbody tr:first-child td {
-        position: sticky;
-        top: 0;
-        background: #f5f5f5;
-        z-index: 2;
-    }
-    .my-sticky-table tbody tr:last-child td {
-        position: sticky;
-        bottom: 0;
-        background: #eeeeee;
-        z-index: 2;
-    }
-    </style>
-    """
-    )
-
-    def handle_search_update(e):
-        search_query["value"] = e.args
-        perform_search()
+    # -------------------------
+    # EVENTS
+    # -------------------------
 
     def on_play(e):
         row = e.args
         navigate_to_film(row["video_id"])
-        ui.notify(f"Playing {row['type']} - {row['title']}")
+        ui.notify(f"Playing {row['type']}")
 
-    table.on("search-update", handle_search_update)
-    table.on("play", on_play)
+    results_table.on("play", on_play)
+    query_input.on("keydown.enter", lambda e: perform_search())
+
     perform_search()
