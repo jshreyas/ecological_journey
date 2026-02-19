@@ -176,27 +176,19 @@ class MatadataTab:
                 @update:model-value="(val) => $parent.$emit('edit-video-description', val)"
                 v-model="props.row.description"
                 >
-                <div class="row q-gutter-sm">
-                    <div class="col">
-                    <q-input
-                        v-model="scope.value"
-                        type="textarea"
-                        dense
-                        autogrow
-                        autofocus
-                        placeholder="Add notes. Supports #labels and @partners"
-                    />
-                    </div>
-                    <div class="col-auto justify-end">
-                    <q-btn
-                        dense
-                        flat
-                        color="primary"
-                        icon="send"
-                        @click="scope.set"
-                    />
-                    </div>
-                </div>
+                <q-input
+                    v-model="scope.value"
+                    type="textarea"
+                    dense
+                    autogrow
+                    autofocus
+                    placeholder="Add notes. Supports #labels and @partners"
+                    @focusout="scope.set"
+                    @keydown.enter.exact.prevent="scope.set"
+                    @keydown.command.enter.prevent="() => {
+                        scope.value += '\n'
+                    }"
+                />
                 </q-popup-edit>
 
                 </q-td>
@@ -351,23 +343,20 @@ class MatadataTab:
                     v-slot="scope"
                     @update:model-value="() => $parent.$emit('edit', props.row)"
                     >
-                    <div class="row q-gutter-sm">
-                        <div class="col">
-                        <q-input
-                            v-model="scope.value"
-                            type="textarea"
-                            dense
-                            autogrow
-                            autofocus
-                            placeholder="use #labels and @partners"
-                        />
-                        </div>
-                        <div class="col-auto justify-end">
-                        <q-btn dense flat color="primary" icon="send" @click="scope.set" />
-                        </div>
-                    </div>
+                    <q-input
+                        v-model="scope.value"
+                        type="textarea"
+                        dense
+                        autogrow
+                        autofocus
+                        placeholder="use #labels and @partners"
+                        @focusout="scope.set"
+                        @keydown.enter.exact.prevent="scope.set"
+                        @keydown.command.enter.prevent="() => {
+                            scope.value += '\n'
+                        }"
+                    />
                     </q-popup-edit>
-
                 </q-td>
 
                 <!-- ACTIONS -->
