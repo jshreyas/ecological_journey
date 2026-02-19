@@ -183,6 +183,7 @@ class MatadataTab:
                     autogrow
                     autofocus
                     placeholder="Add notes. Supports #labels and @partners"
+                    @focusout="scope.set"
                     @keydown.enter.exact.prevent="scope.set"
                     @keydown.command.enter.prevent="() => {
                         scope.value += '\n'
@@ -349,6 +350,7 @@ class MatadataTab:
                         autogrow
                         autofocus
                         placeholder="use #labels and @partners"
+                        @focusout="scope.set"
                         @keydown.enter.exact.prevent="scope.set"
                         @keydown.command.enter.prevent="() => {
                             scope.value += '\n'
