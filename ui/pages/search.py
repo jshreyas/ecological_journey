@@ -11,7 +11,7 @@ from ui.utils.utils import format_time, navigate_to_film
 
 @with_user_context
 def search_page(user: User | None):
-
+    # TODO: componentize this page: table state, table layout, query parsing, search logic, date grouping, cache layering, etc.
     index_service = SearchIndexService()
     query_cache = QueryCacheService()
 
@@ -61,10 +61,9 @@ def search_page(user: User | None):
         },
     ]
 
-    DEFAULT_TEMPLATE = "@playlist \n@type video clip anchor\n@search *"
+    DEFAULT_TEMPLATE = "@playlist an\n@type video clip anchor\n@search *"
 
     search_query = {"value": DEFAULT_TEMPLATE}
-    metrics_state = {"value": {}}
 
     # -------------------------
     # QUERY PARSING
@@ -274,8 +273,6 @@ def search_page(user: User | None):
         # 🔥 Reset to first page on new search
         results_table.props("pagination.page=1")
 
-        metrics_state["value"] = metrics
-
         metadata_label.set_text(
             f"Training Days: {metrics['training_days']} | "
             f"Playlists: {metrics['playlists']} | "
@@ -295,6 +292,6 @@ def search_page(user: User | None):
         ui.notify(f"Playing {row['type']}")
 
     results_table.on("play", on_play)
-    query_input.on("keydown.enter", lambda e: perform_search())
+    query_input.on("keydown.enter.exact.prevent", lambda e: perform_search())
 
     perform_search()
