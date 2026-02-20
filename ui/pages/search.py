@@ -240,7 +240,7 @@ class SearchLayout:
                     />
                 </q-td>
 
-                <q-td>
+                <q-td style="max-width:50%; white-space:normal;">
                     <div v-if="props.row._is_date_start"
                         class="text-grey-5 text-xs q-mb-xs">
                         {{ props.row._date_label }}
