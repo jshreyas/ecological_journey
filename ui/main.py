@@ -28,7 +28,7 @@ from ui.pages.about import about_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.clips import clips_page
 from ui.pages.film import film_page
-from ui.pages.home import home_page
+from ui.pages.home_again import home_page
 from ui.pages.notion import notion_page
 from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
