@@ -17,7 +17,7 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          CONTAINER_ID=$(docker create -e MONGODB_URI=$MONGODB_URI -e JWT_SECRET=$JWT_SECRET ecological-ui bash -c "cd ui && python -m scripts.mint_service_token")
+          CONTAINER_ID=$(docker create -e MONGODB_URI=$MONGODB_URI -e JWT_SECRET=$JWT_SECRET ecological-ui bash -c "python -m ui.scripts.mint_service_token")
           echo "Container created: $CONTAINER_ID"
 
           docker start -a $CONTAINER_ID

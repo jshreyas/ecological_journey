@@ -4,16 +4,19 @@ import os
 import requests
 from dotenv import load_dotenv
 
+from ui.data.crud import create_service_token
+from ui.data.models import User
 from ui.utils.youtube import fetch_playlist_items
 
 load_dotenv()
 
 API_BASE = os.environ["BASE_URL_SHARE"]
-SERVICE_TOKEN = os.environ["SERVICE_TOKEN"]
 
-HEADERS = {
-    "Authorization": f"Bearer {SERVICE_TOKEN}",
-}
+service_user = User.find_one(User.role == "service").run()
+if not service_user:
+    raise RuntimeError("Service user not found")
+
+token = create_service_token(service_user)
 
 
 def get_playlists():
@@ -52,7 +55,7 @@ def post_new_videos(playlist_id: str, videos: list[dict]):
     r = requests.post(
         f"{API_BASE}/api/playlists/{playlist_id}/videos",
         headers={
-            "Authorization": f"Bearer {SERVICE_TOKEN}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
         json=videos,
