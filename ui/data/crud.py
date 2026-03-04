@@ -372,7 +372,7 @@ def create_service_token(service_user: User):
         {
             "sub": str(service_user.id),
             "role": "service",
-            "exp": datetime.utcnow() + timedelta(days=30),
+            "exp": datetime.utcnow() + timedelta(minutes=5),
         },
         SECRET_KEY,
         algorithm=ALGORITHM,
