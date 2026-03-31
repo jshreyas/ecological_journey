@@ -1,16 +1,16 @@
 import asyncio
-from collections import Counter
-from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import ui
 
 from ui.data.crud import AuthError, load_playlists
 from ui.log import log
-from ui.pages.components.home.calendar_component import calendar_container
+
+# from ui.pages.components.home.calendar_component import calendar_container
 from ui.utils.dialog_puns import caught_john_doe
 from ui.utils.user_context import User, with_user_context
-from ui.utils.utils import group_videos_by_day
+
+# from ui.utils.utils import group_videos_by_day
 from ui.utils.utils_api import (
     create_playlist,
     create_team,
@@ -19,7 +19,12 @@ from ui.utils.utils_api import (
     load_playlists_for_user,
     load_videos,
 )
+from ui.utils.video_player import VideoPlayer
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
+
+# from collections import Counter
+# from datetime import datetime
+
 
 load_dotenv()
 # TODO: Refactor this file to separate concerns and reduce size.
@@ -102,6 +107,123 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 fetch_button = ui.button(icon="download").props("flat round").tooltip("Fetch Videos")
                 fetch_button.disable()
                 fetch_button.on("click", fetch_playlist_videos)
+
+
+feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6")
+
+ui.add_head_html(
+    """
+<script>
+window.initFeedObserver = function() {
+
+    const scrollArea = document.querySelector('.feed-scroll');
+    const sentinel = document.querySelector('.feed-sentinel');
+
+    if (!scrollArea || !sentinel) return;
+
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+            emitEvent('load_more');
+        }
+    }, {
+        root: scrollArea,
+        threshold: 0.1
+    });
+
+    observer.observe(sentinel);
+};
+</script>
+"""
+)
+
+
+def render_video_post(video):
+    with ui.card().classes("w-full p-3 shadow-md") as card:
+
+        # 🎥 Custom Video Player
+        VideoPlayer(
+            video_url=video["video_id"],
+            start=video.get("start", 0),
+            end=video.get("end", 10_000),
+            speed=1.0,
+            parent=card,  # 👈 CRITICAL
+            video_state=video.get("video_state"),  # optional
+        )
+
+        # 📌 Metadata
+        with ui.column().classes("gap-1 mt-2"):
+            ui.label(video.get("title", "Untitled")).classes("text-md font-bold")
+            ui.label(f"📅 {video.get('date')}").classes("text-xs text-gray-500")
+            ui.label(f"🎵 Playlist: {video.get('playlist_name', 'N/A')}").classes("text-sm")
+
+            partners = ", ".join(video.get("partners", []))
+            if partners:
+                ui.label(f"👥 {partners}").classes("text-sm text-gray-700")
+
+            # ✂️ Clips
+            clips = video.get("clips", [])
+            if clips:
+                with ui.row().classes("flex-wrap gap-1"):
+                    for c in clips[:5]:
+                        ui.chip(c.get("label", "clip")).props("dense").on(
+                            "click", lambda _, c=c: ui.notify(f"Playing clip: {c.get('label', 'clip')}")
+                        )
+
+        ui.separator().classes("my-2")
+
+
+PAGE_SIZE = 10
+current_index = 0
+
+is_loading = False
+
+
+def load_more(feed_container, videos):
+    global current_index, is_loading
+
+    if is_loading:
+        return
+
+    is_loading = True
+
+    next_batch = videos[current_index : current_index + PAGE_SIZE]  # noqa: E203
+
+    for v in next_batch:
+        render_video_post(v)
+
+    current_index += PAGE_SIZE
+
+    is_loading = False
+
+
+def render_dashboard(parent):
+    parent.clear()
+
+    videos = sorted(load_videos(), key=lambda v: v["date"], reverse=True)
+
+    if not videos:
+        with parent:
+            ui.label("No videos")
+        return
+
+    with parent:
+        with ui.scroll_area().classes("w-full h-full feed-scroll"):
+            ui.label("Your Video Feed").classes("text-lg font-bold mb-4")
+            feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6 p-4")
+
+            global current_index
+            current_index = 0
+
+            load_more(feed_container, videos)
+
+            # 👇 Sentinel (IMPORTANT)
+            ui.element("div").classes("feed-sentinel h-10")
+
+    # 👇 Hook Python event
+    ui.on("load_more", lambda: load_more(feed_container, videos))
+
+    # 👇 Initialize observer AFTER render
+    ui.run_javascript("setTimeout(window.initFeedObserver, 100);")
 
 
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
@@ -205,79 +327,6 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
             )
 
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
-
-
-def render_dashboard(parent):
-    parent.clear()
-    videos = load_videos()
-    if not videos:
-        with parent:
-            with ui.card().classes("p-4 text-center"):
-                ui.label("⚠️ No videos found! Start by adding a playlist.").classes("text-md")
-        return
-    grouped_videos_by_day = group_videos_by_day(videos)
-    dates = [datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ") for v in videos]
-    with parent:
-        calendar_container(grouped_videos_by_day)
-        ui.separator().classes("my-4 w-full")
-        date_counts = Counter(d.date() for d in dates)
-        sorted_dates = sorted(date_counts.keys())
-        chart_data = {
-            "labels": [d.strftime("%b %d, %Y") for d in sorted_dates],
-            "datasets": [
-                {
-                    "label": "Video Count",
-                    "data": [date_counts[d] for d in sorted_dates],
-                    "type": "bar",
-                    "itemStyle": {"color": "#4CAF50"},
-                }
-            ],
-        }
-        ui.echart(
-            {
-                "title": {
-                    "text": "Activity Over Time",
-                    "left": "center",
-                    "textStyle": {"fontSize": 18, "fontWeight": "bold"},
-                },
-                "tooltip": {
-                    "trigger": "axis",
-                    "axisPointer": {"type": "shadow"},
-                    "formatter": "{b}: {c} videos",
-                },
-                "grid": {
-                    "left": "10%",
-                    "right": "10%",
-                    "bottom": "15%",
-                    "containLabel": True,
-                },
-                "xAxis": {
-                    "type": "category",
-                    "data": chart_data["labels"],
-                    "axisLabel": {
-                        "rotate": 45,
-                        "fontSize": 12,
-                    },
-                    "axisLine": {"lineStyle": {"color": "#888"}},
-                },
-                "yAxis": {
-                    "type": "value",
-                    "axisLabel": {
-                        "fontSize": 12,
-                        "formatter": "{value}",
-                    },
-                    "axisLine": {"lineStyle": {"color": "#888"}},
-                    "splitLine": {"lineStyle": {"type": "dashed", "color": "#ddd"}},
-                },
-                "series": [
-                    {
-                        "type": "bar",
-                        "data": chart_data["datasets"][0]["data"],
-                        "barWidth": "50%",
-                    }
-                ],
-            }
-        ).classes("w-full h-80")
 
 
 @with_user_context
