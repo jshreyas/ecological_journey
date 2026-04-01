@@ -109,52 +109,25 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 fetch_button.on("click", fetch_playlist_videos)
 
 
-feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6")
-
-ui.add_head_html(
-    """
-<script>
-window.initFeedObserver = function() {
-
-    const scrollArea = document.querySelector('.feed-scroll');
-    const sentinel = document.querySelector('.feed-sentinel');
-
-    if (!scrollArea || !sentinel) return;
-
-    const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-            emitEvent('load_more');
-        }
-    }, {
-        root: scrollArea,
-        threshold: 0.1
-    });
-
-    observer.observe(sentinel);
-};
-</script>
-"""
-)
-
-
 def render_video_post(video):
-    with ui.card().classes("w-full p-3 shadow-md") as card:
-
-        # 🎥 Custom Video Player
-        VideoPlayer(
-            video_url=video["video_id"],
-            start=video.get("start", 0),
-            end=video.get("end", 10_000),
-            speed=1.0,
-            parent=card,  # 👈 CRITICAL
-            video_state=video.get("video_state"),  # optional
-        )
+    with ui.card().classes("w-full p-3 shadow-md"):
+        with ui.card().classes("w-full h-[70vh] shadow-md") as card:
+            # 🎥 Custom Video Player
+            VideoPlayer(
+                video_url=video["video_id"],
+                start=video.get("start", 0),
+                end=10,  # video.get("end", 10_000),
+                show_speed_slider=False,
+                speed=2.0,
+                parent=card,  # 👈 CRITICAL
+                video_state=video.get("video_state"),  # optional
+            )
 
         # 📌 Metadata
         with ui.column().classes("gap-1 mt-2"):
-            ui.label(video.get("title", "Untitled")).classes("text-md font-bold")
-            ui.label(f"📅 {video.get('date')}").classes("text-xs text-gray-500")
-            ui.label(f"🎵 Playlist: {video.get('playlist_name', 'N/A')}").classes("text-sm")
+            with ui.row().classes("gap-2 items-center"):
+                ui.element("div").classes(f"{video.get('playlist_color')} w-3 h-3 rounded-full")
+                ui.label(f"🎵 Playlist: {video.get('playlist_name', 'N/A')}").classes("text-sm")
 
             partners = ", ".join(video.get("partners", []))
             if partners:
@@ -169,13 +142,13 @@ def render_video_post(video):
                             "click", lambda _, c=c: ui.notify(f"Playing clip: {c.get('label', 'clip')}")
                         )
 
-        ui.separator().classes("my-2")
 
-
-PAGE_SIZE = 10
+PAGE_SIZE = 5
 current_index = 0
-
 is_loading = False
+
+# The feed observer is initialized after the dashboard is rendered so it can attach to
+# the current sentinel and scroll container.
 
 
 def load_more(feed_container, videos):
@@ -188,11 +161,15 @@ def load_more(feed_container, videos):
 
     next_batch = videos[current_index : current_index + PAGE_SIZE]  # noqa: E203
 
-    for v in next_batch:
-        render_video_post(v)
+    if not next_batch:
+        is_loading = False
+        return
+
+    with feed_container:  # 👈 THIS WAS MISSING
+        for v in next_batch:
+            render_video_post(v)
 
     current_index += PAGE_SIZE
-
     is_loading = False
 
 
@@ -206,24 +183,58 @@ def render_dashboard(parent):
             ui.label("No videos")
         return
 
+    global current_index, is_loading
+    current_index = 0
+    is_loading = False
+
     with parent:
-        with ui.scroll_area().classes("w-full h-full feed-scroll"):
-            ui.label("Your Video Feed").classes("text-lg font-bold mb-4")
+        with ui.column().classes("w-full h-full overflow-auto feed-scroll"):
+
             feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6 p-4")
 
-            global current_index
-            current_index = 0
-
+            # initial load
             load_more(feed_container, videos)
 
-            # 👇 Sentinel (IMPORTANT)
+            # 👇 sentinel (VERY IMPORTANT)
             ui.element("div").classes("feed-sentinel h-10")
 
-    # 👇 Hook Python event
+    # 👇 Python event listener
     ui.on("load_more", lambda: load_more(feed_container, videos))
 
-    # 👇 Initialize observer AFTER render
-    ui.run_javascript("setTimeout(window.initFeedObserver, 100);")
+    # 👇 initialize observer AFTER render
+    ui.run_javascript(
+        """
+        (function() {
+            const sentinel = document.querySelector('.feed-sentinel');
+            const scrollRoot = document.querySelector('.feed-scroll');
+            if (!sentinel) return;
+
+            if (window.feedObserver) {
+                window.feedObserver.disconnect();
+            }
+
+            const root = scrollRoot instanceof Element ? scrollRoot : null;
+            window.feedObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    const emitter =
+                        typeof window.emitEvent === 'function'
+                            ? window.emitEvent
+                            : typeof emitEvent === 'function'
+                            ? emitEvent
+                            : null;
+                    if (emitter) {
+                        emitter('load_more');
+                    }
+                }
+            }, {
+                root: root,
+                threshold: 0.1
+            });
+
+            window.feedObserver.observe(sentinel);
+        })();
+        """
+    )
 
 
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
@@ -409,7 +420,7 @@ def home_page(user: User | None):
 
                     refresh_teams()
         with splitter.after:
-            with ui.column().classes("w-full") as dashboard_column:
+            with ui.column().classes("w-full h-full") as dashboard_column:
 
                 def render_dashboard_wrapper():
                     render_dashboard(dashboard_column)
