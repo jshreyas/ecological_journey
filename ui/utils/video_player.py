@@ -109,6 +109,7 @@ class VideoPlayer:
 
                 function onPlayerReady(event) {{
                     event.target.setPlaybackRate(window.ytConfig.speed);
+                    event.target.playVideo();
                     if (ytEndInterval) clearInterval(ytEndInterval);
                     ytEndInterval = setInterval(() => {{
                         const current = ytPlayer.getCurrentTime();

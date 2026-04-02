@@ -5,12 +5,10 @@ from nicegui import ui
 
 from ui.data.crud import AuthError, load_playlists
 from ui.log import log
-
-# from ui.pages.components.home.calendar_component import calendar_container
+from ui.pages.components.home.calendar_component import calendar_container
 from ui.utils.dialog_puns import caught_john_doe
 from ui.utils.user_context import User, with_user_context
-
-# from ui.utils.utils import group_videos_by_day
+from ui.utils.utils import group_videos_by_day
 from ui.utils.utils_api import (
     create_playlist,
     create_team,
@@ -19,7 +17,6 @@ from ui.utils.utils_api import (
     load_playlists_for_user,
     load_videos,
 )
-from ui.utils.video_player import VideoPlayer
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 # from collections import Counter
@@ -109,23 +106,17 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 fetch_button.on("click", fetch_playlist_videos)
 
 
-def render_video_post(video):
+def render_video_post(video, index):
     with ui.card().classes("w-full p-3 shadow-md"):
-        with ui.card().classes("w-full h-[70vh] shadow-md") as card:
-            # 🎥 Custom Video Player
-            VideoPlayer(
-                video_url=video["video_id"],
-                start=video.get("start", 0),
-                end=10,  # video.get("end", 10_000),
-                show_speed_slider=False,
-                speed=2.0,
-                parent=card,  # 👈 CRITICAL
-                video_state=video.get("video_state"),  # optional
+        with ui.link(target=f'/film/{video["video_id"]}').classes("w-full h-[50vh] p-0"):
+            ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/maxresdefault.jpg').classes(
+                "w-full h-full rounded-md"
             )
 
         # 📌 Metadata
         with ui.column().classes("gap-1 mt-2"):
             with ui.row().classes("gap-2 items-center"):
+                ui.label(index + 1).classes("text-sm font-bold text-gray-500")
                 ui.element("div").classes(f"{video.get('playlist_color')} w-3 h-3 rounded-full")
                 ui.label(f"🎵 Playlist: {video.get('playlist_name', 'N/A')}").classes("text-sm")
 
@@ -147,9 +138,6 @@ PAGE_SIZE = 5
 current_index = 0
 is_loading = False
 
-# The feed observer is initialized after the dashboard is rendered so it can attach to
-# the current sentinel and scroll container.
-
 
 def load_more(feed_container, videos):
     global current_index, is_loading
@@ -166,8 +154,8 @@ def load_more(feed_container, videos):
         return
 
     with feed_container:  # 👈 THIS WAS MISSING
-        for v in next_batch:
-            render_video_post(v)
+        for i, v in enumerate(next_batch):
+            render_video_post(v, current_index + i)
 
     current_index += PAGE_SIZE
     is_loading = False
@@ -175,8 +163,8 @@ def load_more(feed_container, videos):
 
 def render_dashboard(parent):
     parent.clear()
-
-    videos = sorted(load_videos(), key=lambda v: v["date"], reverse=True)
+    all_videos = load_videos()
+    videos = sorted(all_videos, key=lambda v: v["date"], reverse=True)
 
     if not videos:
         with parent:
@@ -201,21 +189,22 @@ def render_dashboard(parent):
     # 👇 Python event listener
     ui.on("load_more", lambda: load_more(feed_container, videos))
 
-    # 👇 initialize observer AFTER render
+    # 👇 initialize scroll listener AFTER render
     ui.run_javascript(
         """
         (function() {
-            const sentinel = document.querySelector('.feed-sentinel');
             const scrollRoot = document.querySelector('.feed-scroll');
-            if (!sentinel) return;
+            if (!scrollRoot) return;
 
-            if (window.feedObserver) {
-                window.feedObserver.disconnect();
+            if (window.feedScrollListener && window.feedScrollRoot) {
+                window.feedScrollRoot.removeEventListener('scroll', window.feedScrollListener);
             }
 
-            const root = scrollRoot instanceof Element ? scrollRoot : null;
-            window.feedObserver = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting) {
+            window.feedScrollListener = function() {
+                const root = document.querySelector('.feed-scroll');
+                if (!root) return;
+                const distanceFromBottom = root.scrollHeight - root.scrollTop - root.clientHeight;
+                if (distanceFromBottom <= 20) {
                     const emitter =
                         typeof window.emitEvent === 'function'
                             ? window.emitEvent
@@ -226,12 +215,13 @@ def render_dashboard(parent):
                         emitter('load_more');
                     }
                 }
-            }, {
-                root: root,
-                threshold: 0.1
-            });
+            };
 
-            window.feedObserver.observe(sentinel);
+            window.feedScrollRoot = scrollRoot;
+            window.feedScrollRoot.addEventListener('scroll', window.feedScrollListener);
+
+            // trigger once in case the list is shorter than the viewport
+            window.feedScrollListener();
         })();
         """
     )
@@ -342,12 +332,13 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
 
 @with_user_context
 def home_page(user: User | None):
-    with ui.splitter(value=25).classes("w-full h-[600px] gap-4") as splitter:
+    with ui.splitter(value=40).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
                 tab_playlists = ui.tab("🎵 Playlists")
                 tab_teams = ui.tab("👥 Teams")
-            with ui.tab_panels(tabs, value=tab_playlists).classes("w-full h-full"):
+                tab_calendar = ui.tab("📅 Calendar")
+            with ui.tab_panels(tabs, value=tab_calendar).classes("w-full h-full"):
                 with ui.tab_panel(tab_playlists) as playlists_container:
 
                     def refresh_playlists():
@@ -419,6 +410,8 @@ def home_page(user: User | None):
                                         ui.label(f"🎵 {team.get('playlist_count', 0)}").classes("text-sm text-gray-600")
 
                     refresh_teams()
+                with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
+                    calendar_container(group_videos_by_day(load_videos()))
         with splitter.after:
             with ui.column().classes("w-full h-full") as dashboard_column:
 
