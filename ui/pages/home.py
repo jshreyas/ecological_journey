@@ -391,8 +391,15 @@ TAILWIND_TO_HEX = {
     "bg-yellow-400": "#facc15",
     "bg-purple-400": "#c084fc",
     "bg-pink-400": "#f472b6",
+    "bg-teal-400": "#2dd4bf",
     "bg-indigo-400": "#818cf8",
     "bg-gray-400": "#9ca3af",
+    "bg-orange-400": "#fb923c",
+    "bg-[#ff00ff]": "#ff00ff",
+    "bg-[#5c2e00]": "#5c2e00",
+    "bg-[#ff99ff]": "#ff99ff",
+    "bg-[#66ffff]": "#66ffff",
+    "bg-[#ff8000]": "#ff8000",
 }
 
 
@@ -406,7 +413,7 @@ def build_calendar_events(videos: list[dict]) -> list[dict]:
     events = []
 
     for v in videos:
-        start = v["date"].split("T")[0]
+        start = v["date"]
 
         events.append(
             {
