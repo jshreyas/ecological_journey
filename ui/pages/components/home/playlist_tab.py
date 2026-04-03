@@ -5,7 +5,6 @@ from nicegui import ui
 from ui.data.crud import AuthError
 from ui.log import log
 from ui.utils.dialog_puns import caught_john_doe
-from ui.utils.utils_api import create_playlist
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 from .state import State
@@ -81,16 +80,11 @@ class PlaylistTab:
                     ui.timer(0.1, lambda: spinner.set_visibility(True), once=True)
 
                     async def task():
-                        playlist = create_playlist(
-                            [],
-                            self.home_state.user.token if self.home_state.user else None,
+                        playlist = self.home_state.create_playlist(
                             playlist_name,
                             playlist_id,
                         )
-                        result = await self.sync_playlist(
-                            playlist_obj=playlist,
-                            token=self.home_state.user.token if self.home_state.user else None,
-                        )
+                        result = await self.sync_playlist(playlist)
                         spinner.set_visibility(False)
                         if result == SYNC_OK:
                             ui.notify("✅ Playlist created and synced")
@@ -154,18 +148,14 @@ class PlaylistTab:
                 owned_ids = {pl["_id"] for pl in owned}
                 all_playlists = owned + [p for p in member if p["_id"] not in owned_ids]
 
-                def on_user_sync_click(playlist_obj: dict, token: str):
+                def on_user_sync_click(playlist_obj: dict):
                     playlist_id = playlist_obj["_id"]
                     playlist_name = playlist_obj["name"]
 
                     async def run():
                         try:
                             log.info(f"User-initiated sync for playlist: {playlist_name} ({playlist_id})")
-                            result = await self.sync_playlist(
-                                playlist_obj=playlist_obj,
-                                token=token,
-                            )
-
+                            result = await self.sync_playlist(playlist_obj)
                             with self.container:
                                 if result == SYNC_OK:
                                     ui.notify("Playlist synced successfully", type="positive")
@@ -183,13 +173,13 @@ class PlaylistTab:
                     log.info(f"Preparing to sync playlist: {playlist_name} ({playlist_id})")
                     return run
 
-                def on_sync_click(playlist_obj, token):
+                def on_sync_click(playlist_obj):
                     spinner = ui.spinner(size="lg").props("color=primary")
                     spinner.set_visibility(True)
 
                     async def do_sync():
                         try:
-                            await on_user_sync_click(playlist_obj, token)()
+                            await on_user_sync_click(playlist_obj)()
                         except Exception as e:
                             ui.notify(f"❌ Sync failed: {str(e)}")
                         finally:
@@ -205,18 +195,12 @@ class PlaylistTab:
                     render_playlist_card(
                         playlist=playlist,
                         show_sync=is_owned,
-                        on_sync_click=(
-                            lambda p=playlist: on_sync_click(p, self.home_state.user.token) if is_owned else None
-                        ),
+                        on_sync_click=(lambda p=playlist: on_sync_click(p) if is_owned else None),
                     )
 
             render_add_playlist_card()
 
-    async def sync_playlist(
-        self,
-        playlist_obj: dict,
-        token: str,
-    ) -> str:
+    async def sync_playlist(self, playlist_obj: dict) -> str:
         playlist_name = playlist_obj["name"]
         try:
             existing_videos = self.home_state.load_videos(playlist_obj["_id"])

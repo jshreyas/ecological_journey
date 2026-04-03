@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from ui.data.crud import load_playlists as lp
 from ui.utils.user_context import User
+from ui.utils.utils_api import create_playlist as cp
 from ui.utils.utils_api import create_video as cv
 from ui.utils.utils_api import load_playlists_for_user as lp_user
 from ui.utils.utils_api import load_videos as lv
@@ -12,10 +13,10 @@ class State:
 
     def __init__(self, user: User | None = None):
         self.user = user
-        self._load_videos: Optional[Dict[str, Any]] = None  # TODO: use this in all the tabs
+        self._load_videos: Optional[Dict[str, Any]] = None
         self._refresh_callbacks: List[Callable] = []
-        self._load_playlists: Optional[Dict[str, Any]] = None  # TODO: use this in all the tabs
-        self._load_playlists_user: Optional[Dict[str, Any]] = None  # TODO: use this in all the tabs
+        self._load_playlists: Optional[Dict[str, Any]] = None
+        self._load_playlists_user: Optional[Dict[str, Any]] = None
 
     def refresh(self):
         """Clear cache and notify all registered callbacks"""
@@ -29,6 +30,13 @@ class State:
 
     def get_video_anchor(self, video_id: str):
         return f"video-{video_id}"
+
+    def create_playlist(self, playlist_name: str, playlist_id: str) -> Optional[Dict[str, Any]]:
+        """Create a new playlist and refresh state"""
+        created_playlist = cp([], self.user.token if self.user else "", playlist_name, playlist_id)
+        if created_playlist:
+            self.refresh()
+        return created_playlist
 
     def create_video(self, video_data: Dict[str, Any], playlist_id: str) -> Optional[Dict[str, Any]]:
         """Create a new video and refresh state"""
