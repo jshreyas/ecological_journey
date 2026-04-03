@@ -150,7 +150,7 @@ def render_date_header(date_str):
         ui.label(format_date(date_str)).classes("text-lg font-semibold text-gray-700 border-b pb-1 w-full")
 
 
-PAGE_SIZE = 5
+PAGE_SIZE = 50
 current_index = 0
 is_loading = False
 last_rendered_date = None
@@ -506,10 +506,7 @@ def home_page(user: User | None):
                 # with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
                 #     calendar_container(group_videos_by_day(load_videos()))
                 with ui.tab_panel(tab_newc).classes("w-full h-full p-0"):
-                    print(datetime.now().strftime(r"%Y-%m-%d") + " 08:00:00")
-                    print(load_videos()[0])
                     eves = build_calendar_events(load_videos())
-                    print(eves[0])
                     options = {
                         "initialView": "dayGridMonth",
                         "headerToolbar": {"left": "prev", "center": "title", "right": "next"},
@@ -523,7 +520,7 @@ def home_page(user: User | None):
                     def handle_click(event: events.GenericEventArguments):
                         if "info" not in event.args:
                             return
-                        print("Event clicked:", event.args["info"]["event"])
+
                         event_data = event.args["info"]["event"]
 
                         # 👇 choose navigation strategy

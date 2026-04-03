@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 from nicegui import events, ui
@@ -17,7 +16,6 @@ class FullCalendar(ui.element, component="fullcalendar.js"):
         :param on_click: callback that is called when a calendar event is clicked.
         """
         super().__init__()
-        self.add_resource(Path(__file__).parent / "lib")
         self._props["options"] = options
         self._update_method = "update_calendar"
 
