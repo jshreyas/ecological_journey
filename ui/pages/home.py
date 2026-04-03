@@ -6,13 +6,9 @@ from nicegui import events, ui
 
 from ui.data.crud import AuthError, load_playlists
 from ui.log import log
-
-# from ui.pages.components.home.calendar_component import calendar_container
 from ui.pages.components.home.fullcalendar import FullCalendar as fullcalendar
 from ui.utils.dialog_puns import caught_john_doe
 from ui.utils.user_context import User, with_user_context
-
-# from ui.utils.utils import group_videos_by_day
 from ui.utils.utils_api import (
     create_playlist,
     create_team,
@@ -22,9 +18,6 @@ from ui.utils.utils_api import (
     load_videos,
 )
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
-
-# from collections import Counter
-
 
 load_dotenv()
 # TODO: Refactor this file to separate concerns and reduce size.
@@ -418,7 +411,7 @@ def build_calendar_events(videos: list[dict]) -> list[dict]:
         events.append(
             {
                 "id": v["video_id"],  # 👈 CRITICAL for navigation
-                "title": "",  # v.get("playlist_name", "Video"),
+                "title": "",
                 "start": start,
                 "allDay": False,
                 "backgroundColor": get_event_color(v.get("playlist_color")),
@@ -436,9 +429,8 @@ def home_page(user: User | None):
             with ui.tabs().classes("w-full") as tabs:
                 tab_playlists = ui.tab("🎵 Playlists")
                 tab_teams = ui.tab("👥 Teams")
-                # tab_calendar = ui.tab("📅 Calendar")
-                tab_newc = ui.tab("📅 Calendar")
-            with ui.tab_panels(tabs, value=tab_newc).classes("w-full h-full"):
+                tab_calendar = ui.tab("📅 Calendar")
+            with ui.tab_panels(tabs, value=tab_calendar).classes("w-full h-full"):
                 with ui.tab_panel(tab_playlists) as playlists_container:
 
                     def refresh_playlists():
@@ -510,9 +502,7 @@ def home_page(user: User | None):
                                         ui.label(f"🎵 {team.get('playlist_count', 0)}").classes("text-sm text-gray-600")
 
                     refresh_teams()
-                # with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
-                #     calendar_container(group_videos_by_day(load_videos()))
-                with ui.tab_panel(tab_newc).classes("w-full h-full p-0"):
+                with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
                     eves = build_calendar_events(load_videos())
                     options = {
                         "initialView": "dayGridMonth",
