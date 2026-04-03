@@ -110,6 +110,10 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
 
 
 def render_video_post(video, index):
+    anchor_id = get_video_anchor(video["video_id"])
+
+    ui.element("div").props(f"id={anchor_id}")
+
     with ui.card().classes("w-full p-3 shadow-md"):
         with ui.link(target=f'/film/{video["video_id"]}').classes("w-full h-[50vh] p-0"):
             ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/maxresdefault.jpg').classes(
@@ -138,7 +142,11 @@ def render_video_post(video, index):
 
 
 def render_date_header(date_str):
-    with ui.row().classes("w-full max-w-3xl mx-auto px-4 mt-4"):
+    anchor_id = get_date_anchor(date_str)
+
+    ui.element("div").props(f"id={anchor_id}")
+
+    with ui.row().classes("w-full max-w-3xl mx-auto px-4 mt-4 sticky top-0 bg-white z-10"):
         ui.label(format_date(date_str)).classes("text-lg font-semibold text-gray-700 border-b pb-1 w-full")
 
 
@@ -146,6 +154,14 @@ PAGE_SIZE = 5
 current_index = 0
 is_loading = False
 last_rendered_date = None
+
+
+def get_date_anchor(date_str: str):
+    return f"date-{date_str.split('T')[0]}"
+
+
+def get_video_anchor(video_id: str):
+    return f"video-{video_id}"
 
 
 def format_date(date_str):
@@ -214,6 +230,22 @@ def render_dashboard(parent):
     # 👇 initialize scroll listener AFTER render
     ui.run_javascript(
         """
+        window.scrollToAnchor = function(anchorId) {
+            const container = document.querySelector('.feed-scroll');
+            const el = document.getElementById(anchorId);
+
+            if (!container || !el) return;
+
+            const containerRect = container.getBoundingClientRect();
+            const elRect = el.getBoundingClientRect();
+
+            const offset = elRect.top - containerRect.top + container.scrollTop;
+
+            container.scrollTo({
+                top: offset - 20, // small padding
+                behavior: 'smooth'
+            });
+        };
         (function() {
             const scrollRoot = document.querySelector('.feed-scroll');
             if (!scrollRoot) return;
@@ -352,9 +384,47 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
 
 
+TAILWIND_TO_HEX = {
+    "bg-red-400": "#f87171",
+    "bg-blue-400": "#60a5fa",
+    "bg-green-400": "#4ade80",
+    "bg-yellow-400": "#facc15",
+    "bg-purple-400": "#c084fc",
+    "bg-pink-400": "#f472b6",
+    "bg-indigo-400": "#818cf8",
+    "bg-gray-400": "#9ca3af",
+}
+
+
+def get_event_color(tw_class: str | None):
+    if not tw_class:
+        return "#888888"
+    return TAILWIND_TO_HEX.get(tw_class, "#888888")
+
+
+def build_calendar_events(videos: list[dict]) -> list[dict]:
+    events = []
+
+    for v in videos:
+        start = v["date"].split("T")[0]
+
+        events.append(
+            {
+                "id": v["video_id"],  # 👈 CRITICAL for navigation
+                "title": "",  # v.get("playlist_name", "Video"),
+                "start": start,
+                "allDay": False,
+                "backgroundColor": get_event_color(v.get("playlist_color")),
+                "borderColor": get_event_color(v.get("playlist_color")),
+            }
+        )
+
+    return events
+
+
 @with_user_context
 def home_page(user: User | None):
-    with ui.splitter(value=30).classes("w-full h-[600px] gap-4") as splitter:
+    with ui.splitter(value=50).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
                 tab_playlists = ui.tab("🎵 Playlists")
@@ -436,46 +506,36 @@ def home_page(user: User | None):
                 # with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
                 #     calendar_container(group_videos_by_day(load_videos()))
                 with ui.tab_panel(tab_newc).classes("w-full h-full p-0"):
+                    print(datetime.now().strftime(r"%Y-%m-%d") + " 08:00:00")
+                    print(load_videos()[0])
+                    eves = build_calendar_events(load_videos())
+                    print(eves[0])
                     options = {
                         "initialView": "dayGridMonth",
                         "headerToolbar": {"left": "prev", "center": "title", "right": "next"},
-                        # 'slotMinTime': '05:00:00',
-                        # 'slotMaxTime': '22:00:00',
                         "allDaySlot": False,
                         "timeZone": "local",
                         "height": "auto",
                         "width": "auto",
-                        "events": [
-                            {
-                                "title": "Math",
-                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 08:00:00",
-                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 10:00:00',
-                                "color": "#1226dd",
-                            },
-                            {
-                                "title": "Physics",
-                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 10:00:00",
-                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 12:00:00',
-                                "color": "#c1ae1e",
-                            },
-                            {
-                                "title": "Chemistry",
-                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 13:00:00",
-                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 15:00:00',
-                                "color": "#044228",
-                            },
-                            {
-                                "title": "Biology",
-                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 15:00:00",
-                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 17:00:00',
-                                "color": "#1cb253",
-                            },
-                        ],
+                        "events": eves,
                     }
 
                     def handle_click(event: events.GenericEventArguments):
-                        if "info" in event.args:
-                            ui.notify(event.args["info"]["event"])
+                        if "info" not in event.args:
+                            return
+                        print("Event clicked:", event.args["info"]["event"])
+                        event_data = event.args["info"]["event"]
+
+                        # 👇 choose navigation strategy
+                        video_id = event_data.get("id")
+                        date_str = event_data.get("start", "").split("T")[0]
+
+                        if video_id:
+                            anchor = get_video_anchor(video_id)
+                        else:
+                            anchor = get_date_anchor(date_str)
+
+                        ui.run_javascript(f"scrollToAnchor('{anchor}')")
 
                     fullcalendar(options, on_click=handle_click)
 
