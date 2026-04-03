@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from ui.data.crud import load_playlists as lp
 from ui.utils.user_context import User
+from ui.utils.utils_api import create_video as cv
 from ui.utils.utils_api import load_playlists_for_user as lp_user
 from ui.utils.utils_api import load_videos as lv
 
@@ -28,6 +29,13 @@ class State:
 
     def get_video_anchor(self, video_id: str):
         return f"video-{video_id}"
+
+    def create_video(self, video_data: Dict[str, Any], playlist_id: str) -> Optional[Dict[str, Any]]:
+        """Create a new video and refresh state"""
+        created_video = cv(video_data, self.user.token if self.user else "", playlist_id)
+        if created_video:
+            self.refresh()
+        return created_video
 
     def load_videos(self) -> Optional[Dict[str, Any]]:
         """Get videos data, loading from API if not cached"""

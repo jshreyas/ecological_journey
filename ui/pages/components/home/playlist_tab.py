@@ -5,7 +5,7 @@ from nicegui import ui
 from ui.data.crud import AuthError
 from ui.log import log
 from ui.utils.dialog_puns import caught_john_doe
-from ui.utils.utils_api import create_playlist, create_video
+from ui.utils.utils_api import create_playlist
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 from .state import State
@@ -236,7 +236,7 @@ class PlaylistTab:
                 log.info(f"[{playlist_name}] No new videos")
                 return SYNC_NOOP
 
-            create_video(new_video_data, token, playlist_obj["_id"])
+            self.home_state.create_video(new_video_data, playlist_obj["_id"])
             log.info(f"[{playlist_name}] Synced {len(new_video_data)} videos")
             return SYNC_OK
 
