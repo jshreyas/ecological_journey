@@ -1,7 +1,6 @@
 from nicegui import events, ui
 
 from ui.pages.components.home.fullcalendar import FullCalendar
-from ui.utils.utils_api import load_videos
 
 from .state import State
 
@@ -80,7 +79,7 @@ class CalendarTab:
             "timeZone": "local",
             "height": "auto",
             "width": "auto",
-            "events": self.build_calendar_events(load_videos()),
+            "events": self.build_calendar_events(self.home_state.load_videos()),
         }
 
         def handle_click(event: events.GenericEventArguments):

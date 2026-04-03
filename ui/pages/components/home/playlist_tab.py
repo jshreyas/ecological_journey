@@ -2,10 +2,10 @@ import asyncio
 
 from nicegui import ui
 
-from ui.data.crud import AuthError, load_playlists
+from ui.data.crud import AuthError
 from ui.log import log
 from ui.utils.dialog_puns import caught_john_doe
-from ui.utils.utils_api import create_playlist, create_video, load_playlists_for_user, load_videos
+from ui.utils.utils_api import create_playlist, create_video
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 from .state import State
@@ -14,50 +14,6 @@ SYNC_OK = "ok"
 SYNC_NOOP = "noop"
 SYNC_RETRY_SOON = "retry_soon"
 SYNC_ERROR = "error"
-
-
-async def sync_playlist(
-    playlist_obj: dict,
-    token: str,
-) -> str:
-    playlist_name = playlist_obj["name"]
-    try:
-        existing_videos = load_videos(playlist_obj["_id"])
-
-        if existing_videos:
-            latest_saved_date = max(video["date"] for video in existing_videos)
-            existing_video_ids = [video["video_id"] for video in existing_videos]
-        else:
-            latest_saved_date = None
-            existing_video_ids = set()
-
-        playlist_obj["latest_saved_date"] = latest_saved_date
-        playlist_obj["existing_video_ids"] = existing_video_ids
-        new_video_data_dict = await fetch_playlist_items([playlist_obj])
-        new_video_data = new_video_data_dict[playlist_obj["_id"]]
-        if not new_video_data:
-            log.info(f"[{playlist_name}] No new videos")
-            return SYNC_NOOP
-
-        create_video(new_video_data, token, playlist_obj["_id"])
-        log.info(f"[{playlist_name}] Synced {len(new_video_data)} videos")
-        return SYNC_OK
-
-    except AuthError as e:
-        log.error(f"[{playlist_name}] Auth error: {e}")
-        return SYNC_ERROR
-
-    except Exception as e:
-        msg = str(e)
-        log.info(f"[{playlist_name}] {msg}")
-
-        # 👇 detect active-upload validation error
-        if "duration_seconds" in msg and "Field required" in msg:
-            log.warning(f"[{playlist_name}] Upload in progress detected, retrying soon")
-            return SYNC_RETRY_SOON
-
-        log.exception(f"[{playlist_name}] Sync failed")
-        return SYNC_ERROR
 
 
 class PlaylistTab:
@@ -131,7 +87,7 @@ class PlaylistTab:
                             playlist_name,
                             playlist_id,
                         )
-                        result = await sync_playlist(
+                        result = await self.sync_playlist(
                             playlist_obj=playlist,
                             token=self.home_state.user.token if self.home_state.user else None,
                         )
@@ -186,14 +142,14 @@ class PlaylistTab:
 
         with self.container:
             if not self.home_state.user:
-                for playlist in load_playlists():
+                for playlist in self.home_state.load_playlists():
                     render_playlist_card(
                         playlist=playlist,
                         show_sync=True,
                         on_sync_click=lambda: caught_john_doe(),
                     )
             else:
-                both = load_playlists_for_user(self.home_state.user.id)
+                both = self.home_state.load_playlists_for_user()
                 owned, member = both["owned"], both["member"]
                 owned_ids = {pl["_id"] for pl in owned}
                 all_playlists = owned + [p for p in member if p["_id"] not in owned_ids]
@@ -205,7 +161,7 @@ class PlaylistTab:
                     async def run():
                         try:
                             log.info(f"User-initiated sync for playlist: {playlist_name} ({playlist_id})")
-                            result = await sync_playlist(
+                            result = await self.sync_playlist(
                                 playlist_obj=playlist_obj,
                                 token=token,
                             )
@@ -255,3 +211,47 @@ class PlaylistTab:
                     )
 
             render_add_playlist_card()
+
+    async def sync_playlist(
+        self,
+        playlist_obj: dict,
+        token: str,
+    ) -> str:
+        playlist_name = playlist_obj["name"]
+        try:
+            existing_videos = self.home_state.load_videos(playlist_obj["_id"])
+
+            if existing_videos:
+                latest_saved_date = max(video["date"] for video in existing_videos)
+                existing_video_ids = [video["video_id"] for video in existing_videos]
+            else:
+                latest_saved_date = None
+                existing_video_ids = set()
+
+            playlist_obj["latest_saved_date"] = latest_saved_date
+            playlist_obj["existing_video_ids"] = existing_video_ids
+            new_video_data_dict = await fetch_playlist_items([playlist_obj])
+            new_video_data = new_video_data_dict[playlist_obj["_id"]]
+            if not new_video_data:
+                log.info(f"[{playlist_name}] No new videos")
+                return SYNC_NOOP
+
+            create_video(new_video_data, token, playlist_obj["_id"])
+            log.info(f"[{playlist_name}] Synced {len(new_video_data)} videos")
+            return SYNC_OK
+
+        except AuthError as e:
+            log.error(f"[{playlist_name}] Auth error: {e}")
+            return SYNC_ERROR
+
+        except Exception as e:
+            msg = str(e)
+            log.info(f"[{playlist_name}] {msg}")
+
+            # 👇 detect active-upload validation error
+            if "duration_seconds" in msg and "Field required" in msg:
+                log.warning(f"[{playlist_name}] Upload in progress detected, retrying soon")
+                return SYNC_RETRY_SOON
+
+            log.exception(f"[{playlist_name}] Sync failed")
+            return SYNC_ERROR

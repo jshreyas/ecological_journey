@@ -2,8 +2,6 @@ from datetime import datetime
 
 from nicegui import ui
 
-from ui.utils.utils_api import load_videos
-
 from .state import State
 
 PAGE_SIZE = 50
@@ -123,8 +121,7 @@ class FeedTab:
     def _create_feed_ui(self):
         """Create the feed UI"""
 
-        all_videos = load_videos()
-        videos = sorted(all_videos, key=lambda v: v["date"], reverse=True)
+        videos = sorted(self.home_state.load_videos(), key=lambda v: v["date"], reverse=True)
 
         if not videos:
             ui.label("No videos")
