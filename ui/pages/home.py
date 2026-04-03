@@ -1,14 +1,18 @@
 import asyncio
+from datetime import datetime
 
 from dotenv import load_dotenv
-from nicegui import ui
+from nicegui import events, ui
 
 from ui.data.crud import AuthError, load_playlists
 from ui.log import log
-from ui.pages.components.home.calendar_component import calendar_container
+
+# from ui.pages.components.home.calendar_component import calendar_container
+from ui.pages.components.home.fullcalendar import FullCalendar as fullcalendar
 from ui.utils.dialog_puns import caught_john_doe
 from ui.utils.user_context import User, with_user_context
-from ui.utils.utils import group_videos_by_day
+
+# from ui.utils.utils import group_videos_by_day
 from ui.utils.utils_api import (
     create_playlist,
     create_team,
@@ -20,7 +24,6 @@ from ui.utils.utils_api import (
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 # from collections import Counter
-# from datetime import datetime
 
 
 load_dotenv()
@@ -134,13 +137,25 @@ def render_video_post(video, index):
                         )
 
 
+def render_date_header(date_str):
+    with ui.row().classes("w-full max-w-3xl mx-auto px-4 mt-4"):
+        ui.label(format_date(date_str)).classes("text-lg font-semibold text-gray-700 border-b pb-1 w-full")
+
+
 PAGE_SIZE = 5
 current_index = 0
 is_loading = False
+last_rendered_date = None
+
+
+def format_date(date_str):
+    # assuming ISO format in DB: "2026-04-02T..."
+    dt = datetime.fromisoformat(date_str)
+    return dt.strftime("%A, %b %d, %Y")  # e.g. Thursday, Apr 02, 2026
 
 
 def load_more(feed_container, videos):
-    global current_index, is_loading
+    global current_index, is_loading, last_rendered_date
 
     if is_loading:
         return
@@ -153,8 +168,15 @@ def load_more(feed_container, videos):
         is_loading = False
         return
 
-    with feed_container:  # 👈 THIS WAS MISSING
+    with feed_container:
         for i, v in enumerate(next_batch):
+            video_date = v["date"].split("T")[0]  # normalize to YYYY-MM-DD
+
+            # 👇 insert header when date changes
+            if last_rendered_date != video_date:
+                render_date_header(video_date)
+                last_rendered_date = video_date
+
             render_video_post(v, current_index + i)
 
     current_index += PAGE_SIZE
@@ -332,13 +354,14 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
 
 @with_user_context
 def home_page(user: User | None):
-    with ui.splitter(value=40).classes("w-full h-[600px] gap-4") as splitter:
+    with ui.splitter(value=30).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
                 tab_playlists = ui.tab("🎵 Playlists")
                 tab_teams = ui.tab("👥 Teams")
-                tab_calendar = ui.tab("📅 Calendar")
-            with ui.tab_panels(tabs, value=tab_calendar).classes("w-full h-full"):
+                # tab_calendar = ui.tab("📅 Calendar")
+                tab_newc = ui.tab("📅 Calendar")
+            with ui.tab_panels(tabs, value=tab_newc).classes("w-full h-full"):
                 with ui.tab_panel(tab_playlists) as playlists_container:
 
                     def refresh_playlists():
@@ -410,8 +433,52 @@ def home_page(user: User | None):
                                         ui.label(f"🎵 {team.get('playlist_count', 0)}").classes("text-sm text-gray-600")
 
                     refresh_teams()
-                with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
-                    calendar_container(group_videos_by_day(load_videos()))
+                # with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
+                #     calendar_container(group_videos_by_day(load_videos()))
+                with ui.tab_panel(tab_newc).classes("w-full h-full p-0"):
+                    options = {
+                        "initialView": "dayGridMonth",
+                        "headerToolbar": {"left": "prev", "center": "title", "right": "next"},
+                        # 'slotMinTime': '05:00:00',
+                        # 'slotMaxTime': '22:00:00',
+                        "allDaySlot": False,
+                        "timeZone": "local",
+                        "height": "auto",
+                        "width": "auto",
+                        "events": [
+                            {
+                                "title": "Math",
+                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 08:00:00",
+                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 10:00:00',
+                                "color": "#1226dd",
+                            },
+                            {
+                                "title": "Physics",
+                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 10:00:00",
+                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 12:00:00',
+                                "color": "#c1ae1e",
+                            },
+                            {
+                                "title": "Chemistry",
+                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 13:00:00",
+                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 15:00:00',
+                                "color": "#044228",
+                            },
+                            {
+                                "title": "Biology",
+                                "start": datetime.now().strftime(r"%Y-%m-%d") + " 15:00:00",
+                                # 'end': datetime.now().strftime(r'%Y-%m-%d') + ' 17:00:00',
+                                "color": "#1cb253",
+                            },
+                        ],
+                    }
+
+                    def handle_click(event: events.GenericEventArguments):
+                        if "info" in event.args:
+                            ui.notify(event.args["info"]["event"])
+
+                    fullcalendar(options, on_click=handle_click)
+
         with splitter.after:
             with ui.column().classes("w-full h-full") as dashboard_column:
 
