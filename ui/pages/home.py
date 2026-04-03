@@ -32,5 +32,5 @@ def home_page(user: User | None):
                     calendar_tab.create_tab(calendar_container)
 
         with splitter.after:
-            with ui.column().classes("w-full h-full") as dashboard_column:
-                feed_tab.create_tab(dashboard_column)
+            with ui.column().classes("w-full h-full") as feed_container:
+                feed_tab.create_tab(feed_container)

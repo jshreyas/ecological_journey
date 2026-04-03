@@ -67,6 +67,8 @@ class PlaylistTab:
         self.home_state = home_state
         self.container = None
 
+        self.home_state.add_refresh_callback(self.refresh)
+
     def create_tab(self, container):
         """Create the playlist tab UI"""
         self.container = container

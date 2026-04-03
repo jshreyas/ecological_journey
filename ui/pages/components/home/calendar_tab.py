@@ -37,6 +37,8 @@ class CalendarTab:
         self.home_state = home_state
         self.container = None
 
+        self.home_state.add_refresh_callback(self.refresh)
+
     def create_tab(self, container):
         """Create the calendar tab UI"""
         self.container = container

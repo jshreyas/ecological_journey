@@ -25,6 +25,8 @@ class FeedTab:
         self.is_loading = False
         self.last_rendered_date = None
 
+        self.home_state.add_refresh_callback(self.refresh)
+
     def create_tab(self, container):
         """Create the feed tab UI"""
         self.container = container
@@ -91,7 +93,7 @@ class FeedTab:
         with ui.row().classes("w-full max-w-3xl mx-auto px-4 mt-4 sticky top-0 bg-white z-10"):
             ui.label(format_date(date_str)).classes("text-lg font-semibold text-gray-700 border-b pb-1 w-full")
 
-    def load_more(self, feed_container, videos):
+    def load_more(self, videos):
 
         if self.is_loading:
             return
@@ -104,7 +106,7 @@ class FeedTab:
             self.is_loading = False
             return
 
-        with feed_container:
+        with self.feed_container:
             for i, v in enumerate(next_batch):
                 video_date = v["date"].split("T")[0]  # normalize to YYYY-MM-DD
 
@@ -125,99 +127,94 @@ class FeedTab:
         videos = sorted(all_videos, key=lambda v: v["date"], reverse=True)
 
         if not videos:
-            # with parent:
             ui.label("No videos")
             return
 
-        global current_index, is_loading
-        current_index = 0
-        is_loading = False
-
         with ui.column().classes("w-full h-full overflow-auto feed-scroll"):
 
-            feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6 p-4")
+            self.feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6 p-4")
 
             # initial load
-            self.load_more(feed_container, videos)
+            self.load_more(videos)
 
             # 👇 sentinel (VERY IMPORTANT)
             ui.element("div").classes("feed-sentinel h-10")
 
         # 👇 Python event listener
-        ui.on("load_more", lambda: self.load_more(feed_container, videos))
+        ui.on("load_more", lambda: self.load_more(videos))
 
         # 👇 initialize scroll listener AFTER render
         ui.run_javascript(
             """
-        window.scrollToAnchor = async function(anchorId) {
-            const container = document.querySelector('.feed-scroll');
-            if (!container) return;
+            window.scrollToAnchor = async function(anchorId) {
+                const container = document.querySelector('.feed-scroll');
+                if (!container) return;
 
-            for (let i = 0; i < 25; i++) {  // 👈 retry limit (prevents infinite loop)
-                const el = document.getElementById(anchorId);
+                for (let i = 0; i < 25; i++) {  // 👈 retry limit (prevents infinite loop)
+                    const el = document.getElementById(anchorId);
 
-                if (el) {
-                    const containerRect = container.getBoundingClientRect();
-                    const elRect = el.getBoundingClientRect();
+                    if (el) {
+                        const containerRect = container.getBoundingClientRect();
+                        const elRect = el.getBoundingClientRect();
 
-                    const offset = elRect.top - containerRect.top + container.scrollTop;
+                        const offset = elRect.top - containerRect.top + container.scrollTop;
 
-                    container.scrollTo({
-                        top: offset - 20,
-                        behavior: 'smooth'
-                    });
+                        container.scrollTo({
+                            top: offset - 20,
+                            behavior: 'smooth'
+                        });
 
-                    return;
-                }
+                        return;
+                    }
 
-                // 👇 trigger backend load_more
-                const emitter =
-                    typeof window.emitEvent === 'function'
-                        ? window.emitEvent
-                        : typeof emitEvent === 'function'
-                        ? emitEvent
-                        : null;
-
-                if (emitter) {
-                    emitter('load_more');
-                }
-
-                // 👇 wait for DOM to update
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-
-            console.warn("Anchor not found after loading attempts:", anchorId);
-        };
-        (function() {
-            const scrollRoot = document.querySelector('.feed-scroll');
-            if (!scrollRoot) return;
-
-            if (window.feedScrollListener && window.feedScrollRoot) {
-                window.feedScrollRoot.removeEventListener('scroll', window.feedScrollListener);
-            }
-
-            window.feedScrollListener = function() {
-                const root = document.querySelector('.feed-scroll');
-                if (!root) return;
-                const distanceFromBottom = root.scrollHeight - root.scrollTop - root.clientHeight;
-                if (distanceFromBottom <= 20) {
+                    // 👇 trigger backend load_more
                     const emitter =
                         typeof window.emitEvent === 'function'
                             ? window.emitEvent
                             : typeof emitEvent === 'function'
                             ? emitEvent
                             : null;
+
                     if (emitter) {
                         emitter('load_more');
                     }
+
+                    // 👇 wait for DOM to update
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
+
+                console.warn("Anchor not found after loading attempts:", anchorId);
             };
+            (function() {
+                const scrollRoot = document.querySelector('.feed-scroll');
+                if (!scrollRoot) return;
 
-            window.feedScrollRoot = scrollRoot;
-            window.feedScrollRoot.addEventListener('scroll', window.feedScrollListener);
+                if (window.feedScrollListener && window.feedScrollRoot) {
+                    window.feedScrollRoot.removeEventListener('scroll', window.feedScrollListener);
+                }
 
-            // trigger once in case the list is shorter than the viewport
-            window.feedScrollListener();
-        })();
-        """
+                window.feedScrollListener = function() {
+                    const root = document.querySelector('.feed-scroll');
+                    if (!root) return;
+                    const distanceFromBottom = root.scrollHeight - root.scrollTop - root.clientHeight;
+                    if (distanceFromBottom <= 20) {
+                        const emitter =
+                            typeof window.emitEvent === 'function'
+                                ? window.emitEvent
+                                : typeof emitEvent === 'function'
+                                ? emitEvent
+                                : null;
+                        if (emitter) {
+                            emitter('load_more');
+                        }
+                    }
+                };
+
+                window.feedScrollRoot = scrollRoot;
+                window.feedScrollRoot.addEventListener('scroll', window.feedScrollListener);
+
+                // trigger once in case the list is shorter than the viewport
+                window.feedScrollListener();
+            })();
+            """
         )
