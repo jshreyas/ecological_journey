@@ -45,14 +45,15 @@ class State:
             self.refresh()
         return created_video
 
-    def load_videos(self, playlist_id: str = None) -> Optional[Dict[str, Any]]:
+    def load_videos(self) -> Optional[Dict[str, Any]]:
         """Get videos data, loading from API if not cached"""
         if self._load_videos is None:
-            if playlist_id:
-                self._load_videos = lv(playlist_id)
-            else:
-                self._load_videos = lv()
+            self._load_videos = lv()
         return self._load_videos
+
+    def load_videos_by_playlist(self, playlist_id: str) -> Optional[Dict[str, Any]]:
+        """Get videos data, loading from API if not cached"""
+        return lv(playlist_id)
 
     def load_playlists(self) -> Optional[Dict[str, Any]]:
         """Get playlists data, loading from API if not cached"""

@@ -35,6 +35,9 @@ class FeedTab:
         if not self.container:
             return
 
+        self.current_index = 0
+        self.is_loading = False
+        self.last_rendered_date = None
         self.container.clear()
         with self.container:
             self._create_feed_ui()

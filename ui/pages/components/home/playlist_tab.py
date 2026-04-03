@@ -93,8 +93,6 @@ class PlaylistTab:
                         else:
                             ui.notify("⚠️ Playlist added, sync failed")
 
-                        self.refresh()
-                        # render_dashboard()  # TODO: refresh feedtab
                         playlist_id_input.value = ""
                         fetch_button.disable()
                         playlist_verified["status"] = False
@@ -184,8 +182,6 @@ class PlaylistTab:
                             ui.notify(f"❌ Sync failed: {str(e)}")
                         finally:
                             spinner.set_visibility(False)
-                            self.refresh()
-                            # render_dashboard()  # TODO: refresh feedtab
 
                     ui.timer(0.1, lambda: asyncio.create_task(do_sync()), once=True)
 
@@ -203,7 +199,7 @@ class PlaylistTab:
     async def sync_playlist(self, playlist_obj: dict) -> str:
         playlist_name = playlist_obj["name"]
         try:
-            existing_videos = self.home_state.load_videos(playlist_obj["_id"])
+            existing_videos = self.home_state.load_videos_by_playlist(playlist_obj["_id"])
 
             if existing_videos:
                 latest_saved_date = max(video["date"] for video in existing_videos)
