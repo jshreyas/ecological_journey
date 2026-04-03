@@ -503,7 +503,6 @@ def home_page(user: User | None):
 
                     refresh_teams()
                 with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
-                    eves = build_calendar_events(load_videos())
                     options = {
                         "initialView": "dayGridMonth",
                         "headerToolbar": {"left": "prev", "center": "title", "right": "next"},
@@ -511,7 +510,7 @@ def home_page(user: User | None):
                         "timeZone": "local",
                         "height": "auto",
                         "width": "auto",
-                        "events": eves,
+                        "events": build_calendar_events(load_videos()),
                     }
 
                     def handle_click(event: events.GenericEventArguments):
