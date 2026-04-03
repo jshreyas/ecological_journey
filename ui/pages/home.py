@@ -1,12 +1,13 @@
 import asyncio
-from datetime import datetime
 
 from dotenv import load_dotenv
-from nicegui import events, ui
+from nicegui import ui
 
 from ui.data.crud import AuthError, load_playlists
 from ui.log import log
-from ui.pages.components.home.fullcalendar import FullCalendar
+from ui.pages.components.home.calendar_tab import CalendarTab
+from ui.pages.components.home.feed_tab import FeedTab
+from ui.pages.components.home.state import State
 from ui.utils.dialog_puns import caught_john_doe
 from ui.utils.user_context import User, with_user_context
 from ui.utils.utils_api import (
@@ -20,7 +21,6 @@ from ui.utils.utils_api import (
 from ui.utils.youtube import fetch_playlist_items, fetch_playlist_metadata
 
 load_dotenv()
-# TODO: Refactor this file to separate concerns and reduce size.
 
 
 def render_add_playlist_card(parent, user: User | None, refresh_playlists, render_dashboard):
@@ -102,212 +102,8 @@ def render_add_playlist_card(parent, user: User | None, refresh_playlists, rende
                 fetch_button.on("click", fetch_playlist_videos)
 
 
-def render_video_post(video, index):
-    anchor_id = get_video_anchor(video["video_id"])
-
-    ui.element("div").props(f"id={anchor_id}")
-
-    with ui.card().classes("w-full p-3 shadow-md"):
-        with ui.link(target=f'/film/{video["video_id"]}').classes("w-full h-[50vh] p-0"):
-            ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/maxresdefault.jpg').classes(
-                "w-full h-full rounded-md"
-            )
-
-        # 📌 Metadata
-        with ui.column().classes("gap-1 mt-2"):
-
-            with ui.row().classes("w-full items-center px-2"):
-                with (
-                    ui.grid(columns=5)
-                    .classes("w-full items-center text-sm")
-                    .style("grid-template-columns: auto auto 80px 80px;")
-                ):
-
-                    # Index
-                    with ui.row().classes("items-center gap-2"):
-                        with ui.element("div").classes(
-                            f"{video.get('playlist_color')} w-6 h-6 rounded-full flex items-center justify-center"
-                        ):
-                            ui.label("🎵").classes("text-left")
-
-                        # Playlist
-                        ui.label(f"{video.get('playlist_name')}").classes("text-left")
-
-                    # Runtime
-                    ui.label(f"⏱️ {video.get('duration_human', '--:--')}").classes("text-left")
-
-                    # Clips
-                    ui.label(f"🎬 {len(video.get('clips', []))}").classes("text-right")
-
-                    # Anchors
-                    ui.label(f"📍 {len(video.get('anchors', []))}").classes("text-right")
-
-            partners = ", ".join(video.get("partners", []))
-            if partners:
-                ui.label(f"👥 {partners}").classes("w-full items-center px-2 text-sm text-gray-700")
-
-
-def render_date_header(date_str):
-    anchor_id = get_date_anchor(date_str)
-
-    ui.element("div").props(f"id={anchor_id}")
-
-    with ui.row().classes("w-full max-w-3xl mx-auto px-4 mt-4 sticky top-0 bg-white z-10"):
-        ui.label(format_date(date_str)).classes("text-lg font-semibold text-gray-700 border-b pb-1 w-full")
-
-
-PAGE_SIZE = 50
-current_index = 0
-is_loading = False
-last_rendered_date = None
-
-
-def get_date_anchor(date_str: str):
-    return f"date-{date_str.split('T')[0]}"
-
-
-def get_video_anchor(video_id: str):
-    return f"video-{video_id}"
-
-
-def format_date(date_str):
-    # assuming ISO format in DB: "2026-04-02T..."
-    dt = datetime.fromisoformat(date_str)
-    return dt.strftime("%A, %b %d, %Y")  # e.g. Thursday, Apr 02, 2026
-
-
-def load_more(feed_container, videos):
-    global current_index, is_loading, last_rendered_date
-
-    if is_loading:
-        return
-
-    is_loading = True
-
-    next_batch = videos[current_index : current_index + PAGE_SIZE]  # noqa: E203
-
-    if not next_batch:
-        is_loading = False
-        return
-
-    with feed_container:
-        for i, v in enumerate(next_batch):
-            video_date = v["date"].split("T")[0]  # normalize to YYYY-MM-DD
-
-            # 👇 insert header when date changes
-            if last_rendered_date != video_date:
-                render_date_header(video_date)
-                last_rendered_date = video_date
-
-            render_video_post(v, current_index + i)
-
-    current_index += PAGE_SIZE
-    is_loading = False
-
-
 def render_dashboard(parent):
-    parent.clear()
-    all_videos = load_videos()
-    videos = sorted(all_videos, key=lambda v: v["date"], reverse=True)
-
-    if not videos:
-        with parent:
-            ui.label("No videos")
-        return
-
-    global current_index, is_loading
-    current_index = 0
-    is_loading = False
-
-    with parent:
-        with ui.column().classes("w-full h-full overflow-auto feed-scroll"):
-
-            feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6 p-4")
-
-            # initial load
-            load_more(feed_container, videos)
-
-            # 👇 sentinel (VERY IMPORTANT)
-            ui.element("div").classes("feed-sentinel h-10")
-
-    # 👇 Python event listener
-    ui.on("load_more", lambda: load_more(feed_container, videos))
-
-    # 👇 initialize scroll listener AFTER render
-    ui.run_javascript(
-        """
-        window.scrollToAnchor = async function(anchorId) {
-            const container = document.querySelector('.feed-scroll');
-            if (!container) return;
-
-            for (let i = 0; i < 25; i++) {  // 👈 retry limit (prevents infinite loop)
-                const el = document.getElementById(anchorId);
-
-                if (el) {
-                    const containerRect = container.getBoundingClientRect();
-                    const elRect = el.getBoundingClientRect();
-
-                    const offset = elRect.top - containerRect.top + container.scrollTop;
-
-                    container.scrollTo({
-                        top: offset - 20,
-                        behavior: 'smooth'
-                    });
-
-                    return;
-                }
-
-                // 👇 trigger backend load_more
-                const emitter =
-                    typeof window.emitEvent === 'function'
-                        ? window.emitEvent
-                        : typeof emitEvent === 'function'
-                        ? emitEvent
-                        : null;
-
-                if (emitter) {
-                    emitter('load_more');
-                }
-
-                // 👇 wait for DOM to update
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-
-            console.warn("Anchor not found after loading attempts:", anchorId);
-        };
-        (function() {
-            const scrollRoot = document.querySelector('.feed-scroll');
-            if (!scrollRoot) return;
-
-            if (window.feedScrollListener && window.feedScrollRoot) {
-                window.feedScrollRoot.removeEventListener('scroll', window.feedScrollListener);
-            }
-
-            window.feedScrollListener = function() {
-                const root = document.querySelector('.feed-scroll');
-                if (!root) return;
-                const distanceFromBottom = root.scrollHeight - root.scrollTop - root.clientHeight;
-                if (distanceFromBottom <= 20) {
-                    const emitter =
-                        typeof window.emitEvent === 'function'
-                            ? window.emitEvent
-                            : typeof emitEvent === 'function'
-                            ? emitEvent
-                            : null;
-                    if (emitter) {
-                        emitter('load_more');
-                    }
-                }
-            };
-
-            window.feedScrollRoot = scrollRoot;
-            window.feedScrollRoot.addEventListener('scroll', window.feedScrollListener);
-
-            // trigger once in case the list is shorter than the viewport
-            window.feedScrollListener();
-        })();
-        """
-    )
+    pass
 
 
 def render_playlists_list(parent, user: User | None, refresh_playlists, render_dashboard):
@@ -413,53 +209,12 @@ def render_playlists_list(parent, user: User | None, refresh_playlists, render_d
     render_add_playlist_card(parent, user, refresh_playlists, render_dashboard)
 
 
-TAILWIND_TO_HEX = {
-    "bg-red-400": "#f87171",
-    "bg-blue-400": "#60a5fa",
-    "bg-green-400": "#4ade80",
-    "bg-yellow-400": "#facc15",
-    "bg-purple-400": "#c084fc",
-    "bg-pink-400": "#f472b6",
-    "bg-teal-400": "#2dd4bf",
-    "bg-indigo-400": "#818cf8",
-    "bg-gray-400": "#9ca3af",
-    "bg-orange-400": "#fb923c",
-    "bg-[#ff00ff]": "#ff00ff",
-    "bg-[#5c2e00]": "#5c2e00",
-    "bg-[#ff99ff]": "#ff99ff",
-    "bg-[#66ffff]": "#66ffff",
-    "bg-[#ff8000]": "#ff8000",
-}
-
-
-def get_event_color(tw_class: str | None):
-    if not tw_class:
-        return "#888888"
-    return TAILWIND_TO_HEX.get(tw_class, "#888888")
-
-
-def build_calendar_events(videos: list[dict]) -> list[dict]:
-    events = []
-
-    for v in videos:
-        start = v["date"]
-
-        events.append(
-            {
-                "id": v["video_id"],  # 👈 CRITICAL for navigation
-                "title": "",
-                "start": start,
-                "allDay": False,
-                "backgroundColor": get_event_color(v.get("playlist_color")),
-                "borderColor": get_event_color(v.get("playlist_color")),
-            }
-        )
-
-    return events
-
-
 @with_user_context
 def home_page(user: User | None):
+
+    home_state = State(user)
+    calendar_tab = CalendarTab(home_state)
+    feed_tab = FeedTab(home_state)
     with ui.splitter(value=50).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
@@ -538,43 +293,12 @@ def home_page(user: User | None):
                                         ui.label(f"🎵 {team.get('playlist_count', 0)}").classes("text-sm text-gray-600")
 
                     refresh_teams()
-                with ui.tab_panel(tab_calendar).classes("w-full h-full p-0"):
-                    options = {
-                        "initialView": "dayGridMonth",
-                        "headerToolbar": {"left": "prev", "center": "title", "right": "next"},
-                        "allDaySlot": False,
-                        "timeZone": "local",
-                        "height": "auto",
-                        "width": "auto",
-                        "events": build_calendar_events(load_videos()),
-                    }
-
-                    def handle_click(event: events.GenericEventArguments):
-                        if "info" not in event.args:
-                            return
-
-                        event_data = event.args["info"]["event"]
-
-                        # 👇 choose navigation strategy
-                        video_id = event_data.get("id")
-                        date_str = event_data.get("start", "").split("T")[0]
-
-                        if video_id:
-                            anchor = get_video_anchor(video_id)
-                        else:
-                            anchor = get_date_anchor(date_str)
-
-                        ui.run_javascript(f"scrollToAnchor('{anchor}')")
-
-                    FullCalendar(options, on_click=handle_click)
+                with ui.tab_panel(tab_calendar).classes("w-full h-full p-0") as calendar_container:
+                    calendar_tab.create_tab(calendar_container)
 
         with splitter.after:
             with ui.column().classes("w-full h-full") as dashboard_column:
-
-                def render_dashboard_wrapper():
-                    render_dashboard(dashboard_column)
-
-                render_dashboard_wrapper()
+                feed_tab.create_tab(dashboard_column)
 
 
 # --- Stubbed Actions ---
