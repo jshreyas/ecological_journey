@@ -6,7 +6,7 @@ from nicegui import events, ui
 
 from ui.data.crud import AuthError, load_playlists
 from ui.log import log
-from ui.pages.components.home.fullcalendar import FullCalendar as fullcalendar
+from ui.pages.components.home.fullcalendar import FullCalendar
 from ui.utils.dialog_puns import caught_john_doe
 from ui.utils.user_context import User, with_user_context
 from ui.utils.utils_api import (
@@ -115,23 +115,36 @@ def render_video_post(video, index):
 
         # 📌 Metadata
         with ui.column().classes("gap-1 mt-2"):
-            with ui.row().classes("gap-2 items-center"):
-                ui.label(index + 1).classes("text-sm font-bold text-gray-500")
-                ui.element("div").classes(f"{video.get('playlist_color')} w-3 h-3 rounded-full")
-                ui.label(f"🎵 Playlist: {video.get('playlist_name', 'N/A')}").classes("text-sm")
+
+            with ui.row().classes("w-full items-center px-2"):
+                with (
+                    ui.grid(columns=5)
+                    .classes("w-full items-center text-sm")
+                    .style("grid-template-columns: auto auto 80px 80px;")
+                ):
+
+                    # Index
+                    with ui.row().classes("items-center gap-2"):
+                        with ui.element("div").classes(
+                            f"{video.get('playlist_color')} w-6 h-6 rounded-full flex items-center justify-center"
+                        ):
+                            ui.label("🎵").classes("text-left")
+
+                        # Playlist
+                        ui.label(f"{video.get('playlist_name')}").classes("text-left")
+
+                    # Runtime
+                    ui.label(f"⏱️ {video.get('duration_human', '--:--')}").classes("text-left")
+
+                    # Clips
+                    ui.label(f"🎬 {len(video.get('clips', []))}").classes("text-right")
+
+                    # Anchors
+                    ui.label(f"📍 {len(video.get('anchors', []))}").classes("text-right")
 
             partners = ", ".join(video.get("partners", []))
             if partners:
-                ui.label(f"👥 {partners}").classes("text-sm text-gray-700")
-
-            # ✂️ Clips
-            clips = video.get("clips", [])
-            if clips:
-                with ui.row().classes("flex-wrap gap-1"):
-                    for c in clips[:5]:
-                        ui.chip(c.get("label", "clip")).props("dense").on(
-                            "click", lambda _, c=c: ui.notify(f"Playing clip: {c.get('label', 'clip')}")
-                        )
+                ui.label(f"👥 {partners}").classes("w-full items-center px-2 text-sm text-gray-700")
 
 
 def render_date_header(date_str):
@@ -223,21 +236,44 @@ def render_dashboard(parent):
     # 👇 initialize scroll listener AFTER render
     ui.run_javascript(
         """
-        window.scrollToAnchor = function(anchorId) {
+        window.scrollToAnchor = async function(anchorId) {
             const container = document.querySelector('.feed-scroll');
-            const el = document.getElementById(anchorId);
+            if (!container) return;
 
-            if (!container || !el) return;
+            for (let i = 0; i < 25; i++) {  // 👈 retry limit (prevents infinite loop)
+                const el = document.getElementById(anchorId);
 
-            const containerRect = container.getBoundingClientRect();
-            const elRect = el.getBoundingClientRect();
+                if (el) {
+                    const containerRect = container.getBoundingClientRect();
+                    const elRect = el.getBoundingClientRect();
 
-            const offset = elRect.top - containerRect.top + container.scrollTop;
+                    const offset = elRect.top - containerRect.top + container.scrollTop;
 
-            container.scrollTo({
-                top: offset - 20, // small padding
-                behavior: 'smooth'
-            });
+                    container.scrollTo({
+                        top: offset - 20,
+                        behavior: 'smooth'
+                    });
+
+                    return;
+                }
+
+                // 👇 trigger backend load_more
+                const emitter =
+                    typeof window.emitEvent === 'function'
+                        ? window.emitEvent
+                        : typeof emitEvent === 'function'
+                        ? emitEvent
+                        : null;
+
+                if (emitter) {
+                    emitter('load_more');
+                }
+
+                // 👇 wait for DOM to update
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+
+            console.warn("Anchor not found after loading attempts:", anchorId);
         };
         (function() {
             const scrollRoot = document.querySelector('.feed-scroll');
@@ -530,7 +566,7 @@ def home_page(user: User | None):
 
                         ui.run_javascript(f"scrollToAnchor('{anchor}')")
 
-                    fullcalendar(options, on_click=handle_click)
+                    FullCalendar(options, on_click=handle_click)
 
         with splitter.after:
             with ui.column().classes("w-full h-full") as dashboard_column:
