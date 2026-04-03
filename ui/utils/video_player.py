@@ -98,6 +98,7 @@ class VideoPlayer:
                         width: '100%',
                         videoId: window.ytConfig.videoId,
                         playerVars: {{
+                            autoplay: 1,
                             start: window.ytConfig.start
                         }},
                         events: {{
@@ -110,6 +111,32 @@ class VideoPlayer:
                 function onPlayerReady(event) {{
                     event.target.setPlaybackRate(window.ytConfig.speed);
                     event.target.playVideo();
+                    if (ytEndInterval) clearInterval(ytEndInterval);
+                    ytEndInterval = setInterval(() => {{
+                        const current = ytPlayer.getCurrentTime();
+                        if (current >= window.ytConfig.end) {{
+                            ytPlayer.pauseVideo();
+                            clearInterval(ytEndInterval);
+                            {js_on_end}
+                        }}
+                    }}, 500);
+                }}
+
+                function onPlayerReady(event) {{
+                    event.target.setPlaybackRate(window.ytConfig.speed);
+                    event.target.playVideo();
+
+                    // Set global ytPlayer reference
+                    window.ytPlayer = event.target;
+
+                    // Define helper after player is ready
+                    window.getYTCurrentTime = function() {{
+                        if (window.ytPlayer && typeof window.ytPlayer.getCurrentTime === "function") {{
+                            return window.ytPlayer.getCurrentTime();
+                        }}
+                        return null;
+                    }};
+
                     if (ytEndInterval) clearInterval(ytEndInterval);
                     ytEndInterval = setInterval(() => {{
                         const current = ytPlayer.getCurrentTime();
