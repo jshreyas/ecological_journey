@@ -75,7 +75,7 @@ class VideoPlayer:
             js_on_end = (
                 f"""
                 fetch('/_nicegui_api/{self.element_id}_on_end', {{method: 'POST'}});
-            """
+                """
                 if self.on_end
                 else ""
             )
@@ -147,7 +147,6 @@ class VideoPlayer:
                         }}
                     }}, 500);
                 }}
-
 
                 function onPlayerStateChange(event) {{}}
 
