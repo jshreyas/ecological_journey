@@ -56,7 +56,7 @@ class CalendarTab:
         events = []
 
         for v in videos:
-            start = v["date"]
+            start = v["date"].split("T")[0]  # Extract date part, ignore time
             events.append(
                 {
                     "id": v["video_id"],  # 👈 CRITICAL for navigation
@@ -79,6 +79,7 @@ class CalendarTab:
             "timeZone": "local",
             "height": "auto",
             "width": "auto",
+            "displayEventTime": False,
             "events": self.build_calendar_events(self.home_state.load_videos()),
         }
 
