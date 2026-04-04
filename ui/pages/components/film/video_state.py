@@ -3,7 +3,7 @@ VideoState class for centralized state management of video data
 """
 
 import re
-from typing import Any, Callable, Dict, List, Optional  # All used in type annotations
+from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 from ui.data.crud import load_video
