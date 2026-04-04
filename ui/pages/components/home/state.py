@@ -22,6 +22,7 @@ class State:
         """Clear cache and notify all registered callbacks"""
         self._load_videos = lv()
         self._load_playlists = lp()
+        self._load_playlists_user = None
         for callback in self._refresh_callbacks:
             callback()
 

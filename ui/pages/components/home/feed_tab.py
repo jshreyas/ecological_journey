@@ -141,7 +141,10 @@ class FeedTab:
             ui.element("div").classes("feed-sentinel h-10")
 
         # 👇 Python event listener
-        ui.on("load_more", lambda: self.load_more(videos))
+        ui.on(
+            "load_more",
+            lambda: self.load_more(sorted(self.home_state.load_videos(), key=lambda v: v["date"], reverse=True)),
+        )
 
         # 👇 initialize scroll listener AFTER render
         ui.run_javascript(
