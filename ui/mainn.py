@@ -5,6 +5,8 @@ import time
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from dotenv import load_dotenv
 from fastapi import Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
 from starlette.responses import RedirectResponse
 
@@ -19,6 +21,7 @@ from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
 
+# TODO: missing @api_router apis and check sync playlist works
 load_dotenv()
 FRONTEND_URL = os.getenv("BASE_URL_SHARE")
 
@@ -128,13 +131,27 @@ async def main_page() -> None:
             "/clips": clips_page,
             "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
-            "/notion": notion_page,
+            "/notion": notion_page,  # TODO: the embed doesnt work
             "/partners": partner_page,
+            "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
             "/secret": secret,
             "/error": error,
         }
-    ).classes("flex-grow p-4")
+    ).classes("w-full h-full flex-grow p-4")
+
+
+OBSERVABLE_URL = os.getenv("OBSERVABLE_URL")
+
+
+# TODO: this doesnt work
+def stories():
+    ui.html(
+        f"""
+        <iframe src="{OBSERVABLE_URL}"
+                style="width:100%; height:110vh; border:none;"></iframe>
+    """
+    ).classes("w-full h-full")
 
 
 def home():
@@ -162,5 +179,18 @@ def secret():
     )
 
 
-if __name__ in {"__main__", "__mp_main__"}:
-    ui.run(storage_secret="demo_secret_key_change_in_production")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+ui.run(
+    title="Ecological Journey",
+    reload=True,
+    storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
+)
