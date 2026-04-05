@@ -27,7 +27,8 @@ from ui.pages.clips import clips_page
 from ui.pages.custom_sub_pages import custom_sub_pages
 from ui.pages.film import film_page
 from ui.pages.home import home_page
-from ui.pages.notion import notion_page
+
+# from ui.pages.notion import notion_page
 from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
@@ -166,7 +167,7 @@ async def main_page() -> None:
             nav_button("Clips", "/clips")
             nav_button("Cliplists", "/cliplists")
             nav_button("About", "/about")
-            nav_button("Notion", "/notion")
+            # nav_button("Notion", "/notion")
 
         ui.space()
 
@@ -214,7 +215,7 @@ async def main_page() -> None:
             "/clips": clips_page,
             "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
-            "/notion": notion_page,  # TODO: the embed doesnt work
+            # "/notion": notion_page,  # TODO: the embed doesnt work
             "/partners": partner_page,
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
