@@ -86,25 +86,24 @@ async def main_page() -> None:
     with ui.header().classes(
         "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
     ):
+
+        def nav_button(label: str, path: str):
+            return (
+                ui.button(label, on_click=lambda: ui.navigate.to(path))
+                .classes("text-white text-base normal-case px-4 py-1")
+                .props("flat dense")
+            )
+
         with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
             ui.button(icon="home", on_click=lambda: ui.navigate.to("/")).classes(
                 "text-white text-base normal-case px-4 py-1"
             ).props("flat dense")
-            ui.button("Search", on_click=lambda: ui.navigate.to("/search")).classes(
-                "text-white text-base normal-case px-4 py-1"
-            ).props("flat dense")
-            ui.button("Clips", on_click=lambda: ui.navigate.to("/clips")).classes(
-                "text-white text-base normal-case px-4 py-1"
-            ).props("flat dense")
-            ui.button("Cliplists", on_click=lambda: ui.navigate.to("/cliplists")).classes(
-                "text-white text-base normal-case px-4 py-1"
-            ).props("flat dense")
-            ui.button("About", on_click=lambda: ui.navigate.to("/about")).classes(
-                "text-white text-base normal-case px-4 py-1"
-            ).props("flat dense")
-            ui.button("Notion", on_click=lambda: ui.navigate.to("/notion")).classes(
-                "text-white text-base normal-case px-4 py-1"
-            ).props("flat dense")
+            nav_button("Search", "/search")
+            nav_button("Clips", "/clips")
+            nav_button("Cliplists", "/cliplists")
+            nav_button("About", "/about")
+            nav_button("Notion", "/notion")
+
         ui.space()
 
         auth_container = ui.row().classes("items-center")  # Container for login/logout buttons and user info
