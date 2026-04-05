@@ -3,7 +3,7 @@ import os
 import sys
 import time
 
-from authlib.integrations.starlette_client import OAuth, OAuthError
+from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
 from starlette.responses import RedirectResponse
 
+from ui.data.crud import create_access_token, get_or_create_user
 from ui.pages.about import about_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.clips import clips_page
@@ -67,14 +68,30 @@ async def google_oauth(request: Request) -> RedirectResponse:
         user_info = token.get("userinfo", {})
 
         if _is_valid(user_info):
-            app.storage.user["user_info"] = user_info
-            app.storage.user["authenticated"] = True
+            user = get_or_create_user(
+                user_info["email"],
+                user_info["name"],
+                "google",
+                user_info["sub"],
+            )
 
-        # 🔥 get redirect path from state
+            jwt_token = create_access_token({"sub": str(user["_id"])})
+
+            # ✅ RESTORE OLD STRUCTURE
+            app.storage.user.update(
+                {
+                    "authenticated": True,
+                    "user": user_info["name"],
+                    "id": str(user["_id"]),
+                    "token": jwt_token,
+                    "user_info": user_info,
+                }
+            )
+
         redirect_path = request.query_params.get("state") or "/"
 
-    except (OAuthError, Exception):
-        logging.exception("could not authorize access token")
+    except Exception:
+        logging.exception("OAuth failed")
         redirect_path = "/"
 
     return RedirectResponse(redirect_path)
