@@ -76,16 +76,6 @@ async def google_oauth(request: Request) -> RedirectResponse:
     return RedirectResponse(redirect_path)
 
 
-def logout() -> None:
-    print("Logging out user")
-    print("Before logout, user info:", app.storage.user.get("user_info"))
-    print("Before logout, authenticated:", app.storage.user.get("authenticated"))
-    app.storage.user.clear()
-    print("After logout, user info:", app.storage.user.get("user_info"))
-    print("After logout, authenticated:", app.storage.user.get("authenticated"))
-    ui.navigate.to("/about")
-
-
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
@@ -96,19 +86,32 @@ async def main_page() -> None:
         ui.button("Cliplists", on_click=lambda: ui.navigate.to("/cliplists")).props("flat")
         ui.button("About", on_click=lambda: ui.navigate.to("/about")).props("flat")
         ui.button("Notion", on_click=lambda: ui.navigate.to("/notion")).props("flat")
-
-        # ui.button('Secret', on_click=lambda: ui.navigate.to('/secret')).props('flat')
-        # ui.button('Invalid', on_click=lambda: ui.navigate.to('/invalid')).props('flat')
-        # ui.button('Error', on_click=lambda: ui.navigate.to('/error')).props('flat')
         ui.space()
-        authenticated = app.storage.user.get("authenticated", False)
-        if not authenticated:
-            ui.button(icon="login", on_click=lambda: ui.navigate.to("/auth/google/login")).props(
-                "flat round dense color=primary"
-            ).tooltip("Login")
-        else:
-            ui.label("Hi, me!").classes("text-sm text-primary")
-            ui.button("Logout", icon="logout", on_click=logout).props("flat")
+
+        auth_container = ui.row().classes("items-center")  # Container for login/logout buttons and user info
+
+        def render_auth():
+            auth_container.clear()
+            authenticated = app.storage.user.get("authenticated", False)
+
+            with auth_container:
+                if not authenticated:
+                    ui.button(
+                        icon="login",
+                        on_click=lambda: ui.navigate.to(
+                            f"/auth/google/login?post_login_path={ui.context.client.request.url.path}"
+                        ),
+                    ).props("flat round dense color=primary")
+                else:
+                    ui.label("Hi, me!").classes("text-sm text-primary")
+                    ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=primary")
+
+        def handle_logout():
+            app.storage.user.clear()
+            render_auth()
+            ui.navigate.to("/about")
+
+        render_auth()
 
     custom_sub_pages(
         {
