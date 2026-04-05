@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import time
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
@@ -24,7 +25,7 @@ from ui.pages.search import search_page
 # TODO: missing @api_router apis and check sync playlist works
 load_dotenv()
 FRONTEND_URL = os.getenv("BASE_URL_SHARE")
-
+sys.stdout.reconfigure(line_buffering=True)
 
 oauth = OAuth()
 
@@ -82,13 +83,28 @@ async def google_oauth(request: Request) -> RedirectResponse:
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
-    with ui.header().classes("items-center bg-blue-100"):
-        ui.button("Home", on_click=lambda: ui.navigate.to("/")).props("flat")
-        ui.button("Search", on_click=lambda: ui.navigate.to("/search")).props("flat")
-        ui.button("Clips", on_click=lambda: ui.navigate.to("/clips")).props("flat")
-        ui.button("Cliplists", on_click=lambda: ui.navigate.to("/cliplists")).props("flat")
-        ui.button("About", on_click=lambda: ui.navigate.to("/about")).props("flat")
-        ui.button("Notion", on_click=lambda: ui.navigate.to("/notion")).props("flat")
+    with ui.header().classes(
+        "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
+    ):
+        with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
+            ui.button(icon="home", on_click=lambda: ui.navigate.to("/")).classes(
+                "text-white text-base normal-case px-4 py-1"
+            ).props("flat dense")
+            ui.button("Search", on_click=lambda: ui.navigate.to("/search")).classes(
+                "text-white text-base normal-case px-4 py-1"
+            ).props("flat dense")
+            ui.button("Clips", on_click=lambda: ui.navigate.to("/clips")).classes(
+                "text-white text-base normal-case px-4 py-1"
+            ).props("flat dense")
+            ui.button("Cliplists", on_click=lambda: ui.navigate.to("/cliplists")).classes(
+                "text-white text-base normal-case px-4 py-1"
+            ).props("flat dense")
+            ui.button("About", on_click=lambda: ui.navigate.to("/about")).classes(
+                "text-white text-base normal-case px-4 py-1"
+            ).props("flat dense")
+            ui.button("Notion", on_click=lambda: ui.navigate.to("/notion")).classes(
+                "text-white text-base normal-case px-4 py-1"
+            ).props("flat dense")
         ui.space()
 
         auth_container = ui.row().classes("items-center")  # Container for login/logout buttons and user info
@@ -111,10 +127,13 @@ async def main_page() -> None:
                     ui.button(
                         icon="login",
                         on_click=login,
-                    ).props("flat round dense color=primary")
+                    ).classes(
+                        "text-white"
+                    ).props("flat round dense")
                 else:
-                    ui.label("Hi, me!").classes("text-sm text-primary")
-                    ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=primary")
+                    user = app.storage.user.get("user_info", {}).get("name")
+                    ui.label(f"Hi, {user}!").classes("text-sm text-white")
+                    ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
         def handle_logout():
             app.storage.user.clear()
