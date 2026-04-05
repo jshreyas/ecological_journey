@@ -80,7 +80,7 @@ class FeedTab:
                         ui.label(f"🎬 {len(video.get('clips', []))}").classes("text-right")
 
                         # Anchors
-                        ui.label(f"📍 {len(video.get('anchors', []))}").classes("text-right")
+                        ui.label(f"⚓ {len(video.get('anchors', []))}").classes("text-right")
 
                 partners = ", ".join(video.get("partners", []))
                 if partners:

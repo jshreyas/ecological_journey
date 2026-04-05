@@ -1,448 +1,42 @@
-# import asyncio
+import logging
 import os
 import sys
+import time
 from typing import Any, Dict, List
 
-from authlib.integrations.starlette_client import OAuth, OAuthError
+from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 from fastapi import APIRouter, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
-from structlog.contextvars import bind_contextvars
+from starlette.responses import RedirectResponse
 
 from ui.data.crud import (
     add_video_to_playlist,
     clear_cache,
     create_access_token,
-    create_feedback,
     get_or_create_user,
     load_playlist,
     load_playlists,
     load_teams,
-    login_user,
 )
-from ui.log import log
 from ui.pages.about import about_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.clips import clips_page
+from ui.pages.custom_sub_pages import custom_sub_pages
 from ui.pages.film import film_page
 from ui.pages.home import home_page
-from ui.pages.notion import notion_page
+
+# from ui.pages.notion import notion_page
 from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
-from ui.utils.dialog_puns import caught_john_doe, handle_backend_error
 
-sys.stdout.reconfigure(line_buffering=True)
-
+# TODO: missing @api_router apis and check sync playlist works
 load_dotenv()
-# TODO: is there a way to get rid of app.storage.user usage and use some version of @with_user_context instead?
-
-
-def google_login_button():
-    with (
-        ui.button("", on_click=open_google_login_dialog)
-        .props("outline")
-        .classes("items-center text-sm hover:bg-gray-100")
-    ):
-
-        with (
-            ui.element("div")
-            .classes("q-icon notranslate")
-            .style("width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;")
-        ):
-            ui.html(
-                """
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="width:20px; height:20px;">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0
-                14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58
-                2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92
-                16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15
-                1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98
-                6.19C6.51 42.62 14.62 48 24 48z"/>
-                <path fill="none" d="M0 0h48v48H0z"/>
-            </svg>
-            """
-            )
-
-
-def login_or_signup(mode="login"):
-    with (
-        ui.dialog() as dialog,
-        ui.card().style("padding: 2rem; max-width: 400px; width: 90vw;").classes("w-full"),
-    ):
-        with ui.row().classes("justify-between items-center w-full"):
-            ui.label(f"{'Login' if mode == 'login' else 'Register'}").classes("text-xl font-bold")
-            with ui.row().classes("justify-end items-center"):
-                ui.button(icon="person_add", on_click=lambda: caught_john_doe())
-                google_login_button()
-
-        with ui.column().classes("gap-4 w-full"):
-            email = ui.input("Email").classes("w-full")
-            password = ui.input("Password", password=True).classes("w-full")
-
-        with ui.row().classes("justify-center gap-4 mt-6 w-full"):
-            ui.button(icon="send", on_click=lambda: submit())
-            ui.button(icon="close", on_click=dialog.close)
-
-        def submit():
-            def attempt_login():
-                try:
-                    response = login_user(email.value, password.value)
-                    if not response:
-                        log.error("Login failed with given credentials")
-                        ui.notify("❌ Login failed with given credentials", type="negative")
-                        return
-                    else:
-                        app.storage.user["token"] = response["access_token"]
-                        app.storage.user["user"] = response["username"]
-                        app.storage.user["id"] = response["id"]
-                        bind_contextvars(user=response["username"])
-                        ui.notify("✅ Login successful", type="positive")
-                        clear_cache()
-                        ui.navigate.to(app.storage.user.get("post_login_path", "/"))
-                        app.storage.user["post_login_path"] = "/"
-                except Exception as e:
-                    log.error("Exception during login:", e)
-                    handle_backend_error()
-
-            attempt_login()
-
-    dialog.open()
-
-
-def logout():
-    app.storage.user.clear()
-    ui.navigate.to("/")
-
-
-def open_feedback_dialog():
-    log.info("Opening feedback dialog")
-
-    def submit_feedback(feedback_text: str):
-        create_feedback(feedback_text)
-        ui.notify("Thank you for your feedback!", type="positive")
-        dialog.close()
-
-    with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg"):
-        ui.label("We'd love your feedback!").classes("text-lg font-bold mb-2")
-        feedback_text = ui.textarea(
-            label="be it an idea or appreciation or a bug, " "please describe your experience!"
-        ).classes("w-full")
-        with ui.row().classes("justify-end gap-4 mt-4"):
-            ui.button(icon="send", on_click=lambda: submit_feedback(feedback_text.value)).props("color=primary")
-    dialog.open()
-
-
-def open_google_login_dialog():
-    # Store the current path in app.storage
-    post_login_path = ui.context.client.request.url.path
-    ui.navigate.to(f"/auth/google/login?post_login_path={post_login_path}")
-
-
-def open_login_dialog():
-    # Store the current path in app.storage
-    post_login_path = ui.context.client.request.url.path
-    app.storage.user["post_login_path"] = post_login_path
-    login_or_signup("login")
-
-
-def setup_navbar(title: str = "Ecological Journey"):
-    with (
-        ui.header()
-        .classes("top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm")
-        .style("background-color: #111827;")
-    ):
-
-        # LEFT: Title (fixed width)
-        with ui.row().classes("items-center shrink-0 gap-2 w-auto"):
-            with ui.link("/", target="/").classes("no-underline flex items-center"):
-                ui.icon("home").classes("text-white text-2xl font-bold")
-                ui.label(title).classes("text-white text-2xl font-bold ml-2")
-
-        def nav_button(label: str, path: str):
-            is_active = ui.context.client.page.path == path
-            props = "flat dense"
-            active = "" if not is_active else " text-black font-bold"
-            return (
-                ui.button(label, on_click=lambda: ui.navigate.to(path))
-                .props(f"{props} color=white")
-                .classes(f"normal-case px-4 py-1 text-base text-center{active}")
-            )
-
-        # CENTER: Scrollable nav links
-        with ui.element("div").classes("flex-1 overflow-x-auto no-scrollbar flex justify-center"):
-            with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
-                ui.element("div").classes("w-[40px] shrink-0")
-                nav_button("Search", "/search")
-                nav_button("Clips", "/clips")
-                nav_button("Cliplists", "/cliplists")
-                # nav_button("Partners", "/partners")
-                nav_button("About", "/about")
-                nav_button("Notion", "/notion")
-
-        # RIGHT: Auth buttons (fixed width, right aligned)
-        with ui.row().classes("items-center shrink-0 gap-2 w-auto justify-end"):
-            user = app.storage.user.get("user")
-            if user:
-                ui.label(f"Hi, {user}").classes("text-sm text-white")
-                ui.button(icon="logout", on_click=logout).props("flat round dense color=red").tooltip("Logout")
-            else:
-                ui.button(icon="login", on_click=open_login_dialog).props("flat round dense color=white").tooltip(
-                    "Login"
-                )
-
-    # Scroll-triggered navbar hide/show
-    ui.run_javascript(
-        """
-        let lastScroll = 0;
-        const navbar = document.querySelector('.top-navbar');
-        window.addEventListener('scroll', () => {
-            const current = window.scrollY;
-            if (current > lastScroll && current > 60) {
-                navbar.classList.add('-translate-y-full', 'opacity-0');
-            } else {
-                navbar.classList.remove('-translate-y-full', 'opacity-0');
-            }
-            lastScroll = current;
-        });
-    """
-    )
-
-
-def ecological_layout():
-    bind_contextvars(user="John Doe")  # Default user context
-    setup_navbar()
-    ui.run_javascript(
-        """
-        function showOrientationWarning() {
-            if (!document.getElementById("orientation-warning")) {
-                const notice = document.createElement('div');
-                notice.innerHTML = `
-                    <div style="
-                        display: flex; flex-direction: column; align-items: center; justify-content: center;
-                        width: 100vw; height: 100vh; color: #fff; text-align: center;">
-                        <div style="font-size:3em; margin-bottom:0.5em;">🌿</div>
-                        <div style="font-size:1.5em; font-weight:bold;">This jungle grows sideways 🌴</div>
-                        <div style="font-size:1em; max-width: 90vw; margin-top: 0.5em;">
-                            Please rotate your device to <b>landscape</b><br>
-                            to explore the Ecological Journey. ↩️
-                        </div>
-                    </div>
-                `;
-                notice.style.position = "fixed";
-                notice.style.top = "0";
-                notice.style.left = "0";
-                notice.style.width = "100vw";
-                notice.style.height = "100vh";
-                notice.style.background = "rgba(16,24,32,0.96)";
-                notice.style.zIndex = "9999";
-                notice.id = "orientation-warning";
-                document.body.appendChild(notice);
-            }
-        }
-        function hideOrientationWarning() {
-            const existing = document.getElementById("orientation-warning");
-            if (existing) existing.remove();
-        }
-        function checkOrientation() {
-            const isPortrait = window.innerHeight > window.innerWidth;
-            const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-            if (isMobile && isPortrait) {
-                showOrientationWarning();
-            } else {
-                hideOrientationWarning();
-            }
-        }
-        window.addEventListener(
-            "load", checkOrientation
-        );
-        window.addEventListener(
-            "resize", checkOrientation
-        );
-        window.addEventListener(
-            "orientationchange", checkOrientation
-        );
-        checkOrientation();
-    """
-    )
-
-
-def setup_footer():
-    with ui.page_sticky(x_offset=18, y_offset=18):
-        ui.button(icon="feedback", on_click=open_feedback_dialog).tooltip("Send Feedback").props(
-            "round fab fixed color=secondary"
-        )
-
-
-@ui.page("/oauth")
-def oauth_page(
-    token: str = ui.query("token"),
-    username: str = ui.query("username"),
-    id: str = ui.query("id"),
-    post_login_path: str = ui.query("post_login_path"),
-):
-    if token:
-        app.storage.user["token"] = token
-        app.storage.user["user"] = username
-        app.storage.user["id"] = id
-        ui.notify("✅ Google login successful", type="positive")
-        bind_contextvars(user=username)
-        clear_cache()
-        ui.navigate.to(post_login_path or "/")
-        app.storage.user["post_login_path"] = "/"
-
-
-@ui.page("/notion")
-def _():
-    ecological_layout()
-    notion_page()
-    setup_footer()
-
-
-@ui.page("/")
-def _():
-    ecological_layout()
-    home_page()
-    setup_footer()
-
-
-@ui.page("/search")
-def _():
-    ecological_layout()
-    search_page()
-    setup_footer()
-
-
-@ui.page("/clips")
-def _():
-    ecological_layout()
-    clips_page()
-    setup_footer()
-
-
-@ui.page("/cliplists")
-def _():
-    ecological_layout()
-    cliplists_page()
-    setup_footer()
-
-
-@ui.page("/partners")
-def _():
-    ecological_layout()
-    partner_page()
-    setup_footer()
-
-
-@ui.page("/about")
-def _():
-    ecological_layout()
-    about_page()
-    setup_footer()
-
-
-@ui.page("/playlist/{cliplist_id}")
-def _(cliplist_id: str = None):
-    ecological_layout()
-    playlist_page(cliplist_id)
-    setup_footer()
-
-
-@ui.page("/film/{video_id}")
-def _(video_id: str):
-    ecological_layout()
-    film_page(video_id)
-    setup_footer()
-
-
-OBSERVABLE_URL = os.getenv("OBSERVABLE_URL")
-
-
-@ui.page("/stories")
-def stories():
-    ecological_layout()
-    ui.html(
-        f"""
-        <iframe src="{OBSERVABLE_URL}"
-                style="width:100%; height:110vh; border:none;"></iframe>
-    """
-    ).classes("w-full h-full")
-
-
-@app.api_route("/", methods=["GET", "HEAD"], response_class=PlainTextResponse)
-def root():
-    return "Ecological Journey UI is alive"
-
-
-api_router = APIRouter()
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@api_router.get("/teams")
-def get_teams():
-    return load_teams()
-
-
-@api_router.get("/playlists")
-def get_playlists(full: bool = True):
-    if full:
-        # assemble full playlists from IDs
-        return [load_playlist(p["_id"]) for p in load_playlists()]
-    return load_playlists()
-
-
-@api_router.post("/playlists/{playlist_id}/videos")
-def post_playlist_videos(
-    playlist_id: str,
-    new_videos: List[Dict[str, Any]],
-    authorization: str = Header(...),
-):
-    """
-    Add videos to a playlist.
-    Expects:
-      Authorization: Bearer <token>
-    """
-
-    # Extract raw token
-    if not authorization.startswith("Bearer "):
-        raise OAuthError("Invalid authorization header")
-
-    token = authorization.removeprefix("Bearer ").strip()
-
-    return add_video_to_playlist(
-        playlist_id=playlist_id,
-        new_videos=new_videos,
-        token=token,
-    )
-
-
-app.mount("/api", api_router)
-
-
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-ui.run(
-    title="Ecological Journey",
-    reload=True,
-    storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
-)
-
 FRONTEND_URL = os.getenv("BASE_URL_SHARE")
+sys.stdout.reconfigure(line_buffering=True)
 
 oauth = OAuth()
 
@@ -463,23 +57,197 @@ async def google_login(request: Request):
     return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
 
 
+def _is_valid(user_info: dict) -> bool:
+    try:
+        return all(
+            [
+                int(user_info.get("exp", 0)) > int(time.time()),
+                user_info.get("aud") == os.getenv("GOOGLE_CLIENT_ID"),
+                user_info.get("iss") in {"https://accounts.google.com", "accounts.google.com"},
+                str(user_info.get("email_verified")).lower() == "true",
+            ]
+        )
+    except Exception:
+        return False
+
+
 @app.get("/auth/google/callback")
-async def google_callback(request: Request):
+async def google_oauth(request: Request) -> RedirectResponse:
     try:
         token = await oauth.google.authorize_access_token(request)
-        resp = await oauth.google.get("https://openidconnect.googleapis.com/v1/userinfo", token=token)
-        userinfo = resp.json()
-    except OAuthError:
-        return RedirectResponse(url=f"{FRONTEND_URL}/?error=oauth")
+        user_info = token.get("userinfo", {})
 
-    request.session["user"] = userinfo  # Or store in Redis/etc.
+        if _is_valid(user_info):
+            user = get_or_create_user(
+                user_info["email"],
+                user_info["name"],
+                "google",
+                user_info["sub"],
+            )
 
-    # Replace with your own logic
-    user = get_or_create_user(userinfo["email"], userinfo["name"], "google", userinfo["sub"])
-    jwt_token = create_access_token({"sub": str(user["_id"])})
+            jwt_token = create_access_token({"sub": str(user["_id"])})
 
-    post_login_path = request.query_params.get("state")
-    return RedirectResponse(
-        url=f'{FRONTEND_URL}/oauth?token={jwt_token}&username={userinfo["name"]}'
-        f'&id={str(user["_id"])}&post_login_path={post_login_path}'
+            # ✅ RESTORE OLD STRUCTURE
+            app.storage.user.update(
+                {
+                    "authenticated": True,
+                    "user": user_info["name"],
+                    "id": str(user["_id"]),
+                    "token": jwt_token,
+                    "user_info": user_info,
+                }
+            )
+            clear_cache()
+
+        redirect_path = request.query_params.get("state") or "/"
+
+    except Exception:
+        logging.exception("OAuth failed")
+        redirect_path = "/"
+
+    return RedirectResponse(redirect_path)
+
+
+api_router = APIRouter()
+
+
+@api_router.get("/teams")
+def get_teams():
+    return load_teams()
+
+
+@api_router.get("/playlists")
+def get_playlists(full: bool = True):
+    if full:
+        return [load_playlist(p["_id"]) for p in load_playlists()]
+    return load_playlists()
+
+
+@api_router.post("/playlists/{playlist_id}/videos")
+def post_playlist_videos(
+    playlist_id: str,
+    new_videos: List[Dict[str, Any]],
+    authorization: str = Header(...),
+):
+    if not authorization.startswith("Bearer "):
+        raise Exception("Invalid auth header")
+
+    token = authorization.removeprefix("Bearer ").strip()
+
+    return add_video_to_playlist(
+        playlist_id=playlist_id,
+        new_videos=new_videos,
+        token=token,
     )
+
+
+# app.mount("/api", api_router)
+app.include_router(api_router, prefix="/api")
+
+
+@ui.page("/")
+@ui.page("/{_:path}")
+async def main_page() -> None:
+    with ui.header().classes(
+        "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
+    ):
+
+        def nav_button(label: str, path: str):
+            return (
+                ui.button(label, on_click=lambda: ui.navigate.to(path))
+                .classes("text-white text-base normal-case px-4 py-1")
+                .props("flat dense")
+            )
+
+        with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
+            ui.button(icon="home", on_click=lambda: ui.navigate.to("/")).classes(
+                "text-white text-base normal-case px-4 py-1"
+            ).props("flat dense")
+            nav_button("Search", "/search")
+            nav_button("Clips", "/clips")
+            nav_button("Cliplists", "/cliplists")
+            nav_button("About", "/about")
+            # nav_button("Notion", "/notion")
+
+        ui.space()
+
+        auth_container = ui.row().classes("items-center")  # Container for login/logout buttons and user info
+
+        def render_auth():
+            auth_container.clear()
+            authenticated = app.storage.user.get("authenticated", False)
+
+            with auth_container:
+                if not authenticated:
+
+                    def login():
+                        ui.run_javascript(
+                            """
+                            const path = window.location.pathname + window.location.search;
+                            window.location.href = "/auth/google/login?post_login_path=" + encodeURIComponent(path);
+                        """
+                        )
+
+                    ui.button(
+                        icon="login",
+                        on_click=login,
+                    ).classes(
+                        "text-white"
+                    ).props("flat round dense")
+                else:
+                    user = app.storage.user.get("user_info", {}).get("name")
+                    ui.label(f"Hi, {user}!").classes("text-sm text-white")
+                    ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
+
+        def handle_logout():
+            app.storage.user.clear()
+            app.storage.user.update({"authenticated": False})
+            render_auth()
+            ui.navigate.to("/")
+
+        render_auth()
+
+    custom_sub_pages(
+        {
+            "/": home_page,
+            "/about": about_page,
+            "/search": search_page,
+            "/clips": clips_page,
+            "/cliplists": cliplists_page,
+            "/film/{video_id}": film_page,
+            # "/notion": notion_page,  # TODO: the embed doesnt work
+            "/partners": partner_page,
+            # "/stories": stories,
+            "/playlist/{cliplist_id}": playlist_page,
+        }
+    ).classes("w-full h-full flex-grow p-4")
+
+
+OBSERVABLE_URL = os.getenv("OBSERVABLE_URL")
+
+
+# TODO: this doesnt work
+def stories():
+    ui.html(
+        f"""
+        <iframe src="{OBSERVABLE_URL}"
+                style="width:100%; height:110vh; border:none;"></iframe>
+    """
+    ).classes("w-full h-full")
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+ui.run(
+    title="Ecological Journey",
+    reload=True,
+    storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
+)

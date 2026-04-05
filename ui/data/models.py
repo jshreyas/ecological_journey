@@ -41,6 +41,7 @@ class Video(Document):
     labels: List[str] = []
     clips: List[Clip] = []
     anchors: List[Anchor] = []
+    training_date: Optional[str] = None
 
     class Config:
         validate_by_name = True
