@@ -67,7 +67,7 @@ async def google_oauth(request: Request) -> RedirectResponse:
             app.storage.user["authenticated"] = True
 
         # 🔥 get redirect path from state
-        redirect_path = request.query_params.get("state", "/")
+        redirect_path = request.query_params.get("state") or "/"
 
     except (OAuthError, Exception):
         logging.exception("could not authorize access token")
@@ -96,11 +96,18 @@ async def main_page() -> None:
 
             with auth_container:
                 if not authenticated:
+
+                    def login():
+                        ui.run_javascript(
+                            """
+                            const path = window.location.pathname + window.location.search;
+                            window.location.href = "/auth/google/login?post_login_path=" + encodeURIComponent(path);
+                        """
+                        )
+
                     ui.button(
                         icon="login",
-                        on_click=lambda: ui.navigate.to(
-                            f"/auth/google/login?post_login_path={ui.context.client.request.url.path}"
-                        ),
+                        on_click=login,
                     ).props("flat round dense color=primary")
                 else:
                     ui.label("Hi, me!").classes("text-sm text-primary")
@@ -109,7 +116,7 @@ async def main_page() -> None:
         def handle_logout():
             app.storage.user.clear()
             render_auth()
-            ui.navigate.to("/about")
+            ui.navigate.to("/")
 
         render_auth()
 
