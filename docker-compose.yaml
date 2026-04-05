@@ -51,7 +51,6 @@ services:
       # - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN} # only if testing Upstash Redis locally`
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    # command: ["python", "-m", "ui.mainn"]
     tty: true
     stdin_open: true
     networks:

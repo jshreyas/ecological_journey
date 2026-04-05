@@ -4,6 +4,7 @@ from ui.pages.components.home.fullcalendar import FullCalendar
 
 from .state import State
 
+# TODO: update this mapping in playlist color db, get rid of this
 TAILWIND_TO_HEX = {
     "bg-red-400": "#f87171",
     "bg-blue-400": "#60a5fa",
@@ -74,7 +75,7 @@ class CalendarTab:
 
         options = {
             "initialView": "dayGridMonth",
-            "headerToolbar": {"left": "prev", "center": "title", "right": "next"},
+            "headerToolbar": {"left": "prev,next today", "right": "title"},
             "allDaySlot": False,
             "timeZone": "local",
             "height": "auto",
