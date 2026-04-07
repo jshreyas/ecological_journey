@@ -180,8 +180,6 @@ class VideoState:
         for clip in self.clip_draft:
             clip["_dirty"] = False
 
-        self.refresh()
-
     def _parse_timestamp(self, value: str, context: str) -> int:
         if not isinstance(value, str) or not TIME_PATTERN.fullmatch(value):
             raise ValueError(f"Invalid time format for {context}: '{value}'. " "Expected mm:ss or hh:mm:ss")
