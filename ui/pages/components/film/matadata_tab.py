@@ -476,8 +476,8 @@ class MatadataTab:
 
     def _clear_unsaved(self):
         self.video_state.reload_metadata()
-        self.refresh()
         ui.notify("Unsaved changes cleared", type="info")
+        self.refresh()
 
     def _save(self):
         # TODO: check if dirty flags are true, only then call save_video_metadata()
@@ -488,3 +488,4 @@ class MatadataTab:
             return
 
         ui.notify("Film metadata saved", type="positive")
+        self.refresh()
