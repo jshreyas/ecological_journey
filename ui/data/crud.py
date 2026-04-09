@@ -76,7 +76,7 @@ def to_dicts(obj: Any) -> Any:
 
     # Case 3: Dict (recursively process keys and values)
     elif isinstance(obj, dict):
-        return {to_dicts(k): to_dicts(v) for k, v in obj.items()}
+        return {k: to_dicts(v) for k, v in obj.items()}
 
     # Case 4: List or tuple
     elif isinstance(obj, (list, tuple)):
