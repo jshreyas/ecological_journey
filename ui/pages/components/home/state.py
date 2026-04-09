@@ -5,7 +5,7 @@ from ui.utils.user_context import User
 from ui.utils.utils_api import create_playlist as cp
 from ui.utils.utils_api import create_video as cv
 from ui.utils.utils_api import load_playlists_for_user as lp_user
-from ui.utils.utils_api import load_videos as lv
+from ui.utils.utils_api import load_videos as lvs
 
 
 class State:
@@ -20,7 +20,7 @@ class State:
 
     def refresh(self):
         """Clear cache and notify all registered callbacks"""
-        self._load_videos = lv()
+        self._load_videos = lvs()
         self._load_playlists = lp()
         self._load_playlists_user = None
         for callback in self._refresh_callbacks:
@@ -49,12 +49,12 @@ class State:
     def load_videos(self) -> Optional[Dict[str, Any]]:
         """Get videos data, loading from API if not cached"""
         if self._load_videos is None:
-            self._load_videos = lv()
+            self._load_videos = lvs()
         return self._load_videos
 
     def load_videos_by_playlist(self, playlist_id: str) -> Optional[Dict[str, Any]]:
         """Get videos data, loading from API if not cached"""
-        return lv(playlist_id)
+        return lvs(playlist_id)
 
     def load_playlists(self) -> Optional[Dict[str, Any]]:
         """Get playlists data, loading from API if not cached"""

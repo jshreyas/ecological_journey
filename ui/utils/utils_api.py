@@ -100,7 +100,6 @@ def load_videos(
                 "duration_human": format_duration(video.get("duration_seconds", 0)),
             }
             videos.append(enriched)
-
     videos.sort(key=lambda x: x.get("date", ""), reverse=True)
     return {v["video_id"]: v for v in videos} if response_dict else videos
 
