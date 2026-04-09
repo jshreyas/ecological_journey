@@ -181,7 +181,7 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
     playlist = Playlist.find_one(Playlist.videos.video_id == video_id).run()
     if not playlist:
         return None
-
+    # TODO: apply same logic as videos for training_date vs publish_date
     for video in playlist.videos:
         if video.video_id == video_id:
             v = to_dicts(video)

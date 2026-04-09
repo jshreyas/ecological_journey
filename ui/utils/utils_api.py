@@ -136,7 +136,9 @@ def load_clips() -> List[Dict[str, Any]]:
                         "start": clip.get("start", 0),
                         "end": clip.get("end", 0),
                         "title": clip.get("title", ""),
-                        "date": video.get("date", ""),
+                        "date": video.get(
+                            "date", ""
+                        ),  # TODO: apply same logic as videos for training_date vs publish_date
                         "duration_human": format_duration(clip.get("end", 0) - clip.get("start", 0)),
                         "description": clip.get("description", ""),
                         "partners": partners,

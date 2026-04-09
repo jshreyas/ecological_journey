@@ -21,17 +21,6 @@ def format_time(t: int) -> str:
     return f"{minutes}:{seconds:02d}"
 
 
-# --- Helper: Group videos by YYYY-MM-DD ---
-def group_videos_by_day(videos):
-    """Group videos by date (YYYY-MM-DD) extracted from the timestamp."""
-    grouped = {}
-    for v in videos:
-        # Extract the date portion from the timestamp
-        video_date = datetime.strptime(v["date"], "%Y-%m-%dT%H:%M:%SZ").date().isoformat()
-        grouped.setdefault(video_date, []).append(v)
-    return grouped
-
-
 # TODO: update the video embed window based on the orientation
 def get_video_orientation_internal(video_id: str) -> str:
     url = "https://www.youtube.com/youtubei/v1/player"

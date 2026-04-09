@@ -54,7 +54,6 @@ def mock_utils(monkeypatch):
     monkeypatch.setattr(home_module, "fetch_playlist_metadata", Mock(return_value={"title": "Test Playlist"}))
     monkeypatch.setattr(home_module, "fetch_playlist_items", Mock(return_value=[{"video_id": "v1"}]))
     monkeypatch.setattr(home_module, "create_playlist", Mock())
-    monkeypatch.setattr(home_module, "group_videos_by_day", Mock(return_value={}))
     monkeypatch.setattr(home_module, "load_videos", Mock(return_value=[{"date": "2024-01-01T00:00:00Z"}]))
     return None
 
