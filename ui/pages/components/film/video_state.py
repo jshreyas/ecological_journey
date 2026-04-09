@@ -9,6 +9,7 @@ from uuid import uuid4
 from ui.data.crud import load_video
 from ui.utils.dialog_puns import generate_funny_title
 from ui.utils.user_context import User
+from ui.utils.utils_api import load_videos as lvs
 from ui.utils.utils_api import save_video_metadata
 
 TIME_PATTERN = re.compile(r"^(\d+:[0-5]\d:[0-5]\d|\d+:[0-5]\d)$")
@@ -31,7 +32,14 @@ class VideoState:
         self.video_description_dirty: bool = False
 
         self.tabber = None
+        self._load_videos = None
         self.reload_metadata()
+
+    def load_videos(self) -> Optional[Dict[str, Any]]:
+        """Get videos data, loading from API if not cached"""
+        if self._load_videos is None:
+            self._load_videos = lvs()
+        return self._load_videos
 
     def add_anchor_at_time(self, t: float):
         t = int(t)
@@ -65,6 +73,7 @@ class VideoState:
 
     def refresh(self):
         """Clear cache and notify all registered callbacks"""
+        self._load_videos = lvs()
         self._video_data = load_video(self.video_id)
         for callback in self._refresh_callbacks:
             callback()

@@ -8,7 +8,6 @@ from typing import Callable
 from nicegui import ui
 
 from ui.utils.utils import navigate_to_film
-from ui.utils.utils_api import load_videos
 
 from .video_state import VideoState
 
@@ -48,7 +47,7 @@ class FilmboardTab:
             return
 
         # Get videos from the same day
-        all_videos = load_videos()
+        all_videos = self.video_state.load_videos()
         same_day_videos = [
             v
             for v in all_videos
@@ -99,7 +98,7 @@ class FilmboardTab:
         if not current_video_date:
             return 0
 
-        all_videos = load_videos()
+        all_videos = self.video_state.load_videos()
         same_day_videos = [
             v
             for v in all_videos

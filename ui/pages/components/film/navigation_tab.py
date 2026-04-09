@@ -9,7 +9,6 @@ from typing import Callable, Optional
 from nicegui import ui
 
 from ui.utils.utils import human_stamp, navigate_to_film
-from ui.utils.utils_api import load_videos
 
 from .video_state import VideoState
 
@@ -53,7 +52,7 @@ class NavigationTab:
             self.next_video = None
             return
 
-        all_videos = load_videos()
+        all_videos = self.video_state.load_videos()
 
         # Sort videos by date
         sorted_videos = sorted(all_videos, key=lambda v: v.get("date", ""))
