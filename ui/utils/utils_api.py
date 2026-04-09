@@ -100,14 +100,6 @@ def load_videos(
                 "duration_human": format_duration(video.get("duration_seconds", 0)),
             }
             videos.append(enriched)
-            # "date" field is publish date from YouTube, "training_date" is the parsed date from title (if any)
-            # "publish_date" is the original upload date from YouTube metadata, kept for reference but not used for sorting/filtering
-            # updating "date" to be the training_date if it exists, otherwise fallback to original date, so that sorting/filtering
-            # uses the most relevant date. This is because some videos might have a training date in the title that indicates when
-            # the event actually happened, which could be more relevant for users than the YouTube upload date.
-            enriched["publish_date"] = enriched.get("date")
-            enriched["date"] = enriched.get("training_date") or enriched.get("date")
-
     videos.sort(key=lambda x: x.get("date", ""), reverse=True)
     return {v["video_id"]: v for v in videos} if response_dict else videos
 
@@ -136,9 +128,7 @@ def load_clips() -> List[Dict[str, Any]]:
                         "start": clip.get("start", 0),
                         "end": clip.get("end", 0),
                         "title": clip.get("title", ""),
-                        "date": video.get(
-                            "date", ""
-                        ),  # TODO: apply same logic as videos for training_date vs publish_date
+                        "date": video.get("date", ""),
                         "duration_human": format_duration(clip.get("end", 0) - clip.get("start", 0)),
                         "description": clip.get("description", ""),
                         "partners": partners,

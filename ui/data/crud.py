@@ -151,10 +151,39 @@ def load_playlists():
     ]
 
 
+def apply_training_date_logic(video: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Non-destructive enrichment:
+    - preserve original date as publish_date
+    - override date with training_date if present
+    """
+    enriched = dict(video)  # shallow copy to avoid mutation
+
+    enriched["publish_date"] = enriched.get("date")
+    enriched["date"] = enriched.get("training_date") or enriched.get("date")
+
+    return enriched
+
+
 @cache_result(lambda playlist_id: f"playlist:{playlist_id}", ttl_seconds=CACHE_TTL)
 def load_playlist(playlist_id: str) -> Optional[Dict[str, Any]]:
     playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
-    return to_dicts(playlist) if playlist else None
+    if not playlist:
+        return None
+
+    data = to_dicts(playlist)
+
+    # Apply enrichment to all videos
+    videos = data.get("videos", [])
+    enriched_videos = []
+
+    for video in videos:
+        enriched_video = apply_training_date_logic(video)
+        enriched_videos.append(enriched_video)
+
+    data["videos"] = enriched_videos
+
+    return data
 
 
 @with_user_from_token
@@ -181,13 +210,17 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
     playlist = Playlist.find_one(Playlist.videos.video_id == video_id).run()
     if not playlist:
         return None
-    # TODO: apply same logic as videos for training_date vs publish_date
-    for video in playlist.videos:
-        if video.video_id == video_id:
-            v = to_dicts(video)
-            v["playlist_id"] = str(playlist.id)
-            v["playlist_name"] = playlist.name
-            v["playlist_color"] = playlist.color
+
+    playlist_data = load_playlist(str(playlist.id))  # reuse enriched version
+    if not playlist_data:
+        return None
+
+    for video in playlist_data.get("videos", []):
+        if video["video_id"] == video_id:
+            v = dict(video)
+            v["playlist_id"] = playlist_data["_id"]
+            v["playlist_name"] = playlist_data["name"]
+            v["playlist_color"] = playlist_data["color"]
             return v
 
 
