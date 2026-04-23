@@ -35,7 +35,6 @@ from ui.pages.search import search_page
 
 # TODO: missing @api_router apis and check sync playlist works
 load_dotenv()
-FRONTEND_URL = os.getenv("BASE_URL_SHARE")
 sys.stdout.reconfigure(line_buffering=True)
 
 oauth = OAuth()
@@ -46,15 +45,18 @@ oauth.register(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     client_kwargs={"scope": "openid email profile"},
-    redirect_uri=f"{FRONTEND_URL}/auth/google/callback",
 )
 
 
 @app.get("/auth/google/login")
 async def google_login(request: Request):
     post_login_path = request.query_params.get("post_login_path", "/")
-    redirect_uri = f"{FRONTEND_URL}/auth/google/callback"
-    return await oauth.google.authorize_redirect(request, redirect_uri, state=post_login_path)
+
+    return await oauth.google.authorize_redirect(
+        request,
+        request.url_for("google_oauth"),
+        state=post_login_path,
+    )
 
 
 def _is_valid(user_info: dict) -> bool:
@@ -87,7 +89,6 @@ async def google_oauth(request: Request) -> RedirectResponse:
 
             jwt_token = create_access_token({"sub": str(user["_id"])})
 
-            # ✅ RESTORE OLD STRUCTURE
             app.storage.user.update(
                 {
                     "authenticated": True,
@@ -99,12 +100,10 @@ async def google_oauth(request: Request) -> RedirectResponse:
             )
             clear_cache()
 
-        redirect_path = request.query_params.get("state") or "/"
-
     except Exception:
         logging.exception("OAuth failed")
-        redirect_path = "/"
 
+    redirect_path = request.query_params.get("state") or "/"
     return RedirectResponse(redirect_path)
 
 
