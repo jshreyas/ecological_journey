@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
 from starlette.responses import RedirectResponse
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from ui.data.crud import (
     add_video_to_playlist,
@@ -75,6 +76,8 @@ def _is_valid(user_info: dict) -> bool:
 
 @app.get("/auth/google/callback")
 async def google_oauth(request: Request) -> RedirectResponse:
+    print("Cookies:", request.cookies)
+    print("Session ID:", request.cookies.get("nicegui-session"))
     try:
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get("userinfo", {})
@@ -180,6 +183,7 @@ async def main_page() -> None:
                 if not authenticated:
 
                     def login():
+                        app.storage.user.setdefault("init", True)
                         ui.run_javascript(
                             """
                             const path = window.location.pathname + window.location.search;
@@ -235,6 +239,7 @@ def stories():
     ).classes("w-full h-full")
 
 
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
