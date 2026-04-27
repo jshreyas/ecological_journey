@@ -174,7 +174,7 @@ class MatadataTab:
                 <q-popup-edit
                 v-slot="scope"
                 @update:model-value="(val) => $parent.$emit('edit-video-description', val)"
-                v-model="props.row.description"
+                v-model.lazy="props.row.description"
                 >
                 <q-input
                     v-model="scope.value"
@@ -229,7 +229,7 @@ class MatadataTab:
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
-                            @keyup.enter="scope.set"
+                            @keydown.enter.stop.prevent="scope.set"
                         />
                         </q-popup-edit>
                     </div>
@@ -266,7 +266,7 @@ class MatadataTab:
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
-                            @keyup.enter="scope.set"
+                            @keydown.enter.stop.prevent="scope.set"
                         />
                         </q-popup-edit>
                     </div>
@@ -297,7 +297,7 @@ class MatadataTab:
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
-                            @keyup.enter="scope.set"
+                            @keydown.enter.stop.prevent="scope.set"
                         />
                         </q-popup-edit>
                     </div>
@@ -339,7 +339,7 @@ class MatadataTab:
                     </div>
 
                     <q-popup-edit
-                    v-model="props.row.description"
+                    v-model.lazy="props.row.description"
                     v-slot="scope"
                     @update:model-value="() => $parent.$emit('edit', props.row)"
                     >
@@ -385,11 +385,9 @@ class MatadataTab:
 
         # ---------- handlers ----------
         def on_edit(e: events.GenericEventArguments):
-            # TODO: on editing timestamps for clips and anchors, playing it before saving and after editing timestamps are not honored
-            row = dict(e.args)
+            row = e.args
             row_id = row["id"]
 
-            # Mark dirty
             for r in self.table.rows:
                 if r["id"] == row_id:
                     r.update(row)
@@ -397,7 +395,7 @@ class MatadataTab:
                     break
 
             self.video_state.mark_metadata_dirty()
-            self.refresh()
+            self.table.update()
 
         def on_delete(e: events.GenericEventArguments):
             row = e.args
@@ -432,7 +430,14 @@ class MatadataTab:
             self.video_state.video_description_draft = value
             self.video_state.video_description_dirty = True
             self.video_state._metadata_dirty = True
-            self.refresh()
+
+            # update row directly
+            for r in self.table.rows:
+                if r.get("_is_video_description"):
+                    r["description"] = value
+                    r["_dirty"] = True
+
+            self.table.update()
 
         async def on_toggle_clip(e: events.GenericEventArguments):
             row = e.args
