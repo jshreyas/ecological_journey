@@ -174,7 +174,7 @@ class MatadataTab:
                 <q-popup-edit
                 v-slot="scope"
                 @update:model-value="(val) => $parent.$emit('edit-video-description', val)"
-                v-model="props.row.description"
+                v-model.lazy="props.row.description"
                 >
                 <q-input
                     v-model="scope.value"
@@ -229,7 +229,7 @@ class MatadataTab:
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
-                            @keyup.enter="scope.set"
+                            @keydown.enter.stop.prevent="scope.set"
                         />
                         </q-popup-edit>
                     </div>
@@ -266,7 +266,7 @@ class MatadataTab:
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
-                            @keyup.enter="scope.set"
+                            @keydown.enter.stop.prevent="scope.set"
                         />
                         </q-popup-edit>
                     </div>
@@ -297,7 +297,7 @@ class MatadataTab:
                             v-model="scope.value"
                             dense autofocus
                             placeholder="m:ss"
-                            @keyup.enter="scope.set"
+                            @keydown.enter.stop.prevent="scope.set"
                         />
                         </q-popup-edit>
                     </div>
@@ -339,7 +339,7 @@ class MatadataTab:
                     </div>
 
                     <q-popup-edit
-                    v-model="props.row.description"
+                    v-model.lazy="props.row.description"
                     v-slot="scope"
                     @update:model-value="() => $parent.$emit('edit', props.row)"
                     >
@@ -385,19 +385,52 @@ class MatadataTab:
 
         # ---------- handlers ----------
         def on_edit(e: events.GenericEventArguments):
-            # TODO: on editing timestamps for clips and anchors, playing it before saving and after editing timestamps are not honored
-            row = dict(e.args)
+            row = e.args
             row_id = row["id"]
 
-            # Mark dirty
             for r in self.table.rows:
                 if r["id"] == row_id:
                     r.update(row)
+
+                    # --- sync timestamps ---
+                    if "_time" in r:
+                        try:
+                            r["start"] = self.video_state._parse_timestamp(r["_time"], "edit start")
+                        except Exception:
+                            pass
+
+                    if "_end_time" in r:
+                        try:
+                            r["end"] = self.video_state._parse_timestamp(r["_end_time"], "edit end")
+                        except Exception:
+                            pass
+
+                    # --- ✅ NEW: sync description into draft state ---
+                    if r.get("_type") == "anchor":
+                        for a in self.video_state.anchor_draft:
+                            if a["id"] == row_id:
+                                a["description"] = r.get("description", "")
+                                a["start"] = r.get("start")
+                                a["_time"] = r.get("_time")
+                                a["_dirty"] = True
+                                break
+
+                    elif r.get("_type") == "clip":
+                        for c in self.video_state.clip_draft:
+                            if c["id"] == row_id:
+                                c["description"] = r.get("description", "")
+                                c["start"] = r.get("start")
+                                c["end"] = r.get("end")
+                                c["_time"] = r.get("_time")
+                                c["_end_time"] = r.get("_end_time")
+                                a["_dirty"] = True
+                                break
+
                     r["_dirty"] = True
                     break
 
             self.video_state.mark_metadata_dirty()
-            self.refresh()
+            self.table.update()
 
         def on_delete(e: events.GenericEventArguments):
             row = e.args
@@ -432,7 +465,14 @@ class MatadataTab:
             self.video_state.video_description_draft = value
             self.video_state.video_description_dirty = True
             self.video_state._metadata_dirty = True
-            self.refresh()
+
+            # update row directly
+            for r in self.table.rows:
+                if r.get("_is_video_description"):
+                    r["description"] = value
+                    r["_dirty"] = True
+
+            self.table.update()
 
         async def on_toggle_clip(e: events.GenericEventArguments):
             row = e.args
