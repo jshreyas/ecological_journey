@@ -412,6 +412,7 @@ class MatadataTab:
                                 a["description"] = r.get("description", "")
                                 a["start"] = r.get("start")
                                 a["_time"] = r.get("_time")
+                                a["_dirty"] = True
                                 break
 
                     elif r.get("_type") == "clip":
@@ -422,6 +423,7 @@ class MatadataTab:
                                 c["end"] = r.get("end")
                                 c["_time"] = r.get("_time")
                                 c["_end_time"] = r.get("_end_time")
+                                a["_dirty"] = True
                                 break
 
                     r["_dirty"] = True
