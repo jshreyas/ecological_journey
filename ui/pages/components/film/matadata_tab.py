@@ -384,7 +384,6 @@ class MatadataTab:
         )
 
         # ---------- handlers ----------
-
         def on_edit(e: events.GenericEventArguments):
             row = e.args
             row_id = row["id"]
@@ -393,18 +392,37 @@ class MatadataTab:
                 if r["id"] == row_id:
                     r.update(row)
 
-                    # ✅ NEW: sync UI → real state immediately
+                    # --- sync timestamps ---
                     if "_time" in r:
                         try:
                             r["start"] = self.video_state._parse_timestamp(r["_time"], "edit start")
                         except Exception:
-                            pass  # optional: show notify
+                            pass
 
                     if "_end_time" in r:
                         try:
                             r["end"] = self.video_state._parse_timestamp(r["_end_time"], "edit end")
                         except Exception:
                             pass
+
+                    # --- ✅ NEW: sync description into draft state ---
+                    if r.get("_type") == "anchor":
+                        for a in self.video_state.anchor_draft:
+                            if a["id"] == row_id:
+                                a["description"] = r.get("description", "")
+                                a["start"] = r.get("start")
+                                a["_time"] = r.get("_time")
+                                break
+
+                    elif r.get("_type") == "clip":
+                        for c in self.video_state.clip_draft:
+                            if c["id"] == row_id:
+                                c["description"] = r.get("description", "")
+                                c["start"] = r.get("start")
+                                c["end"] = r.get("end")
+                                c["_time"] = r.get("_time")
+                                c["_end_time"] = r.get("_end_time")
+                                break
 
                     r["_dirty"] = True
                     break
