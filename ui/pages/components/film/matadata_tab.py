@@ -384,6 +384,7 @@ class MatadataTab:
         )
 
         # ---------- handlers ----------
+
         def on_edit(e: events.GenericEventArguments):
             row = e.args
             row_id = row["id"]
@@ -391,6 +392,20 @@ class MatadataTab:
             for r in self.table.rows:
                 if r["id"] == row_id:
                     r.update(row)
+
+                    # ✅ NEW: sync UI → real state immediately
+                    if "_time" in r:
+                        try:
+                            r["start"] = self.video_state._parse_timestamp(r["_time"], "edit start")
+                        except Exception:
+                            pass  # optional: show notify
+
+                    if "_end_time" in r:
+                        try:
+                            r["end"] = self.video_state._parse_timestamp(r["_end_time"], "edit end")
+                        except Exception:
+                            pass
+
                     r["_dirty"] = True
                     break
 

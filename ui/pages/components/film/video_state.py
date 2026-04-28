@@ -53,7 +53,9 @@ class VideoState:
         )
 
         self._metadata_dirty = True
-        self.refresh()
+
+        for callback in self._refresh_callbacks:
+            callback()
 
     def reload_metadata(self):
         self.anchor_draft = [a.copy() for a in self.get_anchors()]
@@ -255,7 +257,8 @@ class VideoState:
         self.clip_draft.append(new_clip)
 
         self._metadata_dirty = True
-        self.refresh()
+        for callback in self._refresh_callbacks:
+            callback()
 
     def convert_clip_to_anchor(self, clip_id: str):
         clip = next((c for c in self.clip_draft if c.get("id") == clip_id), None)
@@ -281,4 +284,5 @@ class VideoState:
         )
 
         self._metadata_dirty = True
-        self.refresh()
+        for callback in self._refresh_callbacks:
+            callback()
