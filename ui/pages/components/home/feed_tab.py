@@ -4,7 +4,7 @@ from nicegui import ui
 
 from .state import State
 
-PAGE_SIZE = 50
+PAGE_SIZE = 10
 
 
 def format_date(date_str):
@@ -49,7 +49,7 @@ class FeedTab:
 
         with ui.card().classes("w-full p-3 shadow-md"):
             with ui.link(target=f'/film/{video["video_id"]}').classes("w-full h-[50vh] p-0"):
-                ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/maxresdefault.jpg').classes(
+                ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/hqdefault.jpg').classes(
                     "w-full h-full rounded-md"
                 )
 
