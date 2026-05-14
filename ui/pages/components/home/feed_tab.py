@@ -188,36 +188,5 @@ class FeedTab:
 
                 console.warn("Anchor not found after loading attempts:", anchorId);
             };
-            (function() {
-                const scrollRoot = document.querySelector('.feed-scroll');
-                if (!scrollRoot) return;
-
-                if (window.feedScrollListener && window.feedScrollRoot) {
-                    window.feedScrollRoot.removeEventListener('scroll', window.feedScrollListener);
-                }
-
-                window.feedScrollListener = function() {
-                    const root = document.querySelector('.feed-scroll');
-                    if (!root) return;
-                    const distanceFromBottom = root.scrollHeight - root.scrollTop - root.clientHeight;
-                    if (distanceFromBottom <= 20) {
-                        const emitter =
-                            typeof window.emitEvent === 'function'
-                                ? window.emitEvent
-                                : typeof emitEvent === 'function'
-                                ? emitEvent
-                                : null;
-                        if (emitter) {
-                            emitter('load_more');
-                        }
-                    }
-                };
-
-                window.feedScrollRoot = scrollRoot;
-                window.feedScrollRoot.addEventListener('scroll', window.feedScrollListener);
-
-                // trigger once in case the list is shorter than the viewport
-                window.feedScrollListener();
-            })();
             """
         )
