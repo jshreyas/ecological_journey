@@ -28,7 +28,7 @@ jobs:
             git pull origin main
 
             echo "Rebuilding containers..."
-            docker compose -f docker-compose.prd.yaml up --build -d
+            docker-compose -f docker-compose.prd.yaml up --build -d
 
             echo "Cleaning unused images..."
             docker image prune -f
