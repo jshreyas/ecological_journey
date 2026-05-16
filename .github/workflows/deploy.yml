@@ -27,6 +27,8 @@ jobs:
             echo "Pulling latest changes..."
             git pull origin main
 
+            docker-compose -f docker-compose.prd.yaml down
+
             echo "Rebuilding containers..."
             docker-compose -f docker-compose.prd.yaml up --build -d
 
