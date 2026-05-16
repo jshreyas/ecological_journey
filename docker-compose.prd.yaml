@@ -1,0 +1,38 @@
+services:
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: ui
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+    ports:
+      - "8080:8080"
+    environment:
+      - LOKI_URL=${LOKI_URL}
+      - LOKI_USER=${LOKI_USER}
+      - LOKI_PASS=${LOKI_PASS}
+      - MONGODB_URI=${MONGODB_URI}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NOTION_TOKEN=${NOTION_TOKEN}
+      - JWT_SECRET=${JWT_SECRET}
+      - API_KEY=${API_KEY}
+      - BASE_URL_SHARE=${BASE_URL_SHARE}
+      - OBSERVABLE_URL=${OBSERVABLE_URL}
+      - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
+      - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
+    tty: true
+    stdin_open: true
+    networks:
+      - ecological-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  ecological-network:
+    driver: bridge
