@@ -83,7 +83,7 @@ class SearchIndexService:
     def _make_row(self, video, type_, start, end, child=None):
         row_id = f"{type_}_{video['video_id']}_{start or 0}"
         # Thumbnail: prefer provided thumbnail_url, otherwise try YouTube pattern
-        thumbnail = video.get("thumbnail_url") or f"https://i.ytimg.com/vi/{video['video_id']}/hqdefault.jpg"
+        thumbnail = video.get("thumbnail_url") or f"https://i.ytimg.com/vi/{video['video_id']}/maxresdefault.jpg"
 
         return {
             "id": row_id,
