@@ -4,7 +4,7 @@ from nicegui import ui
 
 from .state import State
 
-PAGE_SIZE = 10
+PAGE_SIZE = 50
 
 
 def format_date(date_str):
@@ -49,7 +49,7 @@ class FeedTab:
 
         with ui.card().classes("w-full p-3 shadow-md"):
             with ui.link(target=f'/film/{video["video_id"]}').classes("w-full h-[50vh] p-0"):
-                ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/hqdefault.jpg').classes(
+                ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/maxresdefault.jpg').classes(
                     "w-full h-full rounded-md"
                 )
 
@@ -188,5 +188,36 @@ class FeedTab:
 
                 console.warn("Anchor not found after loading attempts:", anchorId);
             };
+            (function() {
+                const scrollRoot = document.querySelector('.feed-scroll');
+                if (!scrollRoot) return;
+
+                if (window.feedScrollListener && window.feedScrollRoot) {
+                    window.feedScrollRoot.removeEventListener('scroll', window.feedScrollListener);
+                }
+
+                window.feedScrollListener = function() {
+                    const root = document.querySelector('.feed-scroll');
+                    if (!root) return;
+                    const distanceFromBottom = root.scrollHeight - root.scrollTop - root.clientHeight;
+                    if (distanceFromBottom <= 20) {
+                        const emitter =
+                            typeof window.emitEvent === 'function'
+                                ? window.emitEvent
+                                : typeof emitEvent === 'function'
+                                ? emitEvent
+                                : null;
+                        if (emitter) {
+                            emitter('load_more');
+                        }
+                    }
+                };
+
+                window.feedScrollRoot = scrollRoot;
+                window.feedScrollRoot.addEventListener('scroll', window.feedScrollListener);
+
+                // trigger once in case the list is shorter than the viewport
+                window.feedScrollListener();
+            })();
             """
         )
