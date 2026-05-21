@@ -279,37 +279,37 @@ class PlaylistTab:
             try:
 
                 result = await self.sync_playlist(playlist_obj)
+                with self.container:
+                    if result == SYNC_OK:
+                        ui.notify(
+                            "Playlist synced successfully",
+                            type="positive",
+                        )
 
-                if result == SYNC_OK:
-                    ui.notify(
-                        "Playlist synced successfully",
-                        type="positive",
-                    )
+                    elif result == SYNC_NOOP:
+                        ui.notify(
+                            "No new videos to sync",
+                            type="info",
+                        )
 
-                elif result == SYNC_NOOP:
-                    ui.notify(
-                        "No new videos to sync",
-                        type="info",
-                    )
+                    elif result == SYNC_RETRY_SOON:
+                        ui.notify(
+                            "Upload still in progress — try again shortly",
+                            type="warning",
+                        )
 
-                elif result == SYNC_RETRY_SOON:
-                    ui.notify(
-                        "Upload still in progress — try again shortly",
-                        type="warning",
-                    )
-
-                else:
-                    ui.notify(
-                        "Sync failed",
-                        type="negative",
-                    )
+                    else:
+                        ui.notify(
+                            "Sync failed",
+                            type="negative",
+                        )
 
             except Exception as e:
-
-                ui.notify(
-                    f"❌ Sync failed: {str(e)}",
-                    type="negative",
-                )
+                with self.container:
+                    ui.notify(
+                        f"❌ Sync failed: {str(e)}",
+                        type="negative",
+                    )
 
             finally:
                 spinner.set_visibility(False)
