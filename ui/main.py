@@ -252,7 +252,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 ui.run(
     title="Ecological Journey",
-    reload=False,
+    reload=True,
     reconnect_timeout=10.0,
     storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
 )
