@@ -38,6 +38,61 @@ class PlaylistTab:
         with self.container:
             self._create_playlist_ui()
 
+    def _run_playlist_sync(self, playlist_obj: dict):
+
+        async def run():
+            spinner = ui.spinner(size="lg").props("color=primary")
+            spinner.set_visibility(True)
+
+            try:
+                log.info(f"User-initiated sync for playlist: " f"{playlist_obj['name']} ({playlist_obj['_id']})")
+
+                result = await self.sync_playlist(playlist_obj)
+
+                if result == SYNC_OK:
+                    ui.notify("Playlist synced successfully", type="positive")
+
+                elif result == SYNC_NOOP:
+                    ui.notify("No new videos to sync", type="info")
+
+                elif result == SYNC_RETRY_SOON:
+                    ui.notify(
+                        "Upload still in progress — try again shortly",
+                        type="warning",
+                    )
+
+                else:
+                    ui.notify("Sync failed", type="negative")
+
+            except Exception as e:
+                ui.notify(f"❌ Sync failed: {str(e)}")
+
+            finally:
+                spinner.set_visibility(False)
+
+        asyncio.create_task(run())
+
+    def _build_playlist_rows(self, playlists, owned_ids=None, logged_in=False):
+        rows = []
+
+        owned_ids = owned_ids or set()
+
+        for playlist in playlists:
+            is_owned = playlist["_id"] in owned_ids
+
+            rows.append(
+                {
+                    "_id": playlist["_id"],
+                    "name": playlist["name"],
+                    "video_count": playlist.get("video_count", 0),
+                    "color": playlist.get("color", "bg-gray-300"),
+                    "can_sync": is_owned if logged_in else True,
+                    "is_owned": is_owned,
+                }
+            )
+
+        return rows
+
     def _create_playlist_ui(self):
         """Create the playlist UI"""
 
@@ -112,7 +167,7 @@ class PlaylistTab:
         def render_playlist_card(
             *,
             playlist: dict,
-            show_sync: bool,
+            show_sync=True,
             on_sync_click=None,
         ):
             with ui.column().classes("w-full p-2 border border-gray-300 rounded-lg bg-white shadow-md"):
@@ -134,66 +189,133 @@ class PlaylistTab:
 
         with self.container:
             if not self.home_state.user:
-                for playlist in self.home_state.load_playlists():
-                    render_playlist_card(
-                        playlist=playlist,
-                        show_sync=True,
-                        on_sync_click=lambda: caught_john_doe(),
-                    )
+
+                all_playlists = self.home_state.load_playlists()
+
+                row_data = self._build_playlist_rows(
+                    playlists=all_playlists,
+                    logged_in=False,
+                )
+
+                owned_ids = set()
+
             else:
+
                 both = self.home_state.load_playlists_for_user()
-                owned, member = both["owned"], both["member"]
+
+                owned = both["owned"]
+                member = both["member"]
+
                 owned_ids = {pl["_id"] for pl in owned}
+
                 all_playlists = owned + [p for p in member if p["_id"] not in owned_ids]
 
-                def on_user_sync_click(playlist_obj: dict):
-                    playlist_id = playlist_obj["_id"]
-                    playlist_name = playlist_obj["name"]
+                row_data = self._build_playlist_rows(
+                    playlists=all_playlists,
+                    owned_ids=owned_ids,
+                    logged_in=True,
+                )
 
-                    async def run():
-                        try:
-                            log.info(f"User-initiated sync for playlist: {playlist_name} ({playlist_id})")
-                            result = await self.sync_playlist(playlist_obj)
-                            with self.container:
-                                if result == SYNC_OK:
-                                    ui.notify("Playlist synced successfully", type="positive")
-                                elif result == SYNC_NOOP:
-                                    ui.notify("No new videos to sync", type="info")
-                                elif result == SYNC_RETRY_SOON:
-                                    ui.notify("Upload still in progress — try again shortly", type="warning")
-                                else:
-                                    ui.notify("Sync failed", type="negative")
+            grid = ui.aggrid(
+                {
+                    "defaultColDef": {
+                        "sortable": True,
+                        "resizable": True,
+                    },
+                    "columnDefs": [
+                        {
+                            "headerName": "Playlist",
+                            "field": "name",
+                            "flex": 3,
+                            "tooltipField": "_id",
+                        },
+                        {
+                            "headerName": "Videos",
+                            "field": "video_count",
+                            "width": 120,
+                        },
+                        {
+                            "headerName": "Color",
+                            "field": "color",
+                            "width": 120,
+                            # hide raw value
+                            "valueFormatter": "return '';",
+                            "cellClassRules": {
+                                "bg-red-300": "x === 'bg-red-300'",
+                                "bg-blue-300": "x === 'bg-blue-300'",
+                                "bg-green-300": "x === 'bg-green-300'",
+                                "bg-yellow-300": "x === 'bg-yellow-300'",
+                                "bg-purple-300": "x === 'bg-purple-300'",
+                                "bg-pink-300": "x === 'bg-pink-300'",
+                                "bg-gray-300": "x === 'bg-gray-300'",
+                            },
+                        },
+                        {
+                            "headerName": "Sync",
+                            "field": "can_sync",
+                            "width": 110,
+                            "cellRenderer": """
+                            function(params) {
 
-                        except Exception as e:
-                            with self.container:
-                                ui.notify(f"Sync failed: {e}", type="negative")
+                                const button = document.createElement('button');
 
-                    log.info(f"Preparing to sync playlist: {playlist_name} ({playlist_id})")
-                    return run
+                                button.innerHTML = '🔄';
 
-                def on_sync_click(playlist_obj):
-                    spinner = ui.spinner(size="lg").props("color=primary")
-                    spinner.set_visibility(True)
+                                button.className =
+                                    'px-2 py-1 rounded bg-primary text-white';
 
-                    async def do_sync():
-                        try:
-                            await on_user_sync_click(playlist_obj)()
-                        except Exception as e:
-                            ui.notify(f"❌ Sync failed: {str(e)}")
-                        finally:
-                            spinner.set_visibility(False)
+                                if (!params.data.can_sync) {
+                                    button.disabled = true;
+                                    button.style.opacity = '0.5';
+                                }
 
-                    ui.timer(0.1, lambda: asyncio.create_task(do_sync()), once=True)
+                                button.addEventListener('click', () => {
 
-                for playlist in all_playlists:
-                    is_owned = playlist["_id"] in owned_ids
+                                    if (!params.data.can_sync) {
+                                        return;
+                                    }
 
-                    render_playlist_card(
-                        playlist=playlist,
-                        show_sync=is_owned,
-                        on_sync_click=(lambda p=playlist: on_sync_click(p) if is_owned else None),
+                                    emitEvent('sync_playlist', params.data);
+                                });
+
+                                return button;
+                            }
+                        """,
+                        },
+                    ],
+                    "rowData": row_data,
+                    "domLayout": "autoHeight",
+                }
+            ).classes("w-full")
+
+            async def handle_sync(e):
+
+                row = e.args
+
+                playlist_obj = next(
+                    (p for p in all_playlists if p["_id"] == row["_id"]),
+                    None,
+                )
+
+                if not playlist_obj:
+                    ui.notify("Playlist not found", type="negative")
+                    return
+
+                if not self.home_state.user:
+                    caught_john_doe()
+                    return
+
+                if playlist_obj["_id"] not in owned_ids:
+                    ui.notify(
+                        "Only playlist owners can sync",
+                        type="warning",
                     )
+                    return
 
+                self._run_playlist_sync(playlist_obj)
+
+            grid.on("sync_playlist", handle_sync)
+            render_playlist_card(all_playlists)
             render_add_playlist_card()
 
     async def sync_playlist(self, playlist_obj: dict) -> str:
