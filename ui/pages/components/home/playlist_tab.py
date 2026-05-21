@@ -82,12 +82,13 @@ class PlaylistTab:
 
             rows.append(
                 {
-                    "_id": playlist["_id"],
+                    # "_id": playlist["_id"],
                     "name": playlist["name"],
                     "video_count": playlist.get("video_count", 0),
                     "color": playlist.get("color", "bg-gray-300"),
                     "can_sync": is_owned if logged_in else True,
                     "is_owned": is_owned,
+                    "url": '<a href="https://google.com">https://google.com</a>',
                 }
             )
 
@@ -164,29 +165,6 @@ class PlaylistTab:
                     fetch_button.disable()
                     fetch_button.on("click", fetch_playlist_videos)
 
-        def render_playlist_card(
-            *,
-            playlist: dict,
-            show_sync=True,
-            on_sync_click=None,
-        ):
-            with ui.column().classes("w-full p-2 border border-gray-300 rounded-lg bg-white shadow-md"):
-                with ui.row().classes("w-full justify-between items-center"):
-                    ui.label(playlist["name"]).tooltip(playlist["_id"]).classes("text-sm font-semibold")
-                    # TODO: playlist owner can change the color with color picker, update the playlist backend accordingly
-                    ui.element("div").classes(f"{playlist['color']} w-3 h-3 rounded-full")
-
-                with ui.row().classes("w-full justify-between items-center"):
-                    ui.label(f"🎬 {playlist.get('video_count')}").classes("text-xs text-gray-600")
-
-                    if show_sync and on_sync_click:
-                        ui.button(
-                            icon="sync",
-                            on_click=on_sync_click,
-                        ).props(
-                            "flat dense round color=primary"
-                        ).tooltip("Sync")
-
         with self.container:
             if not self.home_state.user:
 
@@ -215,77 +193,85 @@ class PlaylistTab:
                     owned_ids=owned_ids,
                     logged_in=True,
                 )
-
+            # import pdb; pdb.set_trace()  # --- IGNORE ---
             grid = ui.aggrid(
                 {
-                    "defaultColDef": {
-                        "sortable": True,
-                        "resizable": True,
-                    },
+                    # "defaultColDef": {
+                    #     "sortable": True,
+                    #     "resizable": True,
+                    # },
                     "columnDefs": [
                         {
                             "headerName": "Playlist",
                             "field": "name",
-                            "flex": 3,
-                            "tooltipField": "_id",
+                            # "flex": 3,
+                            # "tooltipField": "_id",
                         },
                         {
                             "headerName": "Videos",
                             "field": "video_count",
-                            "width": 120,
+                            # "width": 120,
                         },
+                        # {
+                        #     # "headerName": "Color",
+                        #     "field": "color",
+                        #     "width": 120,
+                        #     # hide raw value
+                        #     "valueFormatter": "return '';",
+                        #     "rowClassRules": {
+                        #         "bg-red-300": "x === 'bg-red-300'",
+                        #         "bg-blue-300": "x === 'bg-blue-300'",
+                        #         "bg-green-300": "x === 'bg-green-300'",
+                        #         "bg-yellow-300": "x === 'bg-yellow-300'",
+                        #         "bg-purple-300": "x === 'bg-purple-300'",
+                        #         "bg-pink-300": "x === 'bg-pink-300'",
+                        #         "bg-gray-300": "x === 'bg-gray-300'",
+                        #     },
+                        # },
                         {
-                            "headerName": "Color",
-                            "field": "color",
-                            "width": 120,
-                            # hide raw value
-                            "valueFormatter": "return '';",
-                            "cellClassRules": {
-                                "bg-red-300": "x === 'bg-red-300'",
-                                "bg-blue-300": "x === 'bg-blue-300'",
-                                "bg-green-300": "x === 'bg-green-300'",
-                                "bg-yellow-300": "x === 'bg-yellow-300'",
-                                "bg-purple-300": "x === 'bg-purple-300'",
-                                "bg-pink-300": "x === 'bg-pink-300'",
-                                "bg-gray-300": "x === 'bg-gray-300'",
-                            },
+                            "field": "url",
+                            # "cellRenderer": 'customButton',
+                            # "cellRendererParams": { "actionType": 'delete' }
                         },
                         {
                             "headerName": "Sync",
                             "field": "can_sync",
                             "width": 110,
                             "cellRenderer": """
-                            function(params) {
+                                function(params) {
 
-                                const button = document.createElement('button');
+                                    const button = document.createElement('button');
 
-                                button.innerHTML = '🔄';
+                                    button.innerHTML = '🔄';
 
-                                button.className =
-                                    'px-2 py-1 rounded bg-primary text-white';
-
-                                if (!params.data.can_sync) {
-                                    button.disabled = true;
-                                    button.style.opacity = '0.5';
-                                }
-
-                                button.addEventListener('click', () => {
+                                    button.className =
+                                        'px-2 py-1 rounded bg-primary text-white';
 
                                     if (!params.data.can_sync) {
-                                        return;
+                                        button.disabled = true;
+                                        button.style.opacity = '0.5';
                                     }
 
-                                    emitEvent('sync_playlist', params.data);
-                                });
+                                    button.addEventListener('click', () => {
 
-                                return button;
-                            }
+                                        if (!params.data.can_sync) {
+                                            return;
+                                        }
+
+                                        emitEvent('sync_playlist', params.data);
+                                    });
+
+                                    return button;
+                                }
                         """,
                         },
                     ],
                     "rowData": row_data,
+                    # "rowSelection": {"mode": "multiRow"},
+                    "stopEditingWhenCellsLoseFocus": True,
                     "domLayout": "autoHeight",
-                }
+                },
+                html_columns=[2],
             ).classes("w-full")
 
             async def handle_sync(e):
@@ -315,8 +301,7 @@ class PlaylistTab:
                 self._run_playlist_sync(playlist_obj)
 
             grid.on("sync_playlist", handle_sync)
-            render_playlist_card(all_playlists)
-            render_add_playlist_card()
+            # render_add_playlist_card()
 
     async def sync_playlist(self, playlist_obj: dict) -> str:
         playlist_name = playlist_obj["name"]
