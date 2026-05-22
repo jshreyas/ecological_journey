@@ -1,18 +1,24 @@
 name: Deploy Production
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows:
+      - Build and Publish Docker Image
+    types:
+      - completed
+
   workflow_dispatch:
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
     runs-on: ubuntu-latest
 
     steps:
       - name: Deploy to Oracle VM
         uses: appleboy/ssh-action@v1.2.0
+
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -24,16 +30,14 @@ jobs:
 
             cd /opt/ecological-journey
 
-            echo "Pulling latest changes..."
-            git pull origin main
+            echo "Pulling latest image..."
+            docker compose -f docker-compose.prd.yaml pull
 
-            docker-compose -f docker-compose.prd.yaml down
+            echo "Restarting containers..."
+            docker compose -f docker-compose.prd.yaml up -d
 
-            echo "Rebuilding containers..."
-            docker-compose -f docker-compose.prd.yaml up --build -d
-
-            echo "Cleaning unused images..."
-            docker image prune -f
+            echo "Cleaning old images..."
+            docker image prune -af
 
             echo "Reloading nginx..."
             sudo systemctl reload nginx
