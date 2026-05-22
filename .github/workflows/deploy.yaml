@@ -31,10 +31,10 @@ jobs:
             cd /opt/ecological-journey
 
             echo "Pulling latest image..."
-            docker compose -f docker-compose.prd.yaml pull
+            docker-compose -f docker-compose.prd.yaml pull
 
             echo "Restarting containers..."
-            docker compose -f docker-compose.prd.yaml up -d
+            docker-compose -f docker-compose.prd.yaml up -d
 
             echo "Cleaning old images..."
             docker image prune -af
