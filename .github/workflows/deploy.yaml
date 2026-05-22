@@ -33,6 +33,8 @@ jobs:
             echo "Pulling latest image..."
             docker-compose -f docker-compose.prd.yaml pull
 
+            docker-compose -f docker-compose.prd.yaml down
+
             echo "Restarting containers..."
             docker-compose -f docker-compose.prd.yaml up -d
 
