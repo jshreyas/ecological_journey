@@ -66,7 +66,7 @@ class FeedTab:
                         # Index
                         with ui.row().classes("items-center gap-2"):
                             with ui.element("div").classes(
-                                f"{video.get('playlist_color')} w-6 h-6 rounded-full flex items-center justify-center"
+                                f"bg-[{video.get('playlist_color')}] w-6 h-6 rounded-full flex items-center justify-center"
                             ):
                                 ui.label("🎵").classes("text-left")
 
