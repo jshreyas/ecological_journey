@@ -227,11 +227,12 @@ class PlaylistTab:
 
                         <!-- Color Picker -->
                         <q-btn
+                            icon="palette"
+                            color="primary"
                             flat
                             round
                             dense
                             :style="{
-                                backgroundColor: props.row.color,
                                 width: '20px',
                                 height: '20px'
                             }"
@@ -300,8 +301,11 @@ class PlaylistTab:
                     (p for p in all_playlists if p["_id"] == row["_id"]),
                     None,
                 )
-
                 if not playlist_obj:
+                    ui.notify(
+                        "Playlist not found",
+                        type="negative",
+                    )
                     return
 
                 if playlist_obj["_id"] not in owned_ids:
@@ -310,16 +314,18 @@ class PlaylistTab:
                         type="warning",
                     )
                     return
-
+                old_color = row["color"]
                 try:
+                    row["color"] = color
+                    playlist_table.update()
                     self.home_state.update_playlist_color(
                         playlist_obj["_id"],
                         color,
                     )
-
-                    row["color"] = color
-
+                    playlist_obj["color"] = color
                 except Exception as ex:
+                    row["color"] = old_color
+                    playlist_table.update()
                     ui.notify(
                         f"Failed to update color: {str(ex)}",
                         type="negative",
@@ -409,7 +415,10 @@ class PlaylistTab:
             }
 
             if "#" in color_str:
-                return color_str.split("-")[1].strip("[").strip("]")
+                if "[" in color_str and "]" in color_str:
+                    return color_str.split("-")[1].strip("[").strip("]")
+                else:
+                    return color_str
             else:
                 return color_dict.get(color_str, color_str)
 

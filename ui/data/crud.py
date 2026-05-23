@@ -345,6 +345,43 @@ def merge_embedded_docs(
 
 
 @with_user_from_token
+@invalidate_cache(
+    keys=lambda playlist_id, **_: [
+        "playlists:index",
+        f"playlist:{playlist_id}",
+        *[
+            f"video:{video.video_id}"
+            for video in (Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run().videos or [])
+        ],
+    ]
+)
+def update_playlist_color(
+    playlist_id: str,
+    color: str,
+    user=None,
+    **kwargs,
+):
+
+    playlist = Playlist.find_one(
+        Playlist.id == ObjectId(playlist_id),
+    ).run()
+
+    if not playlist:
+        raise ValueError("Playlist not found")
+
+    if not can_write_playlist(user, playlist):
+        raise AuthError("Access denied")
+
+    playlist.color = color
+    playlist.save()
+
+    return {
+        "_id": str(playlist.id),
+        "color": playlist.color,
+    }
+
+
+@with_user_from_token
 @invalidate_cache(keys=["cliplists"])
 def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
     cliplist = Cliplist(

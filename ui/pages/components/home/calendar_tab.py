@@ -27,7 +27,7 @@ TAILWIND_TO_HEX = {
 def get_event_color(tw_class: str | None):
     if not tw_class:
         return "#888888"
-    return TAILWIND_TO_HEX.get(tw_class, "#888888")
+    return TAILWIND_TO_HEX.get(tw_class, tw_class)
 
 
 class CalendarTab:

@@ -136,11 +136,11 @@ def cache_result(cache_key, ttl_seconds: int = 3600):
             # Redis cache
             cached = cache_get(key)
             if cached is not None:
-                log.info(f"Cache hit for key: {key}")
+                log.debug(f"Cache hit for key: {key}")
                 _cache[key] = cached
                 return cached
 
-            log.info(f"Cache miss for key: {key}")
+            log.debug(f"Cache miss for key: {key}")
 
             # Compute
             data = func(*args, **kwargs)
@@ -174,7 +174,7 @@ def invalidate_cache(keys):
             for key in resolved_keys:
                 _cache.pop(key, None)
                 cache_del(key)
-                log.info(f"Cache deleted for key: {key}")
+                log.debug(f"Cache deleted for key: {key}")
 
             return result
 

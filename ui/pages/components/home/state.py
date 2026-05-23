@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional
 
 from ui.data.crud import load_playlists as lp
+from ui.data.crud import update_playlist_color as upc
 from ui.utils.user_context import User
 from ui.utils.utils_api import create_playlist as cp
 from ui.utils.utils_api import create_video as cv
@@ -77,3 +78,14 @@ class State:
         """Remove a registered refresh callback"""
         if callback in self._refresh_callbacks:
             self._refresh_callbacks.remove(callback)
+
+    def update_playlist_color(
+        self,
+        playlist_id: str,
+        color: str,
+    ):
+        return upc(
+            playlist_id=playlist_id,
+            color=color,
+            token=self.user.token if self.user else "",
+        )
