@@ -167,16 +167,6 @@ class PlaylistTab:
                 .props("hide-header")
             )
 
-            # This WORKS!!!
-            # with playlist_table.add_slot('body-cell-name'):
-            #     with playlist_table.cell('name'):
-
-            #         ui.badge().props(
-            #             ':label="props.row.name" '
-            #             'outline '
-            #             ':style="{backgroundColor: props.row.color}"'
-            #         )
-
             playlist_table.add_slot(
                 "body-cell-name",
                 r"""
@@ -209,42 +199,6 @@ class PlaylistTab:
                 </q-td>
                 """,
             )
-
-            # playlist_table.add_slot(
-            #     "body-cell-actions",
-            #     r"""
-            #     <q-td key="actions" :props="props">
-
-            #         <q-btn
-            #             icon="sync"
-            #             flat
-            #             round
-            #             dense
-            #             color="primary"
-
-            #             :disable="!props.row.can_sync"
-
-            #             @click="$parent.$emit(
-            #                 'sync_playlist',
-            #                 props.row
-            #             )"
-            #         />
-
-            #     </q-td>
-            #     """,
-            # )
-
-            # with playlist_table.add_slot("body-cell-actions"):
-            #     with playlist_table.cell("actions"):
-            #         with ui.row().classes("justify-center gap-2"):
-            #             ui.button(icon="sync").props("flat round dense color=primary").on(
-            #                 "click", js_handler='() => emit(props.row)',
-            #                 # handler=lambda e: ui.notify(f'You chose {e.args}'),
-            #                 handler=lambda e: handle_sync(e),
-            #             )
-            #             with ui.button(icon='').props('flat round dense :style="{backgroundColor: props.row.color}"').on(
-            #                 "click", js_handler='() => emit(props.row)'):
-            #                 ui.color_picker(on_pick=lambda e: ui.notify(f'You chose {e.color}'))
 
             playlist_table.add_slot(
                 "body-cell-actions",
