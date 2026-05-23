@@ -42,16 +42,6 @@ class FeedTab:
         with self.container:
             self._create_feed_ui()
 
-    def adjust_color(self, color_str):
-
-        if "#" in color_str:
-            if "[" not in color_str:
-                return f"bg-[{color_str}]"
-            else:
-                return color_str
-        else:
-            return color_str
-
     def render_video_post(self, video, index):
         anchor_id = self.home_state.get_video_anchor(video["video_id"])
 
@@ -76,7 +66,7 @@ class FeedTab:
                         # Index
                         with ui.row().classes("items-center gap-2"):
                             with ui.element("div").classes(
-                                f"{self.adjust_color(video.get('playlist_color'))} w-6 h-6 rounded-full flex items-center justify-center"
+                                f"bg-[{video.get('playlist_color')}] w-6 h-6 rounded-full flex items-center justify-center"
                             ):
                                 ui.label("🎵").classes("text-left")
 

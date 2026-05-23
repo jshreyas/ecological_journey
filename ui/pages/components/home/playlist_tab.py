@@ -428,41 +428,15 @@ class PlaylistTab:
         logged_in=False,
     ):
         owned_ids = owned_ids or set()
-
         rows = []
-
-        def extract_color(color_str):
-            color_dict = {
-                "bg-green-400": "#4ADE80",
-                "bg-red-400": "#F87171",
-                "bg-blue-400": "#60A5FA",
-                "bg-purple-400": "#b794f4",
-                "bg-yellow-400": "#fdc700",
-                "bg-pink-400": "#FF2E51",
-                "bg-teal-400": "#2DD4BF",
-                "bg-indigo-400": "#7c86ff",
-                "bg-orange-400": "#FB923C",
-                "bg-gray-300": "#D1D5DB",
-            }
-
-            if "#" in color_str:
-                if "[" in color_str and "]" in color_str:
-                    return color_str.split("-")[1].strip("[").strip("]")
-                else:
-                    return color_str
-            else:
-                return color_dict.get(color_str, color_str)
-
         for playlist in playlists:
-
             is_owned = playlist["_id"] in owned_ids
-
             rows.append(
                 {
                     "_id": playlist["_id"],
                     "name": playlist["name"],
                     "video_count": playlist.get("video_count", 0),
-                    "color": extract_color(playlist.get("color", "bg-gray-300")),
+                    "color": playlist.get("color"),
                     "can_sync": is_owned if logged_in else True,
                     "is_owned": is_owned,
                     "temp_color": None,
@@ -470,7 +444,6 @@ class PlaylistTab:
                     "show_color_picker": False,
                 }
             )
-
         return rows
 
     async def sync_playlist(self, playlist_obj: dict) -> str:
