@@ -232,25 +232,56 @@ class PlaylistTab:
                             flat
                             round
                             dense
-                            :style="{
-                                width: '20px',
-                                height: '20px'
-                            }"
                         >
 
-                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                                <q-color
-                                    v-model="props.row.color"
-                                    @update:model-value="
-                                        $parent.$emit(
-                                            'update_playlist_color',
-                                            {
-                                                row: props.row,
-                                                color: props.row.color
-                                            }
-                                        )
-                                    "
-                                />
+                            <q-popup-proxy
+                                ref="popup"
+                                cover
+                                transition-show="scale"
+                                transition-hide="scale"
+                                @before-show="
+                                    props.row.temp_color = props.row.color
+                                "
+                            >
+
+                                <div class="q-pa-md">
+
+                                    <q-form
+                                        class="q-gutter-md"
+                                        @submit.prevent="
+
+                                            props.row.color = props.row.temp_color;
+
+                                            $parent.$emit(
+                                                'update_playlist_color',
+                                                {
+                                                    row: props.row,
+                                                    color: props.row.temp_color
+                                                }
+                                            );
+
+                                            $refs.popup.hide();
+                                        "
+                                    >
+
+                                        <q-color
+                                            v-model="props.row.temp_color"
+                                        />
+
+                                        <div class="row justify-end">
+                                            <q-btn
+                                                icon="send"
+                                                type="submit"
+                                                color="primary"
+                                                flat
+                                                round
+                                            />
+                                        </div>
+
+                                    </q-form>
+
+                                </div>
+
                             </q-popup-proxy>
 
                         </q-btn>
@@ -434,6 +465,7 @@ class PlaylistTab:
                     "color": extract_color(playlist.get("color", "bg-gray-300")),
                     "can_sync": is_owned if logged_in else True,
                     "is_owned": is_owned,
+                    "temp_color": None,
                     "syncing": False,
                     "show_color_picker": False,
                 }
