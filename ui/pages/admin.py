@@ -11,9 +11,10 @@ def admin_page(user: User | None):
         ui.label("Unauthorized")
         return
 
-    # if user.role != "service":
-    #     ui.label("Forbidden")
-    #     return
+    # TODO: Implement proper role-based access control instead of hardcoding email check
+    if user.email != "shreyas.jukanti@gmail.com":
+        ui.label("Forbidden")
+        return
 
     async def handle_clear_cache():
         try:

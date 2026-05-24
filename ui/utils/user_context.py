@@ -6,11 +6,13 @@ from nicegui import app
 from structlog.contextvars import bind_contextvars
 
 
+# TODO: This is duplication of the User class in ui/data/models.py.
 @dataclass
 class User:
     username: str
     token: str
     id: str
+    email: str
 
 
 def with_user_context(page_func: Callable):
@@ -23,6 +25,7 @@ def with_user_context(page_func: Callable):
                 username=user_data.get("user"),
                 token=user_data.get("token"),
                 id=user_data.get("id"),
+                email=user_data["user_info"]["email"],
             )
             bind_contextvars(user=user_data.get("user"))
         else:

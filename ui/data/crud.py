@@ -82,8 +82,6 @@ def to_dicts(obj: Any) -> Any:
 
 @with_user_from_token
 def clear_cache(user=None, **kwargs):
-    # if user.role != "service":
-    #     raise AuthError("Admin access required")
 
     clear_all_caches()
 
