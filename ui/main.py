@@ -15,7 +15,6 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from ui.data.crud import (
     add_video_to_playlist,
-    clear_cache,
     create_access_token,
     get_or_create_user,
     load_playlist,
@@ -76,8 +75,6 @@ def _is_valid(user_info: dict) -> bool:
 
 @app.get("/auth/google/callback")
 async def google_oauth(request: Request) -> RedirectResponse:
-    print("Cookies:", request.cookies)
-    print("Session ID:", request.cookies.get("nicegui-session"))
     try:
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get("userinfo", {})
@@ -101,7 +98,6 @@ async def google_oauth(request: Request) -> RedirectResponse:
                     "user_info": user_info,
                 }
             )
-            clear_cache()
 
     except Exception:
         logging.exception("OAuth failed")

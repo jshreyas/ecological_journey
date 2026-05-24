@@ -22,14 +22,7 @@ SECRET_KEY = os.getenv("JWT_SECRET")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
-
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
-
-
-# TODO: this doesnt invalidate granular caches yet, enhance it and decouple it from about page
-@invalidate_cache(keys=["teams", "notion_tree", "playlists:index", "cliplists"])
-def clear_cache() -> None:
-    pass
 
 
 def get_user_from_token(token: str):
