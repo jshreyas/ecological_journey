@@ -22,6 +22,7 @@ from ui.data.crud import (
     load_teams,
 )
 from ui.pages.about import about_page
+from ui.pages.admin import admin_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.clips import clips_page
 from ui.pages.custom_sub_pages import custom_sub_pages
@@ -218,6 +219,7 @@ async def main_page() -> None:
             "/partners": partner_page,
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
+            "/admin": admin_page,
         }
     ).classes("w-full h-full flex-grow p-4")
 

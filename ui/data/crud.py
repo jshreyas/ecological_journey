@@ -14,7 +14,7 @@ from passlib.context import CryptContext
 
 from ui.data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from ui.log import log
-from ui.utils.cache import cache_result, invalidate_cache
+from ui.utils.cache import cache_result, clear_all_caches, invalidate_cache
 from ui.utils.notion import generate_tree
 
 load_dotenv()
@@ -78,6 +78,18 @@ def to_dicts(obj: Any) -> Any:
     # Case 5: Anything else (primitive types, etc.)
     else:
         return obj
+
+
+@with_user_from_token
+def clear_cache(user=None, **kwargs):
+    # if user.role != "service":
+    #     raise AuthError("Admin access required")
+
+    clear_all_caches()
+
+    return {
+        "success": True,
+    }
 
 
 @cache_result("teams", ttl_seconds=CACHE_TTL)
