@@ -1,14 +1,10 @@
 from nicegui import ui
 
-from ui.data.crud import clear_cache
 from ui.utils.user_context import User, with_user_context
 
 
 @with_user_context
 def about_page(user: User | None):
-    # TODO: make it available to other pages, can this be added as decorator?
-    if ui.context.client.request.query_params.get("clear_cache", "") == "true":
-        clear_cache()
     with ui.column().classes("w-full max-w-4xl mx-auto p-6"):
 
         ui.label("🥋 About This Platform").classes("text-3xl font-bold mb-4")

@@ -14,7 +14,7 @@ from passlib.context import CryptContext
 
 from ui.data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from ui.log import log
-from ui.utils.cache import cache_result, invalidate_cache
+from ui.utils.cache import cache_result, clear_all_caches, invalidate_cache
 from ui.utils.notion import generate_tree
 
 load_dotenv()
@@ -22,14 +22,7 @@ SECRET_KEY = os.getenv("JWT_SECRET")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
-
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
-
-
-# TODO: this doesnt invalidate granular caches yet, enhance it and decouple it from about page
-@invalidate_cache(keys=["teams", "notion_tree", "playlists:index", "cliplists"])
-def clear_cache() -> None:
-    pass
 
 
 def get_user_from_token(token: str):
@@ -85,6 +78,16 @@ def to_dicts(obj: Any) -> Any:
     # Case 5: Anything else (primitive types, etc.)
     else:
         return obj
+
+
+@with_user_from_token
+def clear_cache(user=None, **kwargs):
+
+    clear_all_caches()
+
+    return {
+        "success": True,
+    }
 
 
 @cache_result("teams", ttl_seconds=CACHE_TTL)

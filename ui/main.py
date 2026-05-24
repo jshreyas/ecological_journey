@@ -15,7 +15,6 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from ui.data.crud import (
     add_video_to_playlist,
-    clear_cache,
     create_access_token,
     get_or_create_user,
     load_playlist,
@@ -23,6 +22,7 @@ from ui.data.crud import (
     load_teams,
 )
 from ui.pages.about import about_page
+from ui.pages.admin import admin_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.clips import clips_page
 from ui.pages.custom_sub_pages import custom_sub_pages
@@ -76,8 +76,6 @@ def _is_valid(user_info: dict) -> bool:
 
 @app.get("/auth/google/callback")
 async def google_oauth(request: Request) -> RedirectResponse:
-    print("Cookies:", request.cookies)
-    print("Session ID:", request.cookies.get("nicegui-session"))
     try:
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get("userinfo", {})
@@ -101,7 +99,6 @@ async def google_oauth(request: Request) -> RedirectResponse:
                     "user_info": user_info,
                 }
             )
-            clear_cache()
 
     except Exception:
         logging.exception("OAuth failed")
@@ -222,6 +219,7 @@ async def main_page() -> None:
             "/partners": partner_page,
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
+            "/admin": admin_page,
         }
     ).classes("w-full h-full flex-grow p-4")
 

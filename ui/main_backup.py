@@ -14,7 +14,6 @@ from structlog.contextvars import bind_contextvars
 
 from ui.data.crud import (
     add_video_to_playlist,
-    clear_cache,
     create_access_token,
     create_feedback,
     get_or_create_user,
@@ -104,7 +103,6 @@ def login_or_signup(mode="login"):
                         app.storage.user["id"] = response["id"]
                         bind_contextvars(user=response["username"])
                         ui.notify("✅ Login successful", type="positive")
-                        clear_cache()
                         ui.navigate.to(app.storage.user.get("post_login_path", "/"))
                         app.storage.user["post_login_path"] = "/"
                 except Exception as e:
@@ -293,7 +291,6 @@ def oauth_page(
         app.storage.user["id"] = id
         ui.notify("✅ Google login successful", type="positive")
         bind_contextvars(user=username)
-        clear_cache()
         ui.navigate.to(post_login_path or "/")
         app.storage.user["post_login_path"] = "/"
 

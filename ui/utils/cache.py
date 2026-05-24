@@ -23,6 +23,9 @@ class CacheBackend:
     def delete(self, *keys):
         raise NotImplementedError
 
+    def clear_all(self):
+        raise NotImplementedError
+
 
 class RedisClientBackend(CacheBackend):
     def __init__(self):
@@ -47,8 +50,20 @@ class RedisClientBackend(CacheBackend):
         self.client.set(key, json.dumps(value), ex=ex)
 
     def delete(self, *keys):
-        for key in keys:
-            self.client.delete(key)
+        if keys:
+            self.client.delete(*keys)
+
+    def clear_all(self):
+        cursor = 0
+
+        while True:
+            cursor, keys = self.client.scan(cursor=cursor, match="*", count=500)
+
+            if keys:
+                self.client.delete(*keys)
+
+            if cursor == 0:
+                break
 
 
 # TODO: check if these Upstash APIs are successful
@@ -59,8 +74,17 @@ class UpstashRestBackend(CacheBackend):
         if not (self.url and self.token):
             raise RuntimeError("Upstash REST credentials not set")
 
+    def _headers(self):
+        return {
+            "Authorization": f"Bearer {self.token}",
+        }
+
     def get(self, key):
-        resp = requests.get(f"{self.url}/get/{key}", headers={"Authorization": f"Bearer {self.token}"})
+        resp = requests.get(
+            f"{self.url}/get/{key}",
+            headers=self._headers(),
+        )
+
         if resp.status_code == 200:
             val = resp.json().get("result")
             if val:
@@ -75,14 +99,37 @@ class UpstashRestBackend(CacheBackend):
         url = f"{self.url}/set/{key}"
         if ex:
             url += f"?EX={ex}"
-        requests.post(url, headers={"Authorization": f"Bearer {self.token}"}, data=data)
+
+        requests.post(
+            url,
+            headers=self._headers(),
+            data=data,
+        )
 
     def delete(self, *keys):
         for key in keys:
             requests.post(
                 f"{self.url}/del/{key}",
-                headers={"Authorization": f"Bearer {self.token}"},
+                headers=self._headers(),
             )
+
+    def clear_all(self):
+        cursor = "0"
+
+        while True:
+            resp = requests.get(
+                f"{self.url}/scan/{cursor}",
+                headers=self._headers(),
+            )
+            data = resp.json().get("result", [])
+            if len(data) < 2:
+                break
+
+            cursor, keys = data
+            if keys:
+                self.delete(*keys)
+            if cursor == "0":
+                break
 
 
 def get_cache_backend() -> CacheBackend:
@@ -112,6 +159,28 @@ def cache_del(*keys):
 
 
 _cache: Dict[str, Any] = {}
+
+
+def clear_memory_cache():
+    global _cache
+
+    count = len(_cache)
+
+    _cache.clear()
+
+    log.info(f"Cleared in-memory cache ({count} keys)")
+
+
+def clear_redis_cache():
+    cache_backend.clear_all()
+    log.info("Cleared Redis cache")
+
+
+def clear_all_caches():
+    clear_memory_cache()
+    clear_redis_cache()
+
+    log.info("Cleared all caches")
 
 
 def cache_result(cache_key, ttl_seconds: int = 3600):
