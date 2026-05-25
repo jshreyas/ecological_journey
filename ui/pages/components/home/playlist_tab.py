@@ -110,8 +110,8 @@ class PlaylistTab:
                     fetch_button.on("click", fetch_playlist_videos)
 
         with self.container:
+            all_playlists = self.home_state.load_playlists()
             if not self.home_state.user:
-                all_playlists = self.home_state.load_playlists()
                 owned_ids = set()
                 rows = self._build_playlist_rows(
                     playlists=all_playlists,
@@ -121,8 +121,7 @@ class PlaylistTab:
                 both = self.home_state.load_playlists_for_user()
                 owned = both["owned"]
                 member = both["member"]
-                owned_ids = {pl["_id"] for pl in owned}
-                all_playlists = owned + [p for p in member if p["_id"] not in owned_ids]
+                owned_ids = set([pl["_id"] for pl in owned] + [pl["_id"] for pl in member])
                 rows = self._build_playlist_rows(
                     playlists=all_playlists,
                     owned_ids=owned_ids,
@@ -229,6 +228,7 @@ class PlaylistTab:
                         <q-btn
                             icon="palette"
                             color="primary"
+                            :disable="!props.row.can_sync"
                             flat
                             round
                             dense
