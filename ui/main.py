@@ -4,6 +4,7 @@ import sys
 import time
 from typing import Any, Dict, List
 
+import httpx
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 from fastapi import APIRouter, Header, Request
@@ -96,6 +97,7 @@ async def google_oauth(request: Request) -> RedirectResponse:
                     "user": user_info["name"],
                     "id": str(user["_id"]),
                     "token": jwt_token,
+                    "google_access_token": token["access_token"],
                     "user_info": user_info,
                 }
             )
@@ -199,7 +201,19 @@ async def main_page() -> None:
                     ui.label(f"Hi, {user}!").classes("text-sm text-white")
                     ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
-        def handle_logout():
+        async def handle_logout():
+            access_token = app.storage.user.get("google_access_token")
+            if access_token:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            "https://oauth2.googleapis.com/revoke",
+                            params={"token": access_token},
+                            headers={"content-type": "application/x-www-form-urlencoded"},
+                        )
+                except Exception:
+                    logging.exception("Failed to revoke Google token")
+
             app.storage.user.clear()
             app.storage.user.update({"authenticated": False})
             render_auth()
