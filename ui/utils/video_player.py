@@ -185,7 +185,7 @@ class VideoPlayer:
                     self.speed = speed_knob.value
                     ui.run_javascript(f"window.setYTSpeed({speed_knob.value});")
 
-                with ui.row().classes("items-center justify-center mt-2 mx-6"):
+                with ui.row().classes("items-center justify-center"):
                     speed_knob = (
                         ui.knob(
                             min=0.25,
