@@ -110,3 +110,9 @@ def human_stamp(ts: str) -> str:
 
     dt = datetime.fromisoformat(ts)
     return dt.strftime("%b %d, %I:%M %p")  # e.g. "Sep 23, 12:29 AM"
+
+
+def format_date(date_str):
+    # assuming ISO format in DB: "2026-04-02T..."
+    dt = datetime.fromisoformat(date_str)
+    return dt.strftime("%A, %b %d, %Y")  # e.g. Thursday, Apr 02, 2026

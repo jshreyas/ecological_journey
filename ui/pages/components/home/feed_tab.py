@@ -1,18 +1,11 @@
-from datetime import datetime
-
 from nicegui import ui
 
+from ui.utils.utils import format_date
 from ui.utils.video_player import VideoPlayer
 
 from .state import State
 
 PAGE_SIZE = 50
-
-
-def format_date(date_str):
-    # assuming ISO format in DB: "2026-04-02T..."
-    dt = datetime.fromisoformat(date_str)
-    return dt.strftime("%A, %b %d, %Y")  # e.g. Thursday, Apr 02, 2026
 
 
 class FeedTab:
@@ -89,7 +82,7 @@ class FeedTab:
                                 f"bg-[{video.get('playlist_color')}] "
                                 "w-6 h-6 rounded-full flex items-center justify-center"
                             ):
-                                ui.label("🎵")
+                                ui.label("🎵").classes("text-left")
 
                             ui.label(f"{video.get('playlist_name')}").classes("text-left")
 
