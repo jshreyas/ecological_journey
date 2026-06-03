@@ -2,6 +2,8 @@ from datetime import datetime
 
 from nicegui import ui
 
+from ui.utils.video_player import VideoPlayer
+
 from .state import State
 
 PAGE_SIZE = 50
@@ -23,22 +25,36 @@ class FeedTab:
         self.is_loading = False
         self.last_rendered_date = None
 
+        # inline player state
+        self.active_video_id = None
+
+        # {
+        #   video_id: {
+        #       "container": ui.column,
+        #       "video": video_dict,
+        #   }
+        # }
+        self.video_post_refs = {}
+
         self.home_state.add_refresh_callback(self.refresh)
 
     def create_tab(self, container):
-        """Create the feed tab UI"""
         self.container = container
         self.refresh()
 
     def refresh(self):
-        """Refresh the feed tab with current video data"""
         if not self.container:
             return
 
         self.current_index = 0
         self.is_loading = False
         self.last_rendered_date = None
+
+        self.active_video_id = None
+        self.video_post_refs.clear()
+
         self.container.clear()
+
         with self.container:
             self._create_feed_ui()
 
@@ -48,12 +64,17 @@ class FeedTab:
         ui.element("div").props(f"id={anchor_id}")
 
         with ui.card().classes("w-full p-3 shadow-md"):
-            with ui.link(target=f'/film/{video["video_id"]}').classes("w-full h-[50vh] p-0"):
-                ui.image(f'https://img.youtube.com/vi/{video["video_id"]}/maxresdefault.jpg').classes(
-                    "w-full h-full rounded-md"
-                )
 
-            # 📌 Metadata
+            media_container = ui.column().classes("w-full h-[50vh]")
+
+            self.video_post_refs[video["video_id"]] = {
+                "container": media_container,
+                "video": video,
+            }
+
+            self.render_thumbnail(video, media_container)
+
+            # metadata
             with ui.column().classes("gap-1 mt-2"):
 
                 with ui.row().classes("w-full items-center px-2"):
@@ -63,28 +84,80 @@ class FeedTab:
                         .style("grid-template-columns: auto auto 80px 80px;")
                     ):
 
-                        # Index
                         with ui.row().classes("items-center gap-2"):
                             with ui.element("div").classes(
-                                f"bg-[{video.get('playlist_color')}] w-6 h-6 rounded-full flex items-center justify-center"
+                                f"bg-[{video.get('playlist_color')}] "
+                                "w-6 h-6 rounded-full flex items-center justify-center"
                             ):
-                                ui.label("🎵").classes("text-left")
+                                ui.label("🎵")
 
-                            # Playlist
                             ui.label(f"{video.get('playlist_name')}").classes("text-left")
 
-                        # Runtime
                         ui.label(f"⏱️ {video.get('duration_human', '--:--')}").classes("text-left")
 
-                        # Clips
                         ui.label(f"🎬 {len(video.get('clips', []))}").classes("text-right")
 
-                        # Anchors
                         ui.label(f"⚓ {len(video.get('anchors', []))}").classes("text-right")
 
                 partners = ", ".join(video.get("partners", []))
                 if partners:
                     ui.label(f"👥 {partners}").classes("w-full items-center px-2 text-sm text-gray-700")
+
+    def restore_thumbnail(self, video_id: str):
+        ref = self.video_post_refs.get(video_id)
+
+        if not ref:
+            return
+
+        container = ref["container"]
+        video = ref["video"]
+
+        container.clear()
+
+        self.render_thumbnail(video, container)
+
+    def stop_video(self, video_id: str):
+
+        if self.active_video_id == video_id:
+            self.active_video_id = None
+
+        self.restore_thumbnail(video_id)
+
+    def play_video_inline(self, video):
+
+        video_id = video["video_id"]
+
+        # already playing
+        if self.active_video_id == video_id:
+            return
+
+        # stop old player
+        if self.active_video_id and self.active_video_id in self.video_post_refs:
+            self.restore_thumbnail(self.active_video_id)
+
+        self.active_video_id = video_id
+
+        ref = self.video_post_refs.get(video_id)
+
+        if not ref:
+            return
+
+        container = ref["container"]
+
+        container.clear()
+
+        self.render_player(video, container)
+
+    def render_thumbnail(self, video, container):
+
+        with container:
+
+            ui.image(f"https://img.youtube.com/vi/{video['video_id']}/maxresdefault.jpg").classes(
+                "w-full h-full rounded-md cursor-pointer"
+            ).on(
+                "click",
+                lambda _: self.play_video_inline(video),
+            )
 
     def render_date_header(self, date_str):
         anchor_id = self.home_state.get_date_anchor(date_str)
@@ -109,14 +182,17 @@ class FeedTab:
 
         with self.feed_container:
             for i, v in enumerate(next_batch):
-                video_date = v["date"].split("T")[0]  # normalize to YYYY-MM-DD
 
-                # 👇 insert header when date changes
+                video_date = v["date"].split("T")[0]
+
                 if self.last_rendered_date != video_date:
                     self.render_date_header(video_date)
                     self.last_rendered_date = video_date
 
-                self.render_video_post(v, self.current_index + i)
+                self.render_video_post(
+                    v,
+                    self.current_index + i,
+                )
 
         self.current_index += PAGE_SIZE
         self.is_loading = False
@@ -221,3 +297,24 @@ class FeedTab:
             })();
             """
         )
+
+    def render_player(self, video, container):
+
+        # IMPORTANT:
+        # VideoPlayer already renders inside parent=container
+        VideoPlayer(
+            video["video_id"],
+            show_speed_slider=False,
+            parent=container,
+        )
+
+        with container:
+            with ui.row().classes("w-full justify-end"):
+                ui.button(
+                    icon="edit",
+                    on_click=lambda: ui.navigate.to(f"/film/{video['video_id']}"),
+                )
+                ui.button(
+                    icon="close",
+                    on_click=lambda: self.stop_video(video["video_id"]),
+                )
