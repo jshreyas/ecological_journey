@@ -149,6 +149,12 @@ app.include_router(api_router, prefix="/api")
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
+    ui.add_head_html(
+        """
+        <script src="https://www.youtube.com/iframe_api"></script>
+        """
+    )
+
     with ui.header().classes(
         "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
     ):
