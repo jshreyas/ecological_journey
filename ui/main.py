@@ -35,7 +35,6 @@ from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
 
-# TODO: missing @api_router apis and check sync playlist works
 load_dotenv()
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -142,7 +141,6 @@ def post_playlist_videos(
     )
 
 
-# app.mount("/api", api_router)
 app.include_router(api_router, prefix="/api")
 
 

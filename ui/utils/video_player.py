@@ -2,6 +2,8 @@ from urllib.parse import parse_qs, urlparse
 
 from nicegui import app, ui
 
+from ui.utils.utils import format_time
+
 
 class VideoPlayer:
 
@@ -202,7 +204,12 @@ class VideoPlayer:
                 async def _add_anchor():
                     t = await ui.run_javascript("window.getYTCurrentTime();")
                     if t is not None:
-                        ui.notify(f"Adding anchor at time: {t:.2f}s", type="info", position="bottom", timeout=2000)
+                        ui.notify(
+                            f"Adding anchor at time: {format_time(int(t))}",
+                            type="info",
+                            position="bottom",
+                            timeout=2000,
+                        )
                         self.video_state.add_anchor_at_time(t)
                         self.video_state.tabber.set_value("Control Panel")
 
