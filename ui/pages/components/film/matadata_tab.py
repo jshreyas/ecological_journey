@@ -515,6 +515,7 @@ class MatadataTab:
             save_btn.bind_enabled_from(self.video_state, "_metadata_dirty")
 
     def _clear_unsaved(self):
+        # TODO: doesnt clear unsaved edits to the existing anchors
         self.video_state.reload_metadata()
         ui.notify("Unsaved changes cleared", type="info")
         self.refresh()

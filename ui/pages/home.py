@@ -23,7 +23,7 @@ def home_page(user: User | None):
                 tab_playlists = ui.tab("🎵 Playlists")
                 tab_teams = ui.tab("👥 Teams")
                 tab_calendar = ui.tab("📅 Calendar")
-            with ui.tab_panels(tabs, value=tab_playlists).classes("w-full h-full"):
+            with ui.tab_panels(tabs, value=tab_calendar).classes("w-full h-full"):
                 with ui.tab_panel(tab_playlists) as playlists_container:
                     playlist_tab.create_tab(playlists_container)
                 with ui.tab_panel(tab_teams) as teams_container:
