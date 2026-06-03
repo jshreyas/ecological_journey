@@ -268,7 +268,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 ui.run(
     title="Ecological Journey",
-    reload=False,
-    reconnect_timeout=10.0,
+    reload=True if os.getenv("ENV") == "dev" else False,
     storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
 )
