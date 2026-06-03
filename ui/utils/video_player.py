@@ -57,21 +57,6 @@ class VideoPlayer:
             """
             )
 
-            ui.add_head_html(
-                """
-                <script>
-                if (!window.youtubeIframeApiInjected) {
-                    window.youtubeIframeApiInjected = true;
-
-                    const tag = document.createElement('script');
-                    tag.src = 'https://www.youtube.com/iframe_api';
-
-                    document.head.appendChild(tag);
-                }
-                </script>
-                """
-            )
-
             if self.on_end:
                 endpoint = f"/_nicegui_api/{self.element_id}_on_end"
 
