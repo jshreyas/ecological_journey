@@ -59,8 +59,17 @@ class VideoPlayer:
 
             ui.add_head_html(
                 """
-                <script src="https://www.youtube.com/iframe_api"></script>
-            """
+                <script>
+                if (!window.youtubeIframeApiInjected) {
+                    window.youtubeIframeApiInjected = true;
+
+                    const tag = document.createElement('script');
+                    tag.src = 'https://www.youtube.com/iframe_api';
+
+                    document.head.appendChild(tag);
+                }
+                </script>
+                """
             )
 
             if self.on_end:
@@ -107,20 +116,6 @@ class VideoPlayer:
                         }}
                     }});
                 }};
-
-                function onPlayerReady(event) {{
-                    event.target.setPlaybackRate(window.ytConfig.speed);
-                    event.target.playVideo();
-                    if (ytEndInterval) clearInterval(ytEndInterval);
-                    ytEndInterval = setInterval(() => {{
-                        const current = ytPlayer.getCurrentTime();
-                        if (current >= window.ytConfig.end) {{
-                            ytPlayer.pauseVideo();
-                            clearInterval(ytEndInterval);
-                            {js_on_end}
-                        }}
-                    }}, 500);
-                }}
 
                 function onPlayerReady(event) {{
                     event.target.setPlaybackRate(window.ytConfig.speed);
@@ -173,9 +168,27 @@ class VideoPlayer:
                     }}
                 }};
 
-                if (window.YT && window.YT.Player) {{
-                    window.onYouTubeIframeAPIReady();
-                }}
+                (async function() {{
+
+                    let attempts = 0;
+
+                    while (
+                        (!window.YT || !window.YT.Player)
+                        && attempts < 100
+                    ) {{
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        attempts++;
+                    }}
+
+                    if (window.YT && window.YT.Player) {{
+                        window.onYouTubeIframeAPIReady();
+                    }} else {{
+                        console.error(
+                            "YouTube iframe API failed to load"
+                        );
+                    }}
+
+                }})();
             """
             )
 
