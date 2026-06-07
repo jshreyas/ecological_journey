@@ -157,7 +157,7 @@ class FeedTab:
 
         ui.element("div").props(f"id={anchor_id}")
 
-        with ui.row().classes("w-full max-w-3xl mx-auto px-4 mt-4 sticky top-0 bg-white z-10"):
+        with ui.row().classes("w-full mx-auto px-4 mt-4 sticky top-0 bg-white z-10"):
             ui.label(format_date(date_str)).classes("text-lg font-semibold text-gray-700 border-b pb-1 w-full")
 
     def load_more(self, videos):
@@ -201,7 +201,7 @@ class FeedTab:
 
         with ui.column().classes("w-full h-full overflow-auto feed-scroll"):
 
-            self.feed_container = ui.column().classes("w-full max-w-3xl mx-auto gap-6 p-4")
+            self.feed_container = ui.column().classes("w-full mx-auto gap-6 p-4")
 
             # initial load
             self.load_more(videos)
