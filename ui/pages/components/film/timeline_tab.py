@@ -73,7 +73,7 @@ class TimelineTab:
                 with ui.card().classes("w-full cursor-pointer") as card:
                     ui.label(anchor.get("description", ""))
                     # ui.button(icon="play_arrow", on_click=lambda a=anchor: self._play_anchor(a)).props("flat dense")
-                card.on("click", lambda _, a=anchor: self._play_anchor(a))
+                card.on("click", lambda a=anchor: self._play_anchor(a))
 
     def _refresh_active_anchor(self):
         active_id = self.video_state.active_anchor_id
