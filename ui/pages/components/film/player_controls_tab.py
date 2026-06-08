@@ -3,6 +3,7 @@ PlayerControlsTab - Component for video player controls and playlist functionali
 Handles the video player controls and playlist mode
 """
 
+from asyncio import TimeoutError
 from typing import Callable
 
 from nicegui import ui
@@ -29,6 +30,41 @@ class PlayerControlsTab:
         self.container = container
         self.refresh(play_clips_playlist, autoplay_clip)
 
+    async def _sync_video_position(self):
+
+        try:
+
+            t = await ui.run_javascript(
+                """
+                (function() {
+
+                    if (
+                        typeof window.getYTCurrentTime !== 'function'
+                    ) {
+                        return null;
+                    }
+
+                    return window.getYTCurrentTime();
+
+                })();
+                """,
+                timeout=0.2,
+            )
+
+        except TimeoutError:
+            return
+
+        except Exception:
+            return
+
+        if t is None:
+            return
+
+        try:
+            self.video_state.set_playback_time(float(t))
+        except Exception:
+            pass
+
     def refresh(self, play_clips_playlist=False, autoplay_clip=None):
         """Refresh the player controls with current video data"""
         if not self.container:
@@ -53,7 +89,13 @@ class PlayerControlsTab:
                         video_state=self.video_state,
                     )
 
+                    ui.timer(
+                        0.5,
+                        self._sync_video_position,
+                    )
+
     def play_at_time(self, t: float):
+        # self.video_state.set_playback_time(t)
         ref = self.player_container["ref"]
         if ref:
             ref.clear()
