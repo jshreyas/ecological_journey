@@ -77,7 +77,7 @@ def film_page(user: User | None, video_id: str):
                     timeline = ui.tab("Timeline", icon="timeline").classes("w-full bg-primary text-black")
                     two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
                     five = ui.tab("Control Panel", label="", icon="bookmarks").classes("w-full bg-primary text-black")
-                with ui.tab_panels(tabs, value=timeline).classes("w-full h-full"):
+                with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
                     with ui.tab_panel(timeline):
                         timeline_container = ui.column().classes("w-full h-full")
                         timeline_tab.create_tab(timeline_container)
