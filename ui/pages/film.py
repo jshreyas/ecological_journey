@@ -11,6 +11,7 @@ from ui.pages.components.film.matadata_tab import MatadataTab
 from ui.pages.components.film.navigation_tab import NavigationTab
 from ui.pages.components.film.player_controls_tab import PlayerControlsTab
 from ui.pages.components.film.share_dialog_tab import ShareDialogTab
+from ui.pages.components.film.timeline_tab import TimelineTab
 from ui.pages.components.film.video_state import VideoState
 from ui.utils.user_context import User, with_user_context
 
@@ -57,6 +58,9 @@ def film_page(user: User | None, video_id: str):
         on_play_clip=player_controls_tab.play_clip,
         on_share_clip=share_dialog_tab.share_clip,
     )
+    timeline_tab = TimelineTab(
+        video_state,
+    )
 
     # Inline render_film_editor functionality
     with ui.column().classes("w-full"):
@@ -70,9 +74,13 @@ def film_page(user: User | None, video_id: str):
                     player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
             with splitter.after:
                 with ui.tabs().classes("w-full") as tabs:
+                    timeline = ui.tab("Timeline", icon="timeline").classes("w-full bg-primary text-black")
                     two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
                     five = ui.tab("Control Panel", label="", icon="bookmarks").classes("w-full bg-primary text-black")
                 with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
+                    with ui.tab_panel(timeline):
+                        timeline_container = ui.column().classes("w-full h-full")
+                        timeline_tab.create_tab(timeline_container)
                     with ui.tab_panel(two):
                         chat_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
                         learnings_tab.create_tab(chat_container)

@@ -33,7 +33,47 @@ class VideoState:
 
         self.tabber = None
         self._load_videos = None
+
+        self.current_playback_time: float = 0
+        self.active_anchor_id: str | None = None
+        self.timeline_callbacks: list = []
+
         self.reload_metadata()
+
+    def add_timeline_callback(self, cb):
+        self.timeline_callbacks.append(cb)
+
+    def set_active_anchor(self, anchor_id: str | None):
+
+        if anchor_id == self.active_anchor_id:
+            return
+
+        self.active_anchor_id = anchor_id
+
+        for cb in self.timeline_callbacks:
+            cb()
+
+    def set_playback_time(self, t: float):
+        self.current_playback_time = t
+        active = None
+
+        for anchor in sorted(
+            self.anchor_draft,
+            key=lambda a: a.get("start", 0),
+        ):
+            start = float(anchor.get("start", 0))
+            if start <= t:
+                active = anchor
+            else:
+                break
+
+        active_id = active.get("anchor_id") or active.get("id") if active else None
+        if active_id == self.active_anchor_id:
+            return
+
+        self.active_anchor_id = active_id
+        for cb in self.timeline_callbacks:
+            cb()
 
     def load_videos(self) -> Optional[Dict[str, Any]]:
         """Get videos data, loading from API if not cached"""
@@ -53,6 +93,7 @@ class VideoState:
         )
 
         self._metadata_dirty = True
+        # self.active_anchor_id = new_anchor["id"]
 
         for callback in self._refresh_callbacks:
             callback()
