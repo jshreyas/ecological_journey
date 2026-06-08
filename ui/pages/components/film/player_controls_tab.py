@@ -31,35 +31,26 @@ class PlayerControlsTab:
         self.refresh(play_clips_playlist, autoplay_clip)
 
     async def _sync_video_position(self):
-
         try:
-
             t = await ui.run_javascript(
                 """
                 (function() {
-
                     if (
                         typeof window.getYTCurrentTime !== 'function'
                     ) {
                         return null;
                     }
-
                     return window.getYTCurrentTime();
-
                 })();
                 """,
                 timeout=0.2,
             )
-
         except TimeoutError:
             return
-
         except Exception:
             return
-
         if t is None:
             return
-
         try:
             self.video_state.set_playback_time(float(t))
         except Exception:
