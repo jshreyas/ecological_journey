@@ -5,6 +5,7 @@ from ui.utils.utils import format_time
 from .video_state import VideoState
 
 
+# TODO: TimelineTab is not in sync with MatadataTab play buttons
 class TimelineTab:
 
     def __init__(
