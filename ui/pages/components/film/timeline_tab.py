@@ -1,5 +1,3 @@
-# timeline_tab.py
-
 from nicegui import ui
 
 from ui.utils.utils import format_time
@@ -12,18 +10,12 @@ class TimelineTab:
     def __init__(
         self,
         video_state: VideoState,
-        on_play_anchor,
     ):
-
         self.video_state = video_state
-        self.on_play_anchor = on_play_anchor
-
         self.container = None
-
         self.scroll_area = None
         self.entries = {}
         self.video_state.add_refresh_callback(self.refresh)
-
         self.video_state.add_timeline_callback(self._refresh_active_anchor)
 
     def create_tab(self, container):
@@ -40,25 +32,20 @@ class TimelineTab:
         self.container.clear()
 
         with self.container:
-
             self.scroll_area = ui.scroll_area().classes("w-full h-full")
-
             with self.scroll_area:
-
                 with ui.timeline(
                     side="right",
                     layout="dense",
                 ).classes("w-full"):
-
                     self._render_entries()
 
     def _play_anchor(self, anchor):
 
         self.video_state.current_playback_time = anchor["start"]
-
         self.video_state.set_active_anchor(self._anchor_id(anchor))
 
-        self.on_play_anchor(anchor["start"])
+        ui.run_javascript(f"window.seekYTPlayer({anchor['start']});")
 
     def _anchor_id(self, anchor):
         return anchor.get("anchor_id") or anchor.get("id")
@@ -75,52 +62,29 @@ class TimelineTab:
         for anchor in anchors:
 
             is_active = self._anchor_id(anchor) == active_id
-
             color = "primary" if is_active else "grey"
-
             icon = "play_arrow" if is_active else "bookmark"
-
             with ui.timeline_entry(
                 title=format_time(anchor["start"]),
                 color=color,
                 icon=icon,
             ) as entry:
-
-                # self.entries[anchor["anchor_id"]] = entry
                 self.entries[self._anchor_id(anchor)] = entry
-
                 with ui.card().classes("w-full cursor-pointer"):
-
                     ui.label(anchor.get("description", ""))
-
                     ui.button(icon="play_arrow", on_click=lambda a=anchor: self._play_anchor(a)).props("flat dense")
 
-    # def _refresh_active_anchor(self):
-
-    #     print("Refreshing active anchor in timeline tab...")
-
-    #     self.refresh()
-
-    #     if self.scroll_area:
-    #         self._scroll_to_active_safe()
-
     def _refresh_active_anchor(self):
-
         active_id = self.video_state.active_anchor_id
-
         for anchor_id, entry in self.entries.items():
-
             try:
-
                 if anchor_id == active_id:
                     entry._props["color"] = "primary"
                     entry._props["icon"] = "play_arrow"
                 else:
                     entry._props["color"] = "grey"
                     entry._props["icon"] = "bookmark"
-
                 entry.update()
-
             except Exception:
                 pass
 
@@ -143,13 +107,7 @@ class TimelineTab:
             return
 
         active_index = next(
-            (
-                i
-                for i, a in enumerate(anchors)
-                if (self._anchor_id(a) == self.video_state.active_anchor_id)
-                # if a["anchor_id"]
-                # == self.video_state.active_anchor_id
-            ),
+            (i for i, a in enumerate(anchors) if (self._anchor_id(a) == self.video_state.active_anchor_id)),
             None,
         )
 

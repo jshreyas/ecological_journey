@@ -60,7 +60,6 @@ def film_page(user: User | None, video_id: str):
     )
     timeline_tab = TimelineTab(
         video_state,
-        on_play_anchor=player_controls_tab.play_at_time,
     )
 
     # Inline render_film_editor functionality

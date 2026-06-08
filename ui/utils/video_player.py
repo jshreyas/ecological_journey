@@ -119,6 +119,20 @@ class VideoPlayer:
                         return null;
                     }};
 
+                    window.seekYTPlayer = function(seconds) {{
+                        if (
+                            window.ytPlayer &&
+                            typeof window.ytPlayer.seekTo === 'function'
+                        ) {{
+                            window.ytPlayer.seekTo(seconds, true);
+                            if (
+                                typeof window.ytPlayer.playVideo === 'function'
+                            ) {{
+                                window.ytPlayer.playVideo();
+                            }}
+                        }}
+                    }};
+
                     if (ytEndInterval) clearInterval(ytEndInterval);
                     ytEndInterval = setInterval(() => {{
                         const current = ytPlayer.getCurrentTime();

@@ -54,9 +54,7 @@ class VideoState:
             cb()
 
     def set_playback_time(self, t: float):
-        print(f"Setting playback time to {t} seconds")
         self.current_playback_time = t
-
         active = None
 
         for anchor in sorted(
@@ -64,19 +62,16 @@ class VideoState:
             key=lambda a: a.get("start", 0),
         ):
             start = float(anchor.get("start", 0))
-
             if start <= t:
                 active = anchor
             else:
                 break
 
         active_id = active.get("anchor_id") or active.get("id") if active else None
-
         if active_id == self.active_anchor_id:
             return
 
         self.active_anchor_id = active_id
-        print(f"Active anchor ID set to: {self.active_anchor_id}")
         for cb in self.timeline_callbacks:
             cb()
 
