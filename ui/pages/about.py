@@ -1,10 +1,7 @@
 from nicegui import ui
 
-from ui.utils.user_context import User, with_user_context
 
-
-@with_user_context
-def about_page(user: User | None):
+def about_page():
     with ui.column().classes("w-full max-w-4xl mx-auto p-6"):
 
         ui.label("🥋 About This Platform").classes("text-3xl font-bold mb-4")
