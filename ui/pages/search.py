@@ -42,7 +42,6 @@ class State:
 
 
 class VideosTab:
-
     COLUMN_DEFS = [
         {
             "headerName": "",
@@ -257,16 +256,16 @@ def search_page():
     state = State()
     videos_tab = VideosTab(state)
     clips_tab = ClipsTab(state)
-    cliplists_tab = CliplistsTab(state)
+    # cliplists_tab = CliplistsTab(state)
 
     with ui.tabs().classes("w-full") as tabs:
         tab_films = ui.tab("🎵 Films").classes("w-full border border-gray-300")
         tab_clips = ui.tab("🎵 Clips").classes("w-full border border-gray-300")
-        tab_cliplists = ui.tab("🎵 Cliplists").classes("w-full border border-gray-300")
+        # tab_cliplists = ui.tab("🎵 Cliplists").classes("w-full border border-gray-300")
     with ui.tab_panels(tabs, value=tab_clips).classes("w-full h-full"):
         with ui.tab_panel(tab_films) as video_container:
             videos_tab.create_tab(video_container)
         with ui.tab_panel(tab_clips) as clips_container:
             clips_tab.create_tab(clips_container)
-        with ui.tab_panel(tab_cliplists) as cliplists_container:
-            cliplists_tab.create_tab(cliplists_container)
+        # with ui.tab_panel(tab_cliplists) as cliplists_container:
+        #     cliplists_tab.create_tab(cliplists_container)
