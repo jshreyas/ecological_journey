@@ -164,11 +164,16 @@ async def main_page() -> None:
                 .props("flat dense")
             )
 
+        def nav_icon(icon: str, path: str):
+            return (
+                ui.button(icon=icon, on_click=lambda: ui.navigate.to(path))
+                .classes("text-white text-base normal-case px-4 py-1")
+                .props("flat dense")
+            )
+
         with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
-            ui.button(icon="home", on_click=lambda: ui.navigate.to("/")).classes(
-                "text-white text-base normal-case px-4 py-1"
-            ).props("flat dense")
-            nav_button("Search", "/search")
+            nav_icon("home", "/")
+            nav_icon("search", "/search")
             nav_button("Clips", "/clips")
             nav_button("Cliplists", "/cliplists")
             nav_button("About", "/about")
