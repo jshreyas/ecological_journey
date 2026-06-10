@@ -62,14 +62,8 @@ class VideosTab:
             "field": "date",
             "filter": "agDateColumnFilter",
             "sort": "desc",
-            "width": 120,
+            "width": 100,
         },
-        # {
-        #     "headerName": "Title",
-        #     "field": "title",
-        #     # "filter": "agTextColumnFilter",
-        #     # "flex": 2,
-        # },
         {
             "headerName": "Runtime",
             "field": "duration",
@@ -103,7 +97,6 @@ class VideosTab:
 
     def create_tab(self, container):
         self.container = container
-
         videos = self.state.load_videos()
         for video in videos:
             thumbnail = video.get("thumbnail_url") or f"https://img.youtube.com/vi/{video['video_id']}/0.jpg"
@@ -121,7 +114,6 @@ class VideosTab:
                     "date": video["date"][:10],
                 }
             )
-
         self.rows.sort(
             key=lambda r: r["date"],
             reverse=True,
@@ -150,54 +142,48 @@ class VideosTab:
 class ClipsTab:
 
     COLUMN_DEFS = [
-        {
-            "checkboxSelection": True,
-            "headerCheckboxSelection": True,
-            "width": 60,
-            "pinned": "left",
-        },
+        # TODO: add clip selection and bulk actions for cliplists
+        # {
+        #     "checkboxSelection": True,
+        #     "headerCheckboxSelection": True,
+        #     "width": 60,
+        #     "pinned": "left",
+        # },
         {
             "headerName": "",
             "field": "thumbnail",
-            "width": 110,
+            "width": 100,
             "sortable": False,
             "filter": False,
-        },
-        {
-            "headerName": "Clip",
-            "field": "title",
-            "filter": "agTextColumnFilter",
-            "flex": 2,
-        },
-        {
-            "headerName": "Duration",
-            "field": "duration",
-            "width": 100,
-        },
-        {
-            "headerName": "Notes",
-            "field": "notes",
-            "filter": "agTextColumnFilter",
-            "flex": 3,
-        },
-        {
-            "headerName": "Video",
-            "field": "video_title",
-            "filter": "agTextColumnFilter",
-            "flex": 2,
         },
         {
             "headerName": "Playlist",
             "field": "playlist",
             "filter": "agTextColumnFilter",
-            "width": 140,
+            "width": 120,
         },
         {
             "headerName": "Date",
             "field": "date",
             "filter": "agDateColumnFilter",
             "sort": "desc",
-            "width": 120,
+            "width": 100,
+        },
+        {
+            "headerName": "Video",
+            "field": "video_title",
+            "filter": "agTextColumnFilter",
+            "width": 100,
+        },
+        {
+            "headerName": "Duration",
+            "field": "duration",
+            "width": 80,
+        },
+        {
+            "headerName": "Notes",
+            "field": "notes",
+            "filter": "agTextColumnFilter",
         },
     ]
 
@@ -206,26 +192,17 @@ class ClipsTab:
         self.state = state
 
     def create_tab(self, container):
-
         self.container = container
-
         clips = self.state.load_clips()
-
-        rows = []
-
         for clip in clips:
-
             video_id = clip["video_id"]
             clip_id = clip["clip_id"]
-
             thumbnail = clip.get("thumbnail_url") or f"https://img.youtube.com/vi/{video_id}/0.jpg"
-
             thumbnail = build_thumbnail_html(
                 thumbnail,
                 f"film/{video_id}?clip={clip_id}",
             )
-
-            rows.append(
+            self.rows.append(
                 {
                     "clip_id": clip_id,
                     "video_id": video_id,
@@ -238,16 +215,11 @@ class ClipsTab:
                     "date": clip["date"][:10],
                 }
             )
-
-        rows.sort(
+        self.rows.sort(
             key=lambda r: r["date"],
             reverse=True,
         )
-
-        self.rows = rows
-
         with self.container:
-
             ui.aggrid(
                 {
                     "columnDefs": self.COLUMN_DEFS,
@@ -256,7 +228,7 @@ class ClipsTab:
                     "paginationPageSize": 50,
                     "rowHeight": 70,
                     "animateRows": True,
-                    "rowSelection": "multiple",
+                    # "rowSelection": "multiple",
                     "defaultColDef": {
                         "sortable": True,
                         "filter": True,
@@ -264,9 +236,9 @@ class ClipsTab:
                         "resizable": True,
                     },
                 },
-                html_columns=[1],
+                html_columns=[0],
                 modules="community",
-            ).classes("w-full h-[700px]")
+            ).classes("w-full h-[600px]")
 
 
 class CliplistsTab:
@@ -282,7 +254,6 @@ class CliplistsTab:
 
 
 def search_page():
-
     state = State()
     videos_tab = VideosTab(state)
     clips_tab = ClipsTab(state)
