@@ -144,6 +144,44 @@ def post_playlist_videos(
 app.include_router(api_router, prefix="/api")
 
 
+def setup_landscape_mode_guard():
+    """Show a mobile portrait warning overlay and auto-hide in landscape."""
+
+    ui.add_head_html(
+        """
+        <style>
+        #portrait-overlay {
+            display: none;
+        }
+        @media (max-width: 1024px) and (orientation: portrait) {
+            #portrait-overlay {
+                display: flex;
+            }
+        }
+        </style>
+    """
+    )
+
+    overlay = (
+        ui.element("div")
+        .props('id="portrait-overlay"')
+        .classes(
+            """
+        fixed inset-0
+        z-[9999]
+        items-center
+        justify-center
+        bg-black/50
+        """
+        )
+    )
+    with overlay:
+        with ui.card(align_items="center").classes("w-11/12 max-w-sm"):
+            ui.icon("screen_rotation").classes("text-4xl")
+            ui.label("This application is optimized for landscape mode.").classes("text-center text-base")
+            ui.label("Rotate your device for the best experience.").classes("text-center text-base")
+
+
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
@@ -152,7 +190,7 @@ async def main_page() -> None:
         <script src="https://www.youtube.com/iframe_api"></script>
         """
     )
-
+    setup_landscape_mode_guard()
     with ui.header().classes(
         "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
     ):
