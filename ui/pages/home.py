@@ -21,15 +21,19 @@ def home_page(user: User | None):
     with ui.splitter(value=50).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
-                tab_playlists = ui.tab("🎵 Playlists").classes("w-full border border-gray-300")
+                tab_playlists = ui.tab("Playlists", label="", icon="library_music").classes(
+                    "w-full text-primary border border-gray-300"
+                )
                 # tab_teams = ui.tab("👥 Teams")
-                tab_calendar = ui.tab("📅 Calendar").classes("w-full border border-gray-300")
+                tab_calendar = ui.tab("Calendar", label="", icon="calendar_month").classes(
+                    "w-full text-primary border border-gray-300"
+                )
             with ui.tab_panels(tabs, value=tab_calendar).classes("w-full h-full"):
                 with ui.tab_panel(tab_playlists) as playlists_container:
                     playlist_tab.create_tab(playlists_container)
                 # with ui.tab_panel(tab_teams) as teams_container:
                 #     team_tab.create_tab(teams_container)
-                with ui.tab_panel(tab_calendar).classes("w-full h-full p-0") as calendar_container:
+                with ui.tab_panel(tab_calendar) as calendar_container:
                     calendar_tab.create_tab(calendar_container)
 
         with splitter.after:

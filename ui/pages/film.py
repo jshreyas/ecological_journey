@@ -1,14 +1,11 @@
 # film.py
 import os
-from datetime import datetime
 
 from dotenv import load_dotenv
 from nicegui import ui
 
-from ui.pages.components.film.filmboard_tab import FilmboardTab
 from ui.pages.components.film.learnings_tab import LearningsTab
 from ui.pages.components.film.matadata_tab import MatadataTab
-from ui.pages.components.film.navigation_tab import NavigationTab
 from ui.pages.components.film.player_controls_tab import PlayerControlsTab
 from ui.pages.components.film.share_dialog_tab import ShareDialogTab
 from ui.pages.components.film.timeline_tab import TimelineTab
@@ -24,7 +21,6 @@ BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
 # TODO: Make this page mobile friendly for logged in user for write access
 @with_user_context
 def film_page(user: User | None, video_id: str):
-    # Initialize VideoState for centralized state management
     video_state = VideoState(video_id, user)
 
     query_params = ui.context.client.request.query_params
@@ -46,11 +42,8 @@ def film_page(user: User | None, video_id: str):
         if video_id != video_state.video_id:
             video_state = VideoState(video_id), user
 
-    # Initialize components with user
-    navigation_tab = NavigationTab(video_state)
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
-    filmboard_tab = FilmboardTab(video_state)
     learnings_tab = LearningsTab(video_state)
     metadata_tab = MatadataTab(
         video_state,
@@ -62,21 +55,22 @@ def film_page(user: User | None, video_id: str):
         video_state,
     )
 
-    # Inline render_film_editor functionality
     with ui.column().classes("w-full"):
-        # Navigation
-        with ui.row().classes("w-full justify-between items-center") as navigation_container:
-            navigation_tab.create_tab(navigation_container)
-
-        with ui.splitter(horizontal=False, value=70).classes("w-full h-[70vh] rounded shadow") as splitter:
+        with ui.splitter(horizontal=False, value=70).classes("w-full h-[80vh] rounded shadow") as splitter:
             with splitter.before:
                 with ui.column().classes("w-full h-full") as player_container_ref:
                     player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
             with splitter.after:
                 with ui.tabs().classes("w-full") as tabs:
-                    timeline = ui.tab("Timeline", icon="timeline").classes("w-full bg-primary text-black")
-                    two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
-                    five = ui.tab("Control Panel", label="", icon="bookmarks").classes("w-full bg-primary text-black")
+                    timeline = ui.tab("Timeline", label="", icon="timeline").classes(
+                        "w-full text-primary border border-gray-300"
+                    )
+                    two = ui.tab("Learnings", label="", icon="chat").classes(
+                        "w-full text-primary border border-gray-300"
+                    )
+                    five = ui.tab("Control Panel", label="", icon="bookmarks").classes(
+                        "w-full text-primary border border-gray-300"
+                    )
                 with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
                     with ui.tab_panel(timeline):
                         timeline_container = ui.column().classes("w-full h-full")
@@ -89,19 +83,3 @@ def film_page(user: User | None, video_id: str):
                 video_state.tabber = tabs
             with splitter.separator:
                 ui.icon("drag_indicator").classes("text-gray-400")
-
-        ui.separator().classes("w-full mt-2")
-        # Filmboard heading with count
-        current_video_date = filmboard_tab.get_current_video_date()
-        same_day_count = filmboard_tab.get_same_day_videos_count()
-        with ui.column().classes("w-full h-full rounded-lg"):
-            if current_video_date:
-                ui.label(
-                    f'🎥 More films from 🗓️ {datetime.strptime(current_video_date, "%Y-%m-%d").strftime("%B %d, %Y")} ({same_day_count + 1})'
-                ).classes("text-xl ml-2 font-semibold")
-            else:
-                ui.label("🎥 More films from the same day").classes("text-xl ml-2 font-semibold")
-            with ui.grid().classes(
-                "grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(250px,1fr))] w-full p-2 bg-white rounded-lg shadow-lg"
-            ) as filmboard_container:
-                filmboard_tab.create_tab(filmboard_container)
