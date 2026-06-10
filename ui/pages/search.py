@@ -85,9 +85,8 @@ class VideosTab:
             "headerName": "Notes",
             "field": "notes",
             "filter": "agTextColumnFilter",
-            # "flex": 3,
-            # "wrapText": True,
-            # "autoHeight": True,
+            "wrapText": True,
+            "autoHeight": True,
         },
     ]
 
@@ -142,7 +141,6 @@ class VideosTab:
 
 
 class ClipsTab:
-
     COLUMN_DEFS = [
         # TODO: add clip selection and bulk actions for cliplists
         # {
@@ -186,6 +184,8 @@ class ClipsTab:
             "headerName": "Notes",
             "field": "notes",
             "filter": "agTextColumnFilter",
+            "wrapText": True,
+            "autoHeight": True,
         },
     ]
 
@@ -243,7 +243,6 @@ class ClipsTab:
 
 
 class CliplistsTab:
-
     def __init__(self, state: State):
         self.rows = []
         self.state = state
