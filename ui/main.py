@@ -24,7 +24,8 @@ from ui.data.crud import (
 )
 from ui.pages.about import about_page
 from ui.pages.admin import admin_page
-from ui.pages.cliplists import cliplists_page
+
+# from ui.pages.cliplists import cliplists_page
 from ui.pages.custom_sub_pages import custom_sub_pages
 from ui.pages.film import film_page
 from ui.pages.home import home_page
@@ -173,7 +174,7 @@ async def main_page() -> None:
         with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
             nav_icon("home", "/")
             nav_icon("search", "/search")
-            nav_button("Cliplists", "/cliplists")
+            # nav_button("Cliplists", "/cliplists")
             nav_button("About", "/about")
             # nav_button("Notion", "/notion")
 
@@ -233,7 +234,7 @@ async def main_page() -> None:
             "/": home_page,
             "/about": about_page,
             "/search": search_page,
-            "/cliplists": cliplists_page,
+            # "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
             # "/notion": notion_page,  # TODO: the embed doesnt work
             "/partners": partner_page,
