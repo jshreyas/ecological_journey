@@ -262,7 +262,7 @@ def search_page():
         tab_films = ui.tab("🎵 Films").classes("w-full border border-gray-300")
         tab_clips = ui.tab("🎵 Clips").classes("w-full border border-gray-300")
         # tab_cliplists = ui.tab("🎵 Cliplists").classes("w-full border border-gray-300")
-    with ui.tab_panels(tabs, value=tab_clips).classes("w-full h-full"):
+    with ui.tab_panels(tabs, value=tab_films).classes("w-full h-full"):
         with ui.tab_panel(tab_films) as video_container:
             videos_tab.create_tab(video_container)
         with ui.tab_panel(tab_clips) as clips_container:
