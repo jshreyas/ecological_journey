@@ -62,9 +62,15 @@ def film_page(user: User | None, video_id: str):
                     player_controls_tab.create_tab(player_container_ref, play_clips_playlist, autoplay_clip)
             with splitter.after:
                 with ui.tabs().classes("w-full") as tabs:
-                    timeline = ui.tab("Timeline", icon="timeline").classes("w-full bg-primary text-black")
-                    two = ui.tab("Learnings", label="", icon="chat").classes("w-full bg-primary text-black")
-                    five = ui.tab("Control Panel", label="", icon="bookmarks").classes("w-full bg-primary text-black")
+                    timeline = ui.tab("Timeline", label="", icon="timeline").classes(
+                        "w-full text-primary border border-gray-300"
+                    )
+                    two = ui.tab("Learnings", label="", icon="chat").classes(
+                        "w-full text-primary border border-gray-300"
+                    )
+                    five = ui.tab("Control Panel", label="", icon="bookmarks").classes(
+                        "w-full text-primary border border-gray-300"
+                    )
                 with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
                     with ui.tab_panel(timeline):
                         timeline_container = ui.column().classes("w-full h-full")

@@ -287,13 +287,13 @@ OBSERVABLE_URL = os.getenv("OBSERVABLE_URL")
 
 
 # TODO: this doesnt work
-def stories():
-    ui.html(
-        f"""
-        <iframe src="{OBSERVABLE_URL}"
-                style="width:100%; height:110vh; border:none;"></iframe>
-    """
-    ).classes("w-full h-full")
+# def stories():
+#     ui.html(
+#         f"""
+#         <iframe src="{OBSERVABLE_URL}"
+#                 style="width:100%; height:110vh; border:none;"></iframe>
+#     """
+#     ).classes("w-full h-full")
 
 
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
