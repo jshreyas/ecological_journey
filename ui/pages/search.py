@@ -99,8 +99,10 @@ class VideosTab:
         self.container = container
         videos = self.state.load_videos()
         for video in videos:
-            thumbnail = video.get("thumbnail_url") or f"https://img.youtube.com/vi/{video['video_id']}/0.jpg"
-            thumbnail = f'<a href="film/{video["video_id"]}"><img src="{thumbnail}" alt="Thumbnail description" style="width:96px;height:54px;object-fit:cover;border-radius:6px;" /></a>'
+            thumbnail = build_thumbnail_html(
+                video.get("thumbnail_url") or f"https://img.youtube.com/vi/{video['video_id']}/0.jpg",
+                f"film/{video['video_id']}",
+            )
             self.rows.append(
                 {
                     "video_id": video["video_id"],
@@ -197,9 +199,8 @@ class ClipsTab:
         for clip in clips:
             video_id = clip["video_id"]
             clip_id = clip["clip_id"]
-            thumbnail = clip.get("thumbnail_url") or f"https://img.youtube.com/vi/{video_id}/0.jpg"
             thumbnail = build_thumbnail_html(
-                thumbnail,
+                clip.get("thumbnail_url") or f"https://img.youtube.com/vi/{video_id}/0.jpg",
                 f"film/{video_id}?clip={clip_id}",
             )
             self.rows.append(
