@@ -176,7 +176,7 @@ def setup_landscape_mode_guard():
         )
     )
     with overlay:
-        with ui.card().classes("w-11/12 max-w-sm"):
+        with ui.card(align_items="center").classes("w-11/12 max-w-sm"):
             ui.icon("screen_rotation").classes("text-4xl")
             ui.label("This application is optimized for landscape mode.").classes("text-center text-base")
             ui.label("Rotate your device for the best experience.").classes("text-center text-base")
