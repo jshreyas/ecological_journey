@@ -101,21 +101,31 @@ def search_page(user: User | None):
     state = SearchState()
     state.load()
 
-    ui.aggrid(
-        {
-            "columnDefs": COLUMN_DEFS,
-            "rowData": state.rows,
-            "pagination": True,
-            "paginationPageSize": 50,
-            "animateRows": True,
-            "rowHeight": 70,
-            "defaultColDef": {
-                "sortable": True,
-                "filter": True,
-                "resizable": True,
-                "floatingFilter": True,
-            },
-        },
-        html_columns=[0],
-        modules="community",
-    ).classes("w-full h-[600px]")
+    with ui.tabs().classes("w-full") as tabs:
+        tab_films = ui.tab("🎵 Films").classes("w-full border border-gray-300")
+        tab_clips = ui.tab("🎵 Clips").classes("w-full border border-gray-300")
+        tab_cliplists = ui.tab("🎵 Cliplists").classes("w-full border border-gray-300")
+    with ui.tab_panels(tabs, value=tab_films).classes("w-full h-full"):
+        with ui.tab_panel(tab_films):
+            ui.aggrid(
+                {
+                    "columnDefs": COLUMN_DEFS,
+                    "rowData": state.rows,
+                    "pagination": True,
+                    "paginationPageSize": 50,
+                    "animateRows": True,
+                    "rowHeight": 70,
+                    "defaultColDef": {
+                        "sortable": True,
+                        "filter": True,
+                        "resizable": True,
+                        "floatingFilter": True,
+                    },
+                },
+                html_columns=[0],
+                modules="community",
+            ).classes("w-full h-[600px]")
+        with ui.tab_panel(tab_clips):
+            ui.label("Clips coming soon!").classes("text-center text-gray-500 mt-20")
+        with ui.tab_panel(tab_cliplists):
+            ui.label("Cliplists coming soon!").classes("text-center text-gray-500 mt-20")
