@@ -3,7 +3,23 @@ from typing import Any, Dict, Optional
 from nicegui import ui
 
 from ui.utils.utils import format_time
-from ui.utils.utils_api import load_videos
+from ui.utils.utils_api import load_clips, load_videos
+
+
+def build_thumbnail_html(thumbnail_url: str, href: str) -> str:
+    return f"""
+    <a href="{href}">
+        <img
+            src="{thumbnail_url}"
+            style="
+                width:96px;
+                height:54px;
+                object-fit:cover;
+                border-radius:6px;
+            "
+        />
+    </a>
+    """
 
 
 class State:
@@ -11,12 +27,18 @@ class State:
 
     def __init__(self):
         self._load_videos: Optional[Dict[str, Any]] = None
+        self._load_clips: Optional[Dict[str, Any]] = None
 
     def load_videos(self) -> Optional[Dict[str, Any]]:
         """Get videos data, loading from API if not cached"""
         if self._load_videos is None:
             self._load_videos = load_videos()
         return self._load_videos
+
+    def load_clips(self):
+        if self._load_clips is None:
+            self._load_clips = load_clips()
+        return self._load_clips
 
 
 class VideosTab:
@@ -127,14 +149,124 @@ class VideosTab:
 
 class ClipsTab:
 
+    COLUMN_DEFS = [
+        {
+            "checkboxSelection": True,
+            "headerCheckboxSelection": True,
+            "width": 60,
+            "pinned": "left",
+        },
+        {
+            "headerName": "",
+            "field": "thumbnail",
+            "width": 110,
+            "sortable": False,
+            "filter": False,
+        },
+        {
+            "headerName": "Clip",
+            "field": "title",
+            "filter": "agTextColumnFilter",
+            "flex": 2,
+        },
+        {
+            "headerName": "Duration",
+            "field": "duration",
+            "width": 100,
+        },
+        {
+            "headerName": "Notes",
+            "field": "notes",
+            "filter": "agTextColumnFilter",
+            "flex": 3,
+        },
+        {
+            "headerName": "Video",
+            "field": "video_title",
+            "filter": "agTextColumnFilter",
+            "flex": 2,
+        },
+        {
+            "headerName": "Playlist",
+            "field": "playlist",
+            "filter": "agTextColumnFilter",
+            "width": 140,
+        },
+        {
+            "headerName": "Date",
+            "field": "date",
+            "filter": "agDateColumnFilter",
+            "sort": "desc",
+            "width": 120,
+        },
+    ]
+
     def __init__(self, state: State):
         self.rows = []
         self.state = state
 
     def create_tab(self, container):
+
         self.container = container
+
+        clips = self.state.load_clips()
+
+        rows = []
+
+        for clip in clips:
+
+            video_id = clip["video_id"]
+            clip_id = clip["clip_id"]
+
+            thumbnail = clip.get("thumbnail_url") or f"https://img.youtube.com/vi/{video_id}/0.jpg"
+
+            thumbnail = build_thumbnail_html(
+                thumbnail,
+                f"film/{video_id}?clip={clip_id}",
+            )
+
+            rows.append(
+                {
+                    "clip_id": clip_id,
+                    "video_id": video_id,
+                    "thumbnail": thumbnail,
+                    "title": clip.get("title", ""),
+                    "duration": clip.get("duration_human", 0),
+                    "notes": clip.get("description", ""),
+                    "video_title": clip.get("video_id", ""),
+                    "playlist": clip.get("playlist_name", ""),
+                    "date": clip["date"][:10],
+                }
+            )
+
+        rows.sort(
+            key=lambda r: r["date"],
+            reverse=True,
+        )
+
+        self.rows = rows
+
         with self.container:
-            ui.label("Clips coming soon!").classes("text-center text-gray-500 mt-20")
+
+            ui.aggrid(
+                {
+                    "columnDefs": self.COLUMN_DEFS,
+                    "rowData": self.rows,
+                    "pagination": True,
+                    "paginationPageSize": 50,
+                    "rowHeight": 70,
+                    "animateRows": True,
+                    "rowSelection": "multiple",
+                    "defaultColDef": {
+                        "sortable": True,
+                        "filter": True,
+                        "floatingFilter": True,
+                        "resizable": True,
+                    },
+                },
+                html_columns=[1],
+                modules="community",
+            ).classes("w-full h-[700px]")
 
 
 class CliplistsTab:
@@ -160,7 +292,7 @@ def search_page():
         tab_films = ui.tab("🎵 Films").classes("w-full border border-gray-300")
         tab_clips = ui.tab("🎵 Clips").classes("w-full border border-gray-300")
         tab_cliplists = ui.tab("🎵 Cliplists").classes("w-full border border-gray-300")
-    with ui.tab_panels(tabs, value=tab_films).classes("w-full h-full"):
+    with ui.tab_panels(tabs, value=tab_clips).classes("w-full h-full"):
         with ui.tab_panel(tab_films) as video_container:
             videos_tab.create_tab(video_container)
         with ui.tab_panel(tab_clips) as clips_container:
