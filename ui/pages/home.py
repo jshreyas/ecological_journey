@@ -18,7 +18,7 @@ def home_page(user: User | None):
     playlist_tab = PlaylistTab(home_state)
     # team_tab = TeamTab(home_state)
 
-    with ui.splitter(value=50).classes("w-full h-[600px] gap-4").on("click", ui.notify("blah")) as splitter:
+    with ui.splitter(value=50).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:
                 tab_playlists = ui.tab("🎵 Playlists").classes("w-full")
