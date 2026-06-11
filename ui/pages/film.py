@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from nicegui import ui
 
-from ui.pages.components.film.learnings_tab import LearningsTab
+# from ui.pages.components.film.learnings_tab import LearningsTab
 from ui.pages.components.film.matadata_tab import MatadataTab
 from ui.pages.components.film.player_controls_tab import PlayerControlsTab
 from ui.pages.components.film.share_dialog_tab import ShareDialogTab
@@ -44,16 +44,14 @@ def film_page(user: User | None, video_id: str):
 
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
-    learnings_tab = LearningsTab(video_state)
+    # learnings_tab = LearningsTab(video_state)
     metadata_tab = MatadataTab(
         video_state,
         on_play_anchor=player_controls_tab.play_at_time,
         on_play_clip=player_controls_tab.play_clip,
         on_share_clip=share_dialog_tab.share_clip,
     )
-    timeline_tab = TimelineTab(
-        video_state,
-    )
+    timeline_tab = TimelineTab(video_state)
 
     with ui.column().classes("w-full"):
         with ui.splitter(horizontal=False, value=70).classes("w-full h-[80vh] rounded shadow") as splitter:
@@ -65,20 +63,20 @@ def film_page(user: User | None, video_id: str):
                     timeline = ui.tab("Timeline", label="", icon="timeline").classes(
                         "w-full text-primary border border-gray-300"
                     )
-                    two = ui.tab("Learnings", label="", icon="chat").classes(
+                    # two = ui.tab("Learnings", label="", icon="chat").classes(
+                    #     "w-full text-primary border border-gray-300"
+                    # )
+                    metadata = ui.tab("Control Panel", label="", icon="anchor").classes(
                         "w-full text-primary border border-gray-300"
                     )
-                    five = ui.tab("Control Panel", label="", icon="bookmarks").classes(
-                        "w-full text-primary border border-gray-300"
-                    )
-                with ui.tab_panels(tabs, value=five).classes("w-full h-full"):
+                with ui.tab_panels(tabs, value=metadata).classes("w-full h-full"):
                     with ui.tab_panel(timeline):
                         timeline_container = ui.column().classes("w-full h-full")
                         timeline_tab.create_tab(timeline_container)
-                    with ui.tab_panel(two):
-                        chat_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
-                        learnings_tab.create_tab(chat_container)
-                    with ui.tab_panel(five) as metadata_tab_container:
+                    # with ui.tab_panel(two):
+                    #     chat_container = ui.scroll_area().classes("absolute w-full h-full top-0 left-0")
+                    #     learnings_tab.create_tab(chat_container)
+                    with ui.tab_panel(metadata) as metadata_tab_container:
                         metadata_tab.create_tab(metadata_tab_container)
                 video_state.tabber = tabs
             with splitter.separator:

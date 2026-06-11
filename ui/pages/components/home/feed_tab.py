@@ -304,10 +304,10 @@ class FeedTab:
         with container:
             with ui.row().classes("w-full justify-end"):
                 ui.button(
-                    icon="edit",
+                    icon="zoom_in",
                     on_click=lambda: ui.navigate.to(f"/film/{video['video_id']}"),
                 )
                 ui.button(
-                    icon="close",
+                    icon="cancel",
                     on_click=lambda: self.stop_video(video["video_id"]),
                 )
