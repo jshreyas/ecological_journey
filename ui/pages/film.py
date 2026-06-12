@@ -38,17 +38,18 @@ def film_page(user: User | None, video_id: str):
             ui.label(f"⚠️ Clip: {clip_id} not found in video {video_id}!")
             return
         video_id = autoplay_clip.get("video_id", video_id)
+        # TODO: check if commenting this out is breaking anything? and remove
         # Reinitialize video_state if video_id changed
-        if video_id != video_state.video_id:
-            video_state = VideoState(video_id), user
+        # if video_id != video_state.video_id:
+        #     video_state = VideoState(video_id, user)
 
     player_controls_tab = PlayerControlsTab(video_state)
     share_dialog_tab = ShareDialogTab(video_state)
     # learnings_tab = LearningsTab(video_state)
     metadata_tab = MatadataTab(
         video_state,
-        on_play_anchor=player_controls_tab.play_at_time,
-        on_play_clip=player_controls_tab.play_clip,
+        on_play_anchor=player_controls_tab.seek_anchor,
+        on_play_clip=player_controls_tab.seek_clip,
         on_share_clip=share_dialog_tab.share_clip,
     )
     timeline_tab = TimelineTab(video_state)

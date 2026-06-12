@@ -5,7 +5,7 @@ from ui.utils.utils import format_time
 from .video_state import VideoState
 
 
-# TODO: TimelineTab is not in sync with MatadataTab play buttons
+# TODO: TimelineTab and MatadataTab have minor sync bugs when clips are present
 class TimelineTab:
 
     def __init__(
@@ -36,10 +36,23 @@ class TimelineTab:
                 ).classes("w-full"):
                     self._render_entries()
 
+    # TODO: reuse seek_anchor()
     def _play_anchor(self, anchor):
+
+        anchor_id = self._anchor_id(anchor)
+
         self.video_state.current_playback_time = anchor["start"]
-        self.video_state.set_active_anchor(self._anchor_id(anchor))
-        ui.run_javascript(f"window.seekYTPlayer({anchor['start']});")
+
+        self.video_state.set_active_anchor(anchor_id)
+        self.video_state.set_active_metadata_row(anchor_id)
+
+        ui.run_javascript(
+            f"""
+            if(window.seekYTPlayer){{
+                window.seekYTPlayer({anchor['start']});
+            }}
+            """
+        )
 
     def _anchor_id(self, anchor):
         return anchor.get("anchor_id") or anchor.get("id")
