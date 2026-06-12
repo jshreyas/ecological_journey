@@ -31,21 +31,15 @@ class MatadataTab:
         self.video_state.add_playback_callback(self._refresh_active_rows)
 
     def _refresh_active_rows(self):
-
         if not hasattr(self, "table"):
             return
-
         active_id = self.video_state.active_metadata_row_id
-
         for row in self.table.rows:
-
             if row.get("_is_video_description"):
                 continue
-
             row["_active"] = (
                 row.get("id") == active_id or row.get("clip_id") == active_id or row.get("anchor_id") == active_id
             )
-
         self.table.update()
 
     def create_tab(self, container):
@@ -135,7 +129,6 @@ class MatadataTab:
             .props("hide-header")
             .classes("w-full")
         )
-        self._refresh_active_rows()
 
         self.table.add_slot(
             "body",
