@@ -35,45 +35,79 @@ class VideoState:
         self._load_videos = None
 
         self.current_playback_time: float = 0
+
         self.active_anchor_id: str | None = None
+        self.active_metadata_row_id: str | None = None
+
         self.timeline_callbacks: list = []
+        self.playback_callbacks: list = []
 
         self.reload_metadata()
+
+    def add_playback_callback(self, cb):
+        if cb not in self.playback_callbacks:
+            self.playback_callbacks.append(cb)
+
+    def _notify_playback_callbacks(self):
+        for cb in self.playback_callbacks:
+            try:
+                cb()
+            except Exception:
+                pass
+
+    def set_active_metadata_row(self, row_id: str | None):
+        if row_id == self.active_metadata_row_id:
+            return
+        self.active_metadata_row_id = row_id
+        self._notify_playback_callbacks()
 
     def add_timeline_callback(self, cb):
         self.timeline_callbacks.append(cb)
 
     def set_active_anchor(self, anchor_id: str | None):
-
         if anchor_id == self.active_anchor_id:
             return
-
         self.active_anchor_id = anchor_id
-
         for cb in self.timeline_callbacks:
             cb()
+        self._notify_playback_callbacks()
 
     def set_playback_time(self, t: float):
         self.current_playback_time = t
-        active = None
-
+        active_anchor = None
         for anchor in sorted(
             self.anchor_draft,
             key=lambda a: a.get("start", 0),
         ):
-            start = float(anchor.get("start", 0))
-            if start <= t:
-                active = anchor
+            if float(anchor.get("start", 0)) <= t:
+                active_anchor = anchor
             else:
                 break
 
-        active_id = active.get("anchor_id") or active.get("id") if active else None
-        if active_id == self.active_anchor_id:
-            return
-
-        self.active_anchor_id = active_id
-        for cb in self.timeline_callbacks:
-            cb()
+        active_anchor_id = active_anchor.get("anchor_id") or active_anchor.get("id") if active_anchor else None
+        active_clip = None
+        for clip in self.clip_draft:
+            start = float(clip.get("start", 0))
+            end = float(clip.get("end", 999999))
+            if start <= t <= end:
+                active_clip = clip
+                break
+        active_metadata_row_id = None
+        if active_clip:
+            active_metadata_row_id = active_clip.get("clip_id") or active_clip.get("id")
+        elif active_anchor:
+            active_metadata_row_id = active_anchor.get("anchor_id") or active_anchor.get("id")
+        changed = False
+        if active_anchor_id != self.active_anchor_id:
+            self.active_anchor_id = active_anchor_id
+            for cb in self.timeline_callbacks:
+                cb()
+            changed = True
+        if active_metadata_row_id != self.active_metadata_row_id:
+            self.active_metadata_row_id = active_metadata_row_id
+            changed = True
+        if changed:
+            self._notify_playback_callbacks()
 
     def load_videos(self) -> Optional[Dict[str, Any]]:
         """Get videos data, loading from API if not cached"""

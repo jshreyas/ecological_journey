@@ -1,4 +1,3 @@
-import re
 from uuid import uuid4
 
 from nicegui import events, ui
@@ -7,9 +6,6 @@ from ui.utils.dialog_puns import caught_john_doe
 from ui.utils.utils import format_time
 
 from .video_state import VideoState
-
-LABEL_REGEX = re.compile(r"#([^\s#]+)")
-PARTNER_REGEX = re.compile(r"@([^\s#]+)")
 
 
 # TODO: Clip creation? or Anchor to Clip?
@@ -30,6 +26,27 @@ class MatadataTab:
         self.on_share_clip = on_share_clip
 
         self.video_state.add_refresh_callback(self.refresh)
+
+        self.active_row_id = None
+        self.video_state.add_playback_callback(self._refresh_active_rows)
+
+    def _refresh_active_rows(self):
+
+        if not hasattr(self, "table"):
+            return
+
+        active_id = self.video_state.active_metadata_row_id
+
+        for row in self.table.rows:
+
+            if row.get("_is_video_description"):
+                continue
+
+            row["_active"] = (
+                row.get("id") == active_id or row.get("clip_id") == active_id or row.get("anchor_id") == active_id
+            )
+
+        self.table.update()
 
     def create_tab(self, container):
         self.container = container
@@ -58,6 +75,7 @@ class MatadataTab:
             anchor.setdefault("description", anchor.get("description", ""))
             anchor.setdefault("_dirty", False)
             anchor.setdefault("_type", "anchor")
+            anchor.setdefault("_active", False)
             anchor_rows.append(anchor)
 
         self.video_state.anchor_draft.sort(key=lambda a: a.get("start", 0))
@@ -68,6 +86,7 @@ class MatadataTab:
             clip.setdefault("_end_time", format_time(clip.get("end", 0)))
             clip.setdefault("_type", "clip")
             clip.setdefault("_dirty", False)
+            clip.setdefault("_active", False)
 
             description = (clip.get("description") or "").strip()
             labels = clip.get("labels", []) or []
@@ -116,6 +135,7 @@ class MatadataTab:
             .props("hide-header")
             .classes("w-full")
         )
+        self._refresh_active_rows()
 
         self.table.add_slot(
             "body",
@@ -198,7 +218,10 @@ class MatadataTab:
                 <q-tr
                 v-else
                 :props="props"
-                :class="props.row._dirty ? 'text-primary' : ''"
+                :class="[
+                    props.row._dirty ? 'text-primary' : '',
+                    props.row._active ? 'bg-blue-1' : ''
+                ]"
                 >
 
                 <!-- PLAY -->
@@ -383,7 +406,6 @@ class MatadataTab:
                 """,
         )
 
-        # ---------- handlers ----------
         def on_edit(e: events.GenericEventArguments):
             row = e.args
             row_id = row["id"]
@@ -423,7 +445,7 @@ class MatadataTab:
                                 c["end"] = r.get("end")
                                 c["_time"] = r.get("_time")
                                 c["_end_time"] = r.get("_end_time")
-                                a["_dirty"] = True
+                                c["_dirty"] = True
                                 break
 
                     r["_dirty"] = True
@@ -443,13 +465,14 @@ class MatadataTab:
             self.video_state.mark_metadata_dirty()
             self.refresh()
 
-        def on_play(e: events.GenericEventArguments):
+        async def on_play(e):
             row = e.args
             if row["_type"] == "anchor":
-                self.on_play_anchor(row["start"])
+                if self.on_play_anchor:
+                    await self.on_play_anchor(row)
             else:
                 if self.on_play_clip:
-                    self.on_play_clip(row)
+                    await self.on_play_clip(row)
 
         def on_share(e: events.GenericEventArguments):
             row = e.args

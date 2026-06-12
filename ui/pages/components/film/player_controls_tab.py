@@ -85,19 +85,46 @@ class PlayerControlsTab:
                         self._sync_video_position,
                     )
 
-    def play_at_time(self, t: float):
-        ref = self.player_container["ref"]
-        if ref:
-            ref.clear()
-            with ref:
-                # TODO: should these presets for anchors be parameters?
-                # TODO: if so, is this the right place for this method?
-                VideoPlayer(
-                    self.video_state.video_id,
-                    start=t,
-                    parent=ref,
-                    video_state=self.video_state,
-                )
+    async def seek_anchor(self, anchor):
+
+        start = anchor["start"]
+
+        self.video_state.current_playback_time = start
+
+        anchor_id = anchor.get("anchor_id") or anchor.get("id")
+
+        self.video_state.set_active_anchor(anchor_id)
+        self.video_state.set_active_metadata_row(anchor_id)
+
+        await ui.run_javascript(
+            f"""
+            if(window.seekYTPlayer){{
+                window.seekYTPlayer({start});
+            }}
+            """
+        )
+
+    async def seek_clip(self, clip):
+
+        start = clip["start"]
+        end = clip.get("end")
+
+        clip_id = clip.get("clip_id") or clip.get("id")
+
+        self.video_state.current_playback_time = start
+
+        self.video_state.set_active_metadata_row(clip_id)
+
+        await ui.run_javascript(
+            f"""
+            if(window.setYTClip){{
+                window.setYTClip(
+                    {start},
+                    {end if end is not None else 999999}
+                );
+            }}
+            """
+        )
 
     def play_clip(self, clip):
         """Play a specific clip"""
