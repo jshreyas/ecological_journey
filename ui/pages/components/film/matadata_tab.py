@@ -34,6 +34,8 @@ class MatadataTab:
         if not hasattr(self, "table"):
             return
         active_id = self.video_state.active_metadata_row_id
+        if not active_id:
+            return
         for row in self.table.rows:
             if row.get("_is_video_description"):
                 continue
@@ -129,6 +131,7 @@ class MatadataTab:
             .props("hide-header")
             .classes("w-full")
         )
+        self._refresh_active_rows()
 
         self.table.add_slot(
             "body",
