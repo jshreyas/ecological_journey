@@ -17,6 +17,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from ui.data.crud import (
     add_video_to_playlist,
     create_access_token,
+    delete_videos_from_playlist,
     get_or_create_user,
     load_playlist,
     load_playlists,
@@ -137,6 +138,32 @@ def post_playlist_videos(
     return add_video_to_playlist(
         playlist_id=playlist_id,
         new_videos=new_videos,
+        token=token,
+    )
+
+
+@api_router.delete("/playlists/{playlist_id}/videos")
+def delete_playlist_videos(
+    playlist_id: str,
+    payload: Dict[str, List[str]],
+    authorization: str = Header(...),
+):
+    if not authorization.startswith("Bearer "):
+        raise Exception("Invalid auth header")
+
+    token = authorization.removeprefix("Bearer ").strip()
+    video_ids = payload.get("video_ids", [])
+
+    if not video_ids:
+        return {
+            "_id": playlist_id,
+            "deleted_count": 0,
+            "videos": [],
+        }
+
+    return delete_videos_from_playlist(
+        playlist_id=playlist_id,
+        video_ids=video_ids,
         token=token,
     )
 
