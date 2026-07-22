@@ -246,6 +246,38 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
     return to_dicts(playlist)
 
 
+@with_user_from_token
+@invalidate_cache(
+    keys=lambda playlist_id, video_ids, **_: [
+        "playlists:index",
+        f"playlist:{playlist_id}",
+        "clips:index",
+        *[f"video:{video_id}" for video_id in video_ids],
+    ]
+)
+def delete_videos_from_playlist(playlist_id: str, video_ids: List[str], user=None, **kwargs):
+    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
+    if not playlist:
+        raise ValueError("Playlist not found")
+
+    if not can_write_playlist(user, playlist):
+        raise AuthError("Access denied")
+
+    ids_to_remove = set(video_ids)
+    before_count = len(playlist.videos)
+    playlist.videos = [video for video in playlist.videos if video.video_id not in ids_to_remove]
+    removed_count = before_count - len(playlist.videos)
+
+    if removed_count:
+        playlist.save()
+
+    return {
+        "_id": str(playlist.id),
+        "deleted_count": removed_count,
+        "videos": to_dicts(playlist.videos),
+    }
+
+
 # TODO: updates can be done by team members, not just owner
 @with_user_from_token
 @invalidate_cache(

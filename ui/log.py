@@ -4,17 +4,21 @@ import os
 import structlog
 from dotenv import load_dotenv
 from logging_loki import LokiHandler
-from nicegui import app
-from opentelemetry import trace
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
+
+# Commenting these out since Loki logs are not used anymore and
+# running scripts from inside the continer fails with error:
+# AttributeError: '_IncludedRouter' object has no attribute 'path'
+# from opentelemetry import trace
+# from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+# from opentelemetry.sdk.resources import Resource
+# from opentelemetry.sdk.trace import TracerProvider
+# from nicegui import app
 from structlog.contextvars import merge_contextvars
 
 load_dotenv()
-resource = Resource(attributes={"service.name": "nicegui-app"})
-trace.set_tracer_provider(TracerProvider(resource=resource))
-FastAPIInstrumentor.instrument_app(app)
+# resource = Resource(attributes={"service.name": "nicegui-app"})
+# trace.set_tracer_provider(TracerProvider(resource=resource))
+# FastAPIInstrumentor.instrument_app(app)
 LOKI_URL = os.getenv("LOKI_URL")
 LOKI_USER = os.getenv("LOKI_USER")
 LOKI_PASS = os.getenv("LOKI_PASS")

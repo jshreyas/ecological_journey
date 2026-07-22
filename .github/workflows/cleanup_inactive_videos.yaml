@@ -1,0 +1,27 @@
+name: Cleanup Inactive YouTube Videos
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - run: pip install -r requirements.txt
+
+      - run: python -m ui.scripts.cleanup_inactive_videos
+        env:
+          BASE_URL_SHARE: ${{ secrets.BASE_URL_SHARE }}
+          API_KEY: ${{ secrets.API_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
