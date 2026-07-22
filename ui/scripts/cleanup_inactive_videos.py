@@ -12,7 +12,7 @@ from ui.utils.youtube import fetch_videos_metadata
 
 load_dotenv()
 
-API_BASE = os.environ.get("BASE_URL_SHARE", "http://localhost:8080")
+API_BASE = os.environ.get("BASE_URL_SHARE")
 
 service_user = User.find_one(User.role == "service").run()
 if not service_user:
