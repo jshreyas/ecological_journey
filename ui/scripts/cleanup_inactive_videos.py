@@ -77,7 +77,7 @@ def main():
         inactive_ids = [video_id for video_id in video_ids if video_id not in playable_ids]
         if inactive_ids:
             print(f"Playlist {playlist['name']} has {len(inactive_ids)} inactive video(s): \n{inactive_ids}")
-            delete_inactive_videos(playlist["playlist_id"], inactive_ids)
+            delete_inactive_videos(playlist_id, inactive_ids)
 
 
 if __name__ == "__main__":
