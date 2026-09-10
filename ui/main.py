@@ -16,6 +16,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from ui.data.crud import (
     add_video_to_playlist,
+    clear_cache,
     create_access_token,
     delete_videos_from_playlist,
     get_or_create_user,
@@ -270,8 +271,13 @@ async def main_page() -> None:
                         "text-white"
                     ).props("flat round dense")
                 else:
-                    user = app.storage.user.get("user_info", {}).get("name")
-                    ui.label(f"Hi, {user}!").classes("text-sm text-white")
+                    user = app.storage.user
+                    ui.label(f"Hi, {user.get('user')}!").classes("text-sm text-white")
+                    if user.get("user_info").get("email") == "shreyas.jukanti@gmail.com":
+                        with ui.fab("settings", label="", direction="down").classes(""):
+                            ui.fab_action("sync", on_click=lambda: ui.notify("Playlists sync"))
+                            ui.fab_action("delete", on_click=lambda: clear_cache(token=user.get("token")))
+
                     ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
         async def handle_logout():
