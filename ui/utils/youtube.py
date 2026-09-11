@@ -244,14 +244,6 @@ async def fetch_playlist_items(
 
     logger is optional. If supplied, progress messages are emitted
     as playlists start, complete, or fail.
-    playlists = [
-      {
-        "_id": "...",
-        "playlist_id": "...",
-        "latest_saved_date": str | None
-        "existing_video_ids": list[str] | None
-      }
-    ]
     """
 
     log = logger or logging.getLogger(__name__)
@@ -266,12 +258,13 @@ async def fetch_playlist_items(
             nonlocal completed
 
             playlist_id = p["playlist_id"]
+            playlist_name = p["name"]
 
             log.info(
-                "Starting playlist %s of %s: %s",
+                "Fetching playlist %s of %s: %s",
                 completed + 1,
                 total,
-                playlist_id,
+                playlist_name,
             )
 
             try:
@@ -286,10 +279,10 @@ async def fetch_playlist_items(
                 completed += 1
 
                 log.info(
-                    "Completed playlist %s/%s: %s " "(%s playlist items, %s video IDs)",
+                    "Completed fetching playlist %s/%s: %s " "(%s playlist items, %s video IDs)",
                     completed,
                     total,
-                    playlist_id,
+                    playlist_name,
                     len(items),
                     len(vids),
                 )
@@ -299,14 +292,36 @@ async def fetch_playlist_items(
             except Exception:
                 completed += 1
                 log.exception(
-                    "Failed playlist %s/%s: %s",
+                    "Failed fetching playlist %s/%s: %s",
                     completed,
                     total,
-                    playlist_id,
+                    playlist_name,
                 )
                 raise
 
-        tasks = [guarded_fetch(p) for p in playlists]
+        playlists_meta = []
+
+        for p in playlists:
+            videos = p.get("videos", [])
+
+            if videos:
+                latest_saved_date = max(v["date"] for v in videos)
+                existing_video_ids = [v["video_id"] for v in videos if "video_id" in v]
+            else:
+                latest_saved_date = None
+                existing_video_ids = []
+
+            playlists_meta.append(
+                {
+                    "_id": p["_id"],
+                    "name": p["name"],
+                    "playlist_id": p["playlist_id"],
+                    "latest_saved_date": latest_saved_date,
+                    "existing_video_ids": existing_video_ids,
+                }
+            )
+
+        tasks = [guarded_fetch(p) for p in playlists_meta]
 
         # return_exceptions=True allows the remaining playlists to finish
         # even if one playlist fails.
@@ -388,7 +403,7 @@ async def fetch_playlist_items(
             output[pid] = videos
 
         log.info(
-            "Sync complete: %s playlists processed, %s videos assembled.",
+            "Fetch complete: %s playlists processed, %s videos assembled.",
             len(output),
             sum(len(videos) for videos in output.values()),
         )

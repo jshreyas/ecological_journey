@@ -294,13 +294,8 @@ async def main_page() -> None:
                         with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
                             async def playlistss():
-                                with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl"):
+                                with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl relative"):
                                     log = ui.log(max_lines=200).classes("w-full h-96 font-mono text-sm")
-
-                                    ui.button(
-                                        "Close",
-                                        on_click=dialog.close,
-                                    ).props("flat")
 
                                 dialog.open()
 
@@ -333,7 +328,7 @@ async def main_page() -> None:
                                     )
 
                                     sync_logger.info(
-                                        "Sync result contains %s playlists.",
+                                        "Fetch result contains %s playlists.",
                                         len(videos_to_sync),
                                     )
 
@@ -343,7 +338,18 @@ async def main_page() -> None:
                                         "Total videos available for synchronization: %s",
                                         total_videos,
                                     )
-                                    # TODO: Add these videos to database
+                                    if total_videos == 0:
+                                        sync_logger.info("No videos to synchronize. Exiting.")
+                                        return
+                                    sync_logger.info("Starting synchronization of videos to playlists...")
+                                    for playlist_id, videos in videos_to_sync.items():
+                                        add_video_to_playlist(
+                                            playlist_id=playlist_id,
+                                            new_videos=videos,
+                                            token=user.get("token"),
+                                        )
+                                        pass
+                                    sync_logger.info("Synchronization completed successfully for all playlists.")
 
                                 except asyncio.CancelledError:
                                     sync_logger.warning("Sync cancelled.")
