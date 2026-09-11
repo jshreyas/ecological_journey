@@ -25,6 +25,7 @@ from ui.data.crud import (
     load_playlists,
     load_teams,
 )
+from ui.log import log
 from ui.pages.about import about_page
 
 # from ui.pages.cliplists import cliplists_page
@@ -230,6 +231,7 @@ class LogElementHandler(logging.Handler):
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
+    log.info("Rendering main page")
     ui.add_head_html(
         """
         <script src="https://www.youtube.com/iframe_api"></script>
@@ -367,6 +369,7 @@ async def main_page() -> None:
                             def clearc(token: str):
                                 clear_cache(token=token)
                                 ui.notify("Cache cleared successfully!", color="green")
+                                ui.navigate.reload()
 
                             ui.fab_action("delete", on_click=lambda t=user.get("token"): clearc(token=t))
 
@@ -388,7 +391,7 @@ async def main_page() -> None:
             app.storage.user.clear()
             app.storage.user.update({"authenticated": False})
             render_auth()
-            ui.navigate.to("/")
+            ui.navigate.reload()
 
         render_auth()
 

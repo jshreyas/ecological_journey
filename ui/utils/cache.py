@@ -152,6 +152,7 @@ def cache_get(key: str):
 def cache_set(key: str, value, ex: int = None):
     ttl = ex if ex is not None else CACHE_TTL
     cache_backend.set(key, value, ex=ttl)
+    log.info(f"Cache set for key: {key} with TTL: {ttl} seconds")
 
 
 def cache_del(*keys):
