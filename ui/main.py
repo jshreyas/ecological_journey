@@ -35,6 +35,7 @@ from ui.pages.home import home_page
 from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
+from ui.utils.youtube import fetch_playlist_items
 
 load_dotenv()
 sys.stdout.reconfigure(line_buffering=True)
@@ -219,7 +220,7 @@ async def main_page() -> None:
     )
     setup_landscape_mode_guard()
     with ui.header().classes(
-        "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
+        "top-navbar flex items-center justify-between h-14 px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
     ):
 
         def nav_button(label: str, path: str):
@@ -273,9 +274,30 @@ async def main_page() -> None:
                     user = app.storage.user
                     ui.label(f"Hi, {user.get('user')}!").classes("text-sm text-white")
                     if user.get("user_info").get("email") == "shreyas.jukanti@gmail.com":
-                        with ui.fab("settings", label="", direction="down").classes(""):
-                            ui.fab_action("sync", on_click=lambda: ui.notify("Playlists sync"))
-                            ui.fab_action("delete", on_click=lambda: clear_cache(token=user.get("token")))
+                        with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
+
+                            async def playlistss():
+                                # TODO:
+                                playlists = [load_playlist(p["_id"]) for p in load_playlists()]
+                                with ui.dialog() as dialog, ui.card():
+                                    videos_to_sync = await fetch_playlist_items(
+                                        playlists[14:],
+                                        concurrency=2,
+                                    )
+                                    # log = ui.log(max_lines=10).classes('w-full h-20')
+                                    # log.push(f"Playlists synced: {videos_to_sync}")
+                                    # from pprint import pprint
+                                    ui.label(f"{videos_to_sync}")
+                                    ui.button("Close", on_click=dialog.close)
+                                dialog.open()
+
+                            ui.fab_action("sync", on_click=lambda: playlistss())
+
+                            def clearc(token: str):
+                                clear_cache(token=token)
+                                ui.notify("Cache cleared successfully!", color="green")
+
+                            ui.fab_action("delete", on_click=lambda t=user.get("token"): clearc(token=t))
 
                     ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
