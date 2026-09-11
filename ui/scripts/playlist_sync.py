@@ -22,30 +22,7 @@ token = create_service_token(service_user)
 def get_playlists():
     r = requests.get(f"{API_BASE}/api/playlists")
     r.raise_for_status()
-
-    response = []
-
-    for p in r.json():
-        videos = p.get("videos", [])
-
-        if videos:
-            latest_saved_date = max(v["date"] for v in videos)
-            existing_video_ids = [v["video_id"] for v in videos if "video_id" in v]
-        else:
-            latest_saved_date = None
-            existing_video_ids = []
-
-        response.append(
-            {
-                "_id": p["_id"],
-                "name": p["name"],
-                "playlist_id": p["playlist_id"],  # YouTube playlist ID
-                "latest_saved_date": latest_saved_date,
-                "existing_video_ids": existing_video_ids,
-            }
-        )
-
-    return response
+    return r.json()
 
 
 def post_new_videos(playlist_id: str, videos: list[dict]):
