@@ -338,13 +338,16 @@ async def main_page() -> None:
                                         "Total videos available for synchronization: %s",
                                         total_videos,
                                     )
+                                    if total_videos == 0:
+                                        sync_logger.info("No videos to synchronize. Exiting.")
+                                        return
                                     sync_logger.info("Starting synchronization of videos to playlists...")
                                     for playlist_id, videos in videos_to_sync.items():
-                                        # add_video_to_playlist(
-                                        #     playlist_id=playlist_id,
-                                        #     new_videos=videos,
-                                        #     # token=user.get("token"),
-                                        # )
+                                        add_video_to_playlist(
+                                            playlist_id=playlist_id,
+                                            new_videos=videos,
+                                            token=user.get("token"),
+                                        )
                                         pass
                                     sync_logger.info("Synchronization completed successfully for all playlists.")
 
