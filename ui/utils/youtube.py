@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import re
 from datetime import datetime
@@ -236,64 +237,135 @@ async def fetch_playlist_items_single(
 async def fetch_playlist_items(
     playlists: list[dict],
     concurrency: int = 5,
+    logger: logging.Logger | None = None,
 ):
     """
-    playlists = [
-      {
-        "_id": "...",
-        "playlist_id": "...",
-        "latest_saved_date": str | None
-        "existing_video_ids": list[str] | None
-      }
-    ]
+    Fetch playlist items concurrently and assemble video metadata.
+
+    logger is optional. If supplied, progress messages are emitted
+    as playlists start, complete, or fail.
     """
+
+    log = logger or logging.getLogger(__name__)
+    total = len(playlists)
+    completed = 0
 
     semaphore = asyncio.Semaphore(concurrency)
 
     async with httpx.AsyncClient() as client:
 
         async def guarded_fetch(p):
-            async with semaphore:
-                return p, await fetch_playlist_items_single(
-                    client,
-                    p["playlist_id"],
-                    p.get("latest_saved_date", None),
-                    set(p.get("existing_video_ids", [])),
+            nonlocal completed
+
+            playlist_id = p["playlist_id"]
+
+            log.info(
+                "Starting playlist %s of %s: %s",
+                completed + 1,
+                total,
+                playlist_id,
+            )
+
+            try:
+                async with semaphore:
+                    items, vids = await fetch_playlist_items_single(
+                        client,
+                        playlist_id,
+                        p.get("latest_saved_date", None),
+                        set(p.get("existing_video_ids", [])),
+                    )
+
+                completed += 1
+
+                log.info(
+                    "Completed playlist %s/%s: %s " "(%s playlist items, %s video IDs)",
+                    completed,
+                    total,
+                    playlist_id,
+                    len(items),
+                    len(vids),
                 )
 
+                return p, (items, vids)
+
+            except Exception:
+                completed += 1
+                log.exception(
+                    "Failed playlist %s/%s: %s",
+                    completed,
+                    total,
+                    playlist_id,
+                )
+                raise
+
         tasks = [guarded_fetch(p) for p in playlists]
-        results = await asyncio.gather(*tasks)
 
-        all_video_ids = []
+        # return_exceptions=True allows the remaining playlists to finish
+        # even if one playlist fails.
+        results = await asyncio.gather(
+            *tasks,
+            return_exceptions=True,
+        )
+
+        successful_results = []
+
+        for result in results:
+            if isinstance(result, Exception):
+                log.error(
+                    "A playlist failed and was excluded from the result: %s",
+                    result,
+                )
+            else:
+                successful_results.append(result)
+
         per_playlist = {}
+        all_video_ids = []
 
-        for p, (items, vids) in results:
+        for p, (items, vids) in successful_results:
             per_playlist[p["_id"]] = items
             all_video_ids.extend(vids)
 
-        metadata = await fetch_videos_metadata(
-            client,
-            list(set(all_video_ids)),
+        unique_video_ids = list(set(all_video_ids))
+
+        log.info(
+            "Fetching metadata for %s unique videos...",
+            len(unique_video_ids),
         )
 
-        # Assemble final payload
+        metadata = await fetch_videos_metadata(
+            client,
+            unique_video_ids,
+        )
+
+        log.info(
+            "Metadata fetched for %s videos.",
+            len(metadata),
+        )
+
         output = {}
 
         for pid, items in per_playlist.items():
             videos = []
+
             for item in items:
                 meta = metadata.get(item["video_id"])
+
                 if not meta:
+                    log.warning(
+                        "No metadata found for video %s",
+                        item["video_id"],
+                    )
                     continue
 
                 videos.append(
                     {
                         "video_id": item["video_id"],
                         "title": item["title"],
-                        "youtube_url": f"https://www.youtube.com/watch?v={item['video_id']}",
-                        "date": meta["upload_date"],  # upload date
+                        "youtube_url": (f"https://www.youtube.com/watch?v=" f"{item['video_id']}"),
+                        "date": meta["upload_date"],
                         "training_date": parse_training_date_from_title(
-                            title=item["title"], upload_date_iso=meta["upload_date"]
+                            title=item["title"],
+                            upload_date_iso=meta["upload_date"],
                         ),
                         "duration_seconds": meta["duration_seconds"],
                         "type": "",
@@ -306,6 +378,12 @@ async def fetch_playlist_items(
                 )
 
             output[pid] = videos
+
+        log.info(
+            "Sync complete: %s playlists processed, %s videos assembled.",
+            len(output),
+            sum(len(videos) for videos in output.values()),
+        )
 
         return output
 

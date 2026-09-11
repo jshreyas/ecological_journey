@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -210,6 +211,22 @@ def setup_landscape_mode_guard():
             ui.label("Rotate your device for the best experience.").classes("text-center text-base")
 
 
+# TODO: move this and playlist sync code to its own file?
+class LogElementHandler(logging.Handler):
+    """Push logging records into one NiceGUI ui.log element."""
+
+    def __init__(self, element: ui.log, level: int = logging.NOTSET) -> None:
+        super().__init__(level)
+        self.element = element
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = self.format(record)
+            self.element.push(message)
+        except Exception:
+            self.handleError(record)
+
+
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
@@ -277,19 +294,66 @@ async def main_page() -> None:
                         with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
                             async def playlistss():
-                                # TODO:
-                                playlists = [load_playlist(p["_id"]) for p in load_playlists()]
-                                with ui.dialog() as dialog, ui.card():
-                                    videos_to_sync = await fetch_playlist_items(
-                                        playlists[14:],
-                                        concurrency=2,
-                                    )
-                                    # log = ui.log(max_lines=10).classes('w-full h-20')
-                                    # log.push(f"Playlists synced: {videos_to_sync}")
-                                    # from pprint import pprint
-                                    ui.label(f"{videos_to_sync}")
-                                    ui.button("Close", on_click=dialog.close)
+                                with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl"):
+                                    log = ui.log(max_lines=200).classes("w-full h-96 font-mono text-sm")
+
+                                    ui.button(
+                                        "Close",
+                                        on_click=dialog.close,
+                                    ).props("flat")
+
                                 dialog.open()
+
+                                handler = LogElementHandler(log)
+                                handler.setFormatter(
+                                    logging.Formatter(
+                                        fmt="%(asctime)s %(levelname)s: %(message)s",
+                                        datefmt="%H:%M:%S",
+                                    )
+                                )
+
+                                sync_logger = logging.getLogger(f"playlist-sync-{id(dialog)}")
+                                sync_logger.setLevel(logging.INFO)
+                                sync_logger.propagate = False
+                                sync_logger.addHandler(handler)
+
+                                ui.context.client.on_disconnect(lambda: sync_logger.removeHandler(handler))
+
+                                try:
+                                    playlists = [load_playlist(p["_id"]) for p in load_playlists()]
+
+                                    sync_logger.info(
+                                        "Starting sync for %s playlists",
+                                        len(playlists),
+                                    )
+
+                                    videos_to_sync = await fetch_playlist_items(
+                                        playlists,
+                                        logger=sync_logger,
+                                    )
+
+                                    sync_logger.info(
+                                        "Sync result contains %s playlists.",
+                                        len(videos_to_sync),
+                                    )
+
+                                    total_videos = sum(len(videos) for videos in videos_to_sync.values())
+
+                                    sync_logger.info(
+                                        "Total videos available for synchronization: %s",
+                                        total_videos,
+                                    )
+
+                                except asyncio.CancelledError:
+                                    sync_logger.warning("Sync cancelled.")
+                                    raise
+
+                                except Exception:
+                                    sync_logger.exception("Sync failed.")
+
+                                finally:
+                                    sync_logger.removeHandler(handler)
+                                    handler.close()
 
                             ui.fab_action("sync", on_click=lambda: playlistss())
 
@@ -364,4 +428,5 @@ ui.run(
     title="Ecological Journey",
     reload=True if os.getenv("ENV") == "dev" else False,
     storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
+    reconnect_timeout=30,
 )
