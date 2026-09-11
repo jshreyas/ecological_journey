@@ -244,6 +244,14 @@ async def fetch_playlist_items(
 
     logger is optional. If supplied, progress messages are emitted
     as playlists start, complete, or fail.
+    playlists = [
+      {
+        "_id": "...",
+        "playlist_id": "...",
+        "latest_saved_date": str | None
+        "existing_video_ids": list[str] | None
+      }
+    ]
     """
 
     log = logger or logging.getLogger(__name__)
