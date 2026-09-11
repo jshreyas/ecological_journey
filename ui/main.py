@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -16,6 +17,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from ui.data.crud import (
     add_video_to_playlist,
+    clear_cache,
     create_access_token,
     delete_videos_from_playlist,
     get_or_create_user,
@@ -24,7 +26,6 @@ from ui.data.crud import (
     load_teams,
 )
 from ui.pages.about import about_page
-from ui.pages.admin import admin_page
 
 # from ui.pages.cliplists import cliplists_page
 from ui.pages.custom_sub_pages import custom_sub_pages
@@ -35,6 +36,7 @@ from ui.pages.home import home_page
 from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
+from ui.utils.youtube import fetch_playlist_items
 
 load_dotenv()
 sys.stdout.reconfigure(line_buffering=True)
@@ -209,6 +211,22 @@ def setup_landscape_mode_guard():
             ui.label("Rotate your device for the best experience.").classes("text-center text-base")
 
 
+# TODO: move this and playlist sync code to its own file?
+class LogElementHandler(logging.Handler):
+    """Push logging records into one NiceGUI ui.log element."""
+
+    def __init__(self, element: ui.log, level: int = logging.NOTSET) -> None:
+        super().__init__(level)
+        self.element = element
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = self.format(record)
+            self.element.push(message)
+        except Exception:
+            self.handleError(record)
+
+
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
@@ -219,7 +237,7 @@ async def main_page() -> None:
     )
     setup_landscape_mode_guard()
     with ui.header().classes(
-        "top-navbar flex items-center justify-between px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
+        "top-navbar flex items-center justify-between h-14 px-4 py-2 bg-primary fixed top-0 z-50 w-full shadow-sm"
     ):
 
         def nav_button(label: str, path: str):
@@ -270,8 +288,82 @@ async def main_page() -> None:
                         "text-white"
                     ).props("flat round dense")
                 else:
-                    user = app.storage.user.get("user_info", {}).get("name")
-                    ui.label(f"Hi, {user}!").classes("text-sm text-white")
+                    user = app.storage.user
+                    ui.label(f"Hi, {user.get('user')}!").classes("text-sm text-white")
+                    if user.get("user_info").get("email") == "shreyas.jukanti@gmail.com":
+                        with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
+
+                            async def playlistss():
+                                with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl"):
+                                    log = ui.log(max_lines=200).classes("w-full h-96 font-mono text-sm")
+
+                                    ui.button(
+                                        "Close",
+                                        on_click=dialog.close,
+                                    ).props("flat")
+
+                                dialog.open()
+
+                                handler = LogElementHandler(log)
+                                handler.setFormatter(
+                                    logging.Formatter(
+                                        fmt="%(asctime)s %(levelname)s: %(message)s",
+                                        datefmt="%H:%M:%S",
+                                    )
+                                )
+
+                                sync_logger = logging.getLogger(f"playlist-sync-{id(dialog)}")
+                                sync_logger.setLevel(logging.INFO)
+                                sync_logger.propagate = False
+                                sync_logger.addHandler(handler)
+
+                                ui.context.client.on_disconnect(lambda: sync_logger.removeHandler(handler))
+
+                                try:
+                                    playlists = [load_playlist(p["_id"]) for p in load_playlists()]
+
+                                    sync_logger.info(
+                                        "Starting sync for %s playlists",
+                                        len(playlists),
+                                    )
+
+                                    videos_to_sync = await fetch_playlist_items(
+                                        playlists,
+                                        logger=sync_logger,
+                                    )
+
+                                    sync_logger.info(
+                                        "Sync result contains %s playlists.",
+                                        len(videos_to_sync),
+                                    )
+
+                                    total_videos = sum(len(videos) for videos in videos_to_sync.values())
+
+                                    sync_logger.info(
+                                        "Total videos available for synchronization: %s",
+                                        total_videos,
+                                    )
+                                    # TODO: Add these videos to database
+
+                                except asyncio.CancelledError:
+                                    sync_logger.warning("Sync cancelled.")
+                                    raise
+
+                                except Exception:
+                                    sync_logger.exception("Sync failed.")
+
+                                finally:
+                                    sync_logger.removeHandler(handler)
+                                    handler.close()
+
+                            ui.fab_action("sync", on_click=lambda: playlistss())
+
+                            def clearc(token: str):
+                                clear_cache(token=token)
+                                ui.notify("Cache cleared successfully!", color="green")
+
+                            ui.fab_action("delete", on_click=lambda t=user.get("token"): clearc(token=t))
+
                     ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
         async def handle_logout():
@@ -305,7 +397,6 @@ async def main_page() -> None:
             "/partners": partner_page,
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
-            "/admin": admin_page,
         }
     ).classes("w-full h-full flex-grow p-4")
 
@@ -338,4 +429,5 @@ ui.run(
     title="Ecological Journey",
     reload=True if os.getenv("ENV") == "dev" else False,
     storage_secret="45d3fba306d5a694f61d0ccd684c75fa",
+    reconnect_timeout=30,
 )
