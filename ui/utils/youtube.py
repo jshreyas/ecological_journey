@@ -258,12 +258,13 @@ async def fetch_playlist_items(
             nonlocal completed
 
             playlist_id = p["playlist_id"]
+            playlist_name = p["name"]
 
             log.info(
                 "Starting playlist %s of %s: %s",
                 completed + 1,
                 total,
-                playlist_id,
+                playlist_name,
             )
 
             try:
@@ -281,7 +282,7 @@ async def fetch_playlist_items(
                     "Completed playlist %s/%s: %s " "(%s playlist items, %s video IDs)",
                     completed,
                     total,
-                    playlist_id,
+                    playlist_name,
                     len(items),
                     len(vids),
                 )
@@ -294,7 +295,7 @@ async def fetch_playlist_items(
                     "Failed playlist %s/%s: %s",
                     completed,
                     total,
-                    playlist_id,
+                    playlist_name,
                 )
                 raise
 
