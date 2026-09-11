@@ -261,7 +261,7 @@ async def fetch_playlist_items(
             playlist_name = p["name"]
 
             log.info(
-                "Starting playlist %s of %s: %s",
+                "Fetching playlist %s of %s: %s",
                 completed + 1,
                 total,
                 playlist_name,
@@ -279,7 +279,7 @@ async def fetch_playlist_items(
                 completed += 1
 
                 log.info(
-                    "Completed playlist %s/%s: %s " "(%s playlist items, %s video IDs)",
+                    "Completed fetching playlist %s/%s: %s " "(%s playlist items, %s video IDs)",
                     completed,
                     total,
                     playlist_name,
@@ -292,7 +292,7 @@ async def fetch_playlist_items(
             except Exception:
                 completed += 1
                 log.exception(
-                    "Failed playlist %s/%s: %s",
+                    "Failed fetching playlist %s/%s: %s",
                     completed,
                     total,
                     playlist_name,
@@ -403,7 +403,7 @@ async def fetch_playlist_items(
             output[pid] = videos
 
         log.info(
-            "Sync complete: %s playlists processed, %s videos assembled.",
+            "Fetch complete: %s playlists processed, %s videos assembled.",
             len(output),
             sum(len(videos) for videos in output.values()),
         )
