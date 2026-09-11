@@ -343,6 +343,7 @@ async def main_page() -> None:
                                         "Total videos available for synchronization: %s",
                                         total_videos,
                                     )
+                                    # TODO: Add these videos to database
 
                                 except asyncio.CancelledError:
                                     sync_logger.warning("Sync cancelled.")
