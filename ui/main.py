@@ -296,12 +296,33 @@ async def main_page() -> None:
                         with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
                             async def playlistss():
-                                with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl relative"):
-                                    log = ui.log(max_lines=200).classes("w-full h-96 font-mono text-sm")
+                                state = {
+                                    "reload_on_close": False,
+                                }
+
+                                async def close_dialog() -> None:
+                                    dialog.close()
+
+                                    if state["reload_on_close"]:
+                                        await asyncio.sleep(0)
+                                        ui.navigate.reload()
+
+                                with (
+                                    ui.dialog().props("persistent") as dialog,
+                                    ui.card().classes("w-full max-w-3xl relative"),
+                                ):
+                                    log_element = ui.log(max_lines=200).classes("w-full h-96 font-mono text-sm")
+
+                                    close_button = ui.button(
+                                        "Close",
+                                        on_click=close_dialog,
+                                    ).props("flat")
+
+                                    close_button.disable()
 
                                 dialog.open()
 
-                                handler = LogElementHandler(log)
+                                handler = LogElementHandler(log_element)
                                 handler.setFormatter(
                                     logging.Formatter(
                                         fmt="%(asctime)s %(levelname)s: %(message)s",
@@ -320,7 +341,7 @@ async def main_page() -> None:
                                     playlists = [load_playlist(p["_id"]) for p in load_playlists()]
 
                                     sync_logger.info(
-                                        "Starting sync for %s playlists",
+                                        "Starting sync for %s playlists.",
                                         len(playlists),
                                     )
 
@@ -340,27 +361,45 @@ async def main_page() -> None:
                                         "Total videos available for synchronization: %s",
                                         total_videos,
                                     )
+
                                     if total_videos == 0:
-                                        sync_logger.info("No videos to synchronize. Exiting.")
+                                        sync_logger.info(
+                                            "No videos to synchronize. "
+                                            "You can close this dialog; the page will not reload."
+                                        )
                                         return
+
                                     sync_logger.info("Starting synchronization of videos to playlists...")
+
                                     for playlist_id, videos in videos_to_sync.items():
                                         add_video_to_playlist(
                                             playlist_id=playlist_id,
                                             new_videos=videos,
                                             token=user.get("token"),
                                         )
-                                        pass
-                                    sync_logger.info("Synchronization completed successfully for all playlists.")
 
+                                        sync_logger.info(
+                                            "Synchronized %s videos to playlist %s.",
+                                            len(videos),
+                                            playlist_id,
+                                        )
+
+                                    state["reload_on_close"] = True
+
+                                    sync_logger.info(
+                                        "Synchronization completed successfully. "
+                                        "Close this dialog to reload the page."
+                                    )
                                 except asyncio.CancelledError:
-                                    sync_logger.warning("Sync cancelled.")
+                                    sync_logger.warning("Sync cancelled. You can now close the dialog.")
                                     raise
-
                                 except Exception:
-                                    sync_logger.exception("Sync failed.")
-
+                                    sync_logger.exception(
+                                        "Sync failed. You can close the dialog; " "the page will not reload."
+                                    )
                                 finally:
+                                    close_button.enable()
+
                                     sync_logger.removeHandler(handler)
                                     handler.close()
 
