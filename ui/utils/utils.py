@@ -1,7 +1,6 @@
 # utils.py
 from datetime import datetime
 
-import requests
 from nicegui import ui
 
 
@@ -19,39 +18,6 @@ def format_time(t: int) -> str:
     if hours > 0:
         return f"{hours}:{minutes:02d}:{seconds:02d}"
     return f"{minutes}:{seconds:02d}"
-
-
-# TODO: update the video embed window based on the orientation
-def get_video_orientation_internal(video_id: str) -> str:
-    url = "https://www.youtube.com/youtubei/v1/player"
-    params = {"videoId": video_id}
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0",
-        "Origin": "https://www.youtube.com",
-    }
-    payload = {
-        "context": {"client": {"clientName": "WEB", "clientVersion": "2.20210721.00.00"}},
-        "videoId": video_id,
-    }
-
-    response = requests.post(url, params=params, json=payload, headers=headers)
-    data = response.json()
-
-    try:
-        streaming_data = data.get("streamingData", {})
-        formats = streaming_data.get("formats", [])
-
-        # Get the first video format that includes width & height
-        for fmt in formats:
-            width = fmt.get("width")
-            height = fmt.get("height")
-            if width and height:
-                return "portrait" if height > width else "landscape"
-
-        return "Unknown (no resolution data found)"
-    except Exception as e:
-        return f"Error: {str(e)}"
 
 
 # --- Utility for parsing and checking query syntax ---
