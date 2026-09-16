@@ -32,8 +32,7 @@ from ui.pages.about import about_page
 from ui.pages.custom_sub_pages import custom_sub_pages
 from ui.pages.film import film_page
 from ui.pages.home import home_page
-
-# from ui.pages.notion import notion_page
+from ui.pages.notion import notion_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
 from ui.utils.youtube import fetch_playlist_items
@@ -440,7 +439,7 @@ async def main_page() -> None:
             "/search": search_page,
             # "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
-            # "/notion": notion_page,  # TODO: the embed doesnt work
+            "/notion": notion_page,  # TODO: the embed doesnt work
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
         }
