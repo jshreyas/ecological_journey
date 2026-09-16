@@ -1,8 +1,5 @@
 from nicegui import ui
 
-from ui.data.crud import trigger_notion_refresh
-from ui.utils.dialog_puns import caught_john_doe
-from ui.utils.user_context import User, with_user_context
 from ui.utils.utils_api import get_notion_tree
 
 
@@ -30,7 +27,7 @@ def reset_tree_to_first_level(tree, expanded_ids):
     tree.update()
 
 
-def render_tree(pages, user_token, notion_iframe):
+def render_tree(pages, notion_iframe):
     with ui.scroll_area().classes("w-full").style("height: 100vw; max-height: 100vh;"):
         expanded = False
         tree = None
@@ -51,27 +48,10 @@ def render_tree(pages, user_token, notion_iframe):
 
         with ui.row().classes("w-full justify-between items-center"):
             ui.label("📚 Notion Pages").classes("font-bold text-lg text-primary")
-
-            with ui.row().classes("gap-2"):
-                if user_token:
-                    ui.button(
-                        icon="sync",
-                        on_click=lambda: trigger_notion_refresh(),
-                    ).props(
-                        "flat dense round color=primary"
-                    ).tooltip("Sync")
-                else:
-                    ui.button(
-                        icon="sync",
-                        on_click=lambda: caught_john_doe(),
-                    ).props(
-                        "flat dense round color=primary"
-                    ).tooltip("Sync")
-
-                toggle_button = ui.button(
-                    icon="unfold_more",
-                    on_click=toggle_tree,
-                ).props("dense flat")
+            toggle_button = ui.button(
+                icon="unfold_more",
+                on_click=toggle_tree,
+            ).props("dense flat")
 
         tree = ui.tree(
             pages,
@@ -82,10 +62,8 @@ def render_tree(pages, user_token, notion_iframe):
         tree.expand(expanded_ids.copy())
 
 
-@with_user_context
-def notion_page(user: User | None):
+def notion_page():
     notion_pages = get_notion_tree()
-    user_token = user.token if user else None
 
     if not notion_pages:
         ui.label("No Notion pages found.")
@@ -99,9 +77,8 @@ def notion_page(user: User | None):
             notion_iframe = (
                 ui.element("iframe")
                 .props(f"src={notion_url(notion_pages[0]['id'])}")
-                .classes("w-full h-[calc(100vh-3em)]")
-                # .classes("w-full h-full rounded shadow bg-white")
+                .classes("w-full h-[calc(100vh-3em)] rounded shadow bg-white")
             )
 
         with splitter.before:
-            render_tree(notion_pages, user_token, notion_iframe)
+            render_tree(notion_pages, notion_iframe)
