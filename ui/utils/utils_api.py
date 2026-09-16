@@ -11,7 +11,7 @@ from ui.data.crud import (
     load_playlists,
     load_teams,
 )
-from ui.utils.cache import CACHE_TTL, cache_get, cache_result, cache_set
+from ui.utils.cache import CACHE_TTL, cache_result
 from ui.utils.utils import parse_query_expression
 
 
@@ -140,47 +140,6 @@ def load_clips() -> List[Dict[str, Any]]:
 
     clips.sort(key=lambda x: x.get("date", ""), reverse=True)
     return clips
-
-
-# TODO: make this consistent with @cache_result decorator
-def get_all_partners() -> List[str]:
-    cache_key = "all_partners"
-    cached = cache_get(cache_key)
-    if cached:
-        return cached
-    partners_set = set()
-    videos = load_videos()
-    for video in videos:
-        video_partners = video.get("partners", [])
-        partners_set.update(video_partners)
-        clips = video.get("clips", [])
-        for clip in clips:
-            if clip.get("type") == "clip":
-                partners_set.update(clip.get("partners", []))
-    result = sorted(partners_set)
-    cache_set(cache_key, result)
-    return result
-
-
-def find_clips_by_partner(partner: str) -> List[Dict[str, Any]]:
-    result = []
-    videos = load_videos()
-    for video in videos:
-        video_id = video["video_id"]
-        video_partners = video.get("partners", [])
-        clips = video.get("clips", [])
-        for clip in clips:
-            clip_partners = clip.get("partners", [])
-            if partner in clip_partners or partner in video_partners:
-                merged_labels = list(set(video.get("labels", []) + clip.get("labels", [])))
-                combined = {
-                    "video_id": video_id,
-                    **video,
-                    **clip,
-                    "labels": merged_labels,
-                }
-                result.append(combined)
-    return result
 
 
 def save_video_metadata(video_metadata: dict, token: str) -> bool:

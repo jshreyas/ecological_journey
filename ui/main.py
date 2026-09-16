@@ -34,7 +34,6 @@ from ui.pages.film import film_page
 from ui.pages.home import home_page
 
 # from ui.pages.notion import notion_page
-from ui.pages.partner import partner_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
 from ui.utils.youtube import fetch_playlist_items
@@ -442,7 +441,6 @@ async def main_page() -> None:
             # "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
             # "/notion": notion_page,  # TODO: the embed doesnt work
-            "/partners": partner_page,
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
         }
