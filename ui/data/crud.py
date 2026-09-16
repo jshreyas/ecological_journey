@@ -9,7 +9,6 @@ import jwt
 from bson import ObjectId
 from bunnet import Document
 from dotenv import load_dotenv
-from nicegui import ui  # TODO: remove or use your own alert/logger
 from passlib.context import CryptContext
 
 from ui.data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
@@ -134,7 +133,6 @@ def trigger_notion_refresh():
         generate_and_store_notion_tree()
 
     threading.Thread(target=background_job, daemon=True).start()
-    ui.notify("Started Notion tree generation in background", type="info")
 
 
 @cache_result("playlists:index", ttl_seconds=CACHE_TTL)

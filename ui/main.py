@@ -24,6 +24,7 @@ from ui.data.crud import (
     load_playlist,
     load_playlists,
     load_teams,
+    trigger_notion_refresh,
 )
 from ui.log import log
 from ui.pages.about import about_page
@@ -401,7 +402,13 @@ async def main_page() -> None:
                                     sync_logger.removeHandler(handler)
                                     handler.close()
 
-                            ui.fab_action("sync", on_click=lambda: playlistss())
+                            ui.fab_action("playlist_add_check", on_click=lambda: playlistss())
+
+                            def notion_tree_update():
+                                trigger_notion_refresh()
+                                ui.notify("Started Notion tree sync in background")
+
+                            ui.fab_action("description", on_click=lambda: notion_tree_update())
 
                             def clearc(token: str):
                                 clear_cache(token=token)
