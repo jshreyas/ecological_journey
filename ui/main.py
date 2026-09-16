@@ -291,6 +291,7 @@ async def main_page() -> None:
                 else:
                     user = app.storage.user
                     ui.label(f"Hi, {user.get('user')}!").classes("text-sm text-white")
+                    # TODO: add a super admin role instead of these hardcoded checks
                     if user.get("user_info").get("email") == "shreyas.jukanti@gmail.com":
                         with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
