@@ -257,9 +257,9 @@ async def main_page() -> None:
         with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
             nav_icon("home", "/")
             nav_icon("search", "/search")
+            nav_icon("description", "/notion")
             nav_icon("info", "/about")
             # nav_button("Cliplists", "/cliplists")
-            # nav_button("Notion", "/notion")
 
         ui.space()
 
