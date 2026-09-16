@@ -24,6 +24,7 @@ from ui.data.crud import (
     load_playlist,
     load_playlists,
     load_teams,
+    trigger_notion_refresh,
 )
 from ui.log import log
 from ui.pages.about import about_page
@@ -32,8 +33,7 @@ from ui.pages.about import about_page
 from ui.pages.custom_sub_pages import custom_sub_pages
 from ui.pages.film import film_page
 from ui.pages.home import home_page
-
-# from ui.pages.notion import notion_page
+from ui.pages.notion import notion_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
 from ui.utils.youtube import fetch_playlist_items
@@ -258,9 +258,9 @@ async def main_page() -> None:
         with ui.button_group().classes("gap-1 items-center justify-center border-none shadow-none"):
             nav_icon("home", "/")
             nav_icon("search", "/search")
+            nav_icon("description", "/notion")
             nav_icon("info", "/about")
             # nav_button("Cliplists", "/cliplists")
-            # nav_button("Notion", "/notion")
 
         ui.space()
 
@@ -291,6 +291,7 @@ async def main_page() -> None:
                 else:
                     user = app.storage.user
                     ui.label(f"Hi, {user.get('user')}!").classes("text-sm text-white")
+                    # TODO: add a super admin role instead of these hardcoded checks
                     if user.get("user_info").get("email") == "shreyas.jukanti@gmail.com":
                         with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
@@ -402,7 +403,13 @@ async def main_page() -> None:
                                     sync_logger.removeHandler(handler)
                                     handler.close()
 
-                            ui.fab_action("sync", on_click=lambda: playlistss())
+                            ui.fab_action("playlist_add_check", on_click=lambda: playlistss())
+
+                            def notion_tree_update():
+                                trigger_notion_refresh()
+                                ui.notify("Started Notion tree sync in background")
+
+                            ui.fab_action("description", on_click=lambda: notion_tree_update())
 
                             def clearc(token: str):
                                 clear_cache(token=token)
@@ -440,7 +447,7 @@ async def main_page() -> None:
             "/search": search_page,
             # "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
-            # "/notion": notion_page,  # TODO: the embed doesnt work
+            "/notion": notion_page,  # TODO: the embed doesnt work
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
         }

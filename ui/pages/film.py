@@ -1,7 +1,3 @@
-# film.py
-import os
-
-from dotenv import load_dotenv
 from nicegui import ui
 
 # from ui.pages.components.film.learnings_tab import LearningsTab
@@ -12,13 +8,7 @@ from ui.pages.components.film.timeline_tab import TimelineTab
 from ui.pages.components.film.video_state import VideoState
 from ui.utils.user_context import User, with_user_context
 
-load_dotenv()
 
-
-BASE_URL_SHARE = os.getenv("BASE_URL_SHARE")
-
-
-# TODO: Make this page mobile friendly for logged in user for write access
 @with_user_context
 def film_page(user: User | None, video_id: str):
     video_state = VideoState(video_id, user)
