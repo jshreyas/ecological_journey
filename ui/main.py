@@ -28,7 +28,6 @@ from ui.data.crud import (
     trigger_notion_refresh,
 )
 from ui.data.models import User
-from ui.log import log
 from ui.pages.about import about_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.custom_sub_pages import custom_sub_pages
@@ -230,7 +229,6 @@ class LogElementHandler(logging.Handler):
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
-    log.info("Rendering main page")
     ui.add_head_html(
         """
         <script src="https://www.youtube.com/iframe_api"></script>
