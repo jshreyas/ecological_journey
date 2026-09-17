@@ -497,6 +497,8 @@ def load_cliplist(cliplist_id: str):
     return None
 
 
+# TODO: this method is for non oauth login which we dont have currently
+# if we need this, it should be updated to return user object similar to google_oauth
 def login_user(email: str, password: str) -> dict[str, str] | bool:
     user = load_user_by_email(email)
 
