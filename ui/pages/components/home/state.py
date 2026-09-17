@@ -87,7 +87,7 @@ class State:
         color_changed = upc(
             playlist_id=playlist_id,
             color=color,
-            token=self.user.token if self.user else "",
+            user=self.user,
         )
         if color_changed:
             self.refresh()

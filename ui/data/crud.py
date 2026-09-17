@@ -602,13 +602,11 @@ def create_learning(
     text: str,
     user: User,
     video_id: str | None = None,
-    clip_id: str | None = None,
 ) -> dict[str, Any]:
     learning = Learnings(
         author_id=user.id,
         text=text,
         video_id=video_id,
-        clip_id=clip_id,
     )
     learning.insert()
     return to_dicts(learning)

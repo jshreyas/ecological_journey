@@ -1,6 +1,7 @@
 from nicegui import ui
 
 from ui.data.crud import create_learning, delete_learning, load_learnings, update_learning
+from ui.utils.user_context import require_current_user
 from ui.utils.utils import human_stamp
 
 from .video_state import VideoState
@@ -63,7 +64,7 @@ class LearningsTab:
             return
         if not self.user or msg["author_id"] != self.user.id:
             return
-        delete_learning(learning_id=msg["_id"], token=self.user.token)
+        delete_learning(learning_id=msg["_id"], user=require_current_user())
         self.refresh()
 
     def on_edit(self, msg):
@@ -82,7 +83,7 @@ class LearningsTab:
             update_learning(
                 learning_id=self.editing_msg["_id"],
                 text=self.text_input.value,
-                token=self.user.token,
+                user=require_current_user(),
             )
             self.editing_msg = None
         else:
@@ -91,7 +92,7 @@ class LearningsTab:
                 author_id=self.user.id,
                 text=self.text_input.value,
                 video_id=self.video_state.video_id,
-                token=self.user.token,
+                user=require_current_user(),
             )
         self.text_input.value = ""
         self.refresh()

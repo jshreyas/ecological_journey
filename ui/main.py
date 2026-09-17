@@ -8,7 +8,7 @@ from typing import Annotated, Any, Dict, List
 import httpx
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
@@ -152,12 +152,8 @@ def post_playlist_videos(
 def delete_playlist_videos(
     playlist_id: str,
     payload: Dict[str, List[str]],
-    authorization: str = Header(...),
+    user: Annotated[User, Depends(require_api_user)],
 ):
-    if not authorization.startswith("Bearer "):
-        raise Exception("Invalid auth header")
-
-    token = authorization.removeprefix("Bearer ").strip()
     video_ids = payload.get("video_ids", [])
 
     if not video_ids:
@@ -170,7 +166,7 @@ def delete_playlist_videos(
     return delete_videos_from_playlist(
         playlist_id=playlist_id,
         video_ids=video_ids,
-        token=token,
+        user=user,
     )
 
 
@@ -295,8 +291,6 @@ async def main_page() -> None:
                     ).props("flat round dense")
                     return
 
-                # user = app.storage.user
-                token = app.storage.user.get("token")
                 ui.label(f"Hi, {user.username}!").classes("text-sm text-white")
                 # TODO: add a super admin role instead of these hardcoded checks
 
@@ -383,7 +377,7 @@ async def main_page() -> None:
                                     add_video_to_playlist(
                                         playlist_id=playlist_id,
                                         new_videos=videos,
-                                        token=token,
+                                        user=user,
                                     )
 
                                     sync_logger.info(
@@ -418,12 +412,12 @@ async def main_page() -> None:
 
                         ui.fab_action("description", on_click=lambda: notion_tree_update())
 
-                        def clearc(token: str):
-                            clear_cache(token=token)
+                        def clearc():
+                            clear_cache(user=user)
                             ui.notify("Cache cleared successfully!", color="green")
                             ui.navigate.reload()
 
-                        ui.fab_action("delete", on_click=lambda t=token: clearc(token=t))
+                        ui.fab_action("delete", on_click=lambda: clearc())
 
                 ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
