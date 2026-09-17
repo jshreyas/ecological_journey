@@ -1,4 +1,4 @@
-from ui.data.crud import create_service_token
+from ui.data.auth import create_service_token
 from ui.data.models import User
 
 service_user = User.find_one(User.role == "service").run()

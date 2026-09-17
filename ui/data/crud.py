@@ -1,60 +1,108 @@
 import os
 import threading
-from datetime import datetime, timedelta
-from functools import wraps
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, Optional, ParamSpec, TypeVar
 from uuid import uuid4
 
-import jwt
 from bson import ObjectId
 from bunnet import Document
 from dotenv import load_dotenv
-from passlib.context import CryptContext
 
+from ui.data.auth import AuthError, create_access_token, verify_password
 from ui.data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from ui.log import log
 from ui.utils.cache import cache_result, clear_all_caches, invalidate_cache
 from ui.utils.notion import generate_tree
 
+P = ParamSpec("P")
+R = TypeVar("R")
 load_dotenv()
-SECRET_KEY = os.getenv("JWT_SECRET")
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
+
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
 
 
-def get_user_from_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload["sub"]
-        user = User.find_one(User.id == ObjectId(user_id)).run()
-        if not user:
-            raise ValueError("User not found")
-        return user
-    except Exception as e:
-        log.error(f"Token error: {e}")
-        return None
+# TODO: Make shreyas.jukanti an admin
+def require_admin_or_service(user: User) -> None:
+    if user.role not in {"admin", "service"} and user.email != "shreyas.jukanti@gmail.com":
+        raise AuthError("Admin or service permission required")
 
 
-class AuthError(Exception):
-    pass
+def can_write_playlist(user: User, playlist: Playlist) -> bool:
+    if user.role in {"admin", "service"}:
+        return True
+
+    if playlist.owner_id == user.id:
+        return True
+
+    # TODO: Add this when Playlist.team_id and Team membership are enforced:
+    # if playlist.team_id and user.id in team.member_ids:
+    #     return True
+
+    return False
 
 
-def with_user_from_token(fn):
-    @wraps(fn)
-    def wrapper(*args, token=None, **kwargs):
-        if not token:
-            raise AuthError("Missing token")
+def get_or_create_user(
+    email: str,
+    username: str,
+    oauth_provider: str,
+    oauth_sub: str,
+) -> User:
+    """Return the existing user, or create and return a User document."""
+    existing_user = load_user_by_oauth(oauth_provider, oauth_sub)
 
-        user = get_user_from_token(token)
-        if not user:
-            raise AuthError("Invalid or expired token")
+    if existing_user:
+        # Optional: update display attributes from the current OAuth profile.
+        existing_user.username = username
+        existing_user.email = email
+        existing_user.save()
+        return existing_user
 
-        # Inject user into kwargs
-        return fn(*args, user=user, **kwargs)
+    # If OAuth subject was not found, optionally fall back to email.
+    existing_user = load_user_by_email(email)
+    if existing_user:
+        existing_user.username = username
+        existing_user.oauth_provider = oauth_provider
+        existing_user.oauth_sub = oauth_sub
+        existing_user.save()
+        return existing_user
 
-    return wrapper
+    return create_user(
+        email=email,
+        username=username,
+        oauth_provider=oauth_provider,
+        oauth_sub=oauth_sub,
+    )
+
+
+def create_user(
+    email: str,
+    username: str,
+    oauth_provider: str,
+    oauth_sub: str,
+) -> User:
+    user = User(
+        username=username,
+        email=email,
+        oauth_provider=oauth_provider,
+        oauth_sub=oauth_sub,
+        hashed_password=None,
+    )
+    user.insert()
+    return user
+
+
+def load_user_by_email(email: str) -> User | None:
+    return User.find_one(User.email == email).run()
+
+
+def load_user_by_oauth(
+    oauth_provider: str,
+    oauth_sub: str,
+) -> User | None:
+    return User.find_one(
+        User.oauth_provider == oauth_provider,
+        User.oauth_sub == oauth_sub,
+    ).run()
 
 
 def to_dicts(obj: Any) -> Any:
@@ -79,14 +127,11 @@ def to_dicts(obj: Any) -> Any:
         return obj
 
 
-@with_user_from_token
-def clear_cache(user=None, **kwargs):
+def clear_cache(*, user: User) -> dict[str, bool]:
+    require_admin_or_service(user)
 
     clear_all_caches()
-
-    return {
-        "success": True,
-    }
+    return {"success": True}
 
 
 @cache_result("teams", ttl_seconds=CACHE_TTL)
@@ -95,13 +140,12 @@ def load_teams():
     return to_dicts(teams)
 
 
-@with_user_from_token
 @invalidate_cache(keys=["teams"])
-def create_team(name: str, user=None, **kwargs):
+def create_team(*, name: str, user: User) -> dict[str, Any]:
     team = Team(
         name=name,
-        owner_id=user.id,  # inject user id
-        member_ids=[user.id],  # inject user id
+        owner_id=user.id,
+        member_ids=[user.id],
     )
     team.insert()
     return to_dicts(team)
@@ -187,23 +231,22 @@ def load_playlist(playlist_id: str) -> Optional[Dict[str, Any]]:
     return data
 
 
-@with_user_from_token
 @invalidate_cache(keys=["playlists:index"])
-def create_playlist(name: str, playlist_id: str, videos: List[Dict[str, Any]], user=None, **kwargs):
+def create_playlist(
+    *,
+    name: str,
+    playlist_id: str,
+    videos: list[dict[str, Any]],
+    user: User,
+) -> dict[str, Any]:
     playlist = Playlist(
         name=name,
         playlist_id=playlist_id,
-        videos=videos,
-        owner_id=user.id,  # inject user id
+        videos=[Video(**video) for video in videos],
+        owner_id=user.id,
     )
     playlist.insert()
     return to_dicts(playlist)
-
-
-def can_write_playlist(user: User, playlist: Playlist) -> bool:
-    if user.role == "service":
-        return True
-    return playlist.owner_id == user.id
 
 
 @cache_result(lambda video_id: f"video:{video_id}", ttl_seconds=CACHE_TTL)
@@ -225,7 +268,6 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
             return v
 
 
-@with_user_from_token
 @invalidate_cache(
     keys=lambda playlist_id, new_videos, **_: [
         f"playlist:{playlist_id}",
@@ -233,18 +275,29 @@ def load_video(video_id: str) -> Optional[Dict[str, Any]]:
         *[f"video:{video['video_id']}" for video in new_videos],
     ]
 )
-def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], user=None, **kwargs):
+def add_video_to_playlist(
+    *,
+    playlist_id: str,
+    new_videos: list[dict[str, Any]],
+    user: User,
+) -> dict[str, Any]:
+    if not ObjectId.is_valid(playlist_id):
+        raise ValueError("Invalid playlist ID")
 
     playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
-    if not playlist or not can_write_playlist(user, playlist):
-        raise AuthError("Playlist not found or access denied")
 
-    playlist.videos.extend([Video(**video) for video in new_videos])
+    if playlist is None:
+        raise ValueError("Playlist not found")
+
+    if not can_write_playlist(user, playlist):
+        raise AuthError("Access denied")
+
+    playlist.videos.extend(Video(**video) for video in new_videos)
     playlist.save()
+
     return to_dicts(playlist)
 
 
-@with_user_from_token
 @invalidate_cache(
     keys=lambda playlist_id, video_ids, **_: [
         "playlists:index",
@@ -253,9 +306,18 @@ def add_video_to_playlist(playlist_id: str, new_videos: List[Dict[str, Any]], us
         *[f"video:{video_id}" for video_id in video_ids],
     ]
 )
-def delete_videos_from_playlist(playlist_id: str, video_ids: List[str], user=None, **kwargs):
+def delete_videos_from_playlist(
+    *,
+    playlist_id: str,
+    video_ids: list[str],
+    user: User,
+) -> dict[str, Any]:
+    if not ObjectId.is_valid(playlist_id):
+        raise ValueError("Invalid playlist ID")
+
     playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
-    if not playlist:
+
+    if playlist is None:
         raise ValueError("Playlist not found")
 
     if not can_write_playlist(user, playlist):
@@ -263,7 +325,9 @@ def delete_videos_from_playlist(playlist_id: str, video_ids: List[str], user=Non
 
     ids_to_remove = set(video_ids)
     before_count = len(playlist.videos)
+
     playlist.videos = [video for video in playlist.videos if video.video_id not in ids_to_remove]
+
     removed_count = before_count - len(playlist.videos)
 
     if removed_count:
@@ -276,8 +340,6 @@ def delete_videos_from_playlist(playlist_id: str, video_ids: List[str], user=Non
     }
 
 
-# TODO: updates can be done by team members, not just owner
-@with_user_from_token
 @invalidate_cache(
     keys=lambda playlist_id, updated_video, **_: [
         f"video:{updated_video['video_id']}",
@@ -286,65 +348,59 @@ def delete_videos_from_playlist(playlist_id: str, video_ids: List[str], user=Non
     ]
 )
 def edit_video_in_playlist(
+    *,
     playlist_id: str,
-    updated_video: Dict[str, Any],
-    user=None,
-    **kwargs,
-):
-    playlist = Playlist.find_one(
-        Playlist.id == ObjectId(playlist_id),
-        Playlist.owner_id == user.id,
-    ).run()
+    updated_video: dict[str, Any],
+    user: User,
+) -> dict[str, Any]:
+    if not ObjectId.is_valid(playlist_id):
+        raise ValueError("Invalid playlist ID")
 
-    if not playlist:
-        raise ValueError("Playlist not found or access denied")
+    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
 
+    if playlist is None:
+        raise ValueError("Playlist not found")
+
+    if not can_write_playlist(user, playlist):
+        raise AuthError("Access denied")
+
+    updated_video = dict(updated_video)
     updated_video.pop("_id", None)
+
     updated_video_obj = Video(**updated_video)
     updated_video_id = updated_video_obj.video_id
 
-    updated = False
-
-    for i, video in enumerate(playlist.videos):
+    for index, video in enumerate(playlist.videos):
         if video.video_id != updated_video_id:
             continue
 
-        updated_fields = video.dict()
+        updated_fields = video.model_dump()
 
-        # --- CLIPS ---
         if "clips" in updated_video:
-            merged_clips = merge_embedded_docs(
+            updated_fields["clips"] = merge_embedded_docs(
                 existing_docs=video.clips,
                 updated_docs=updated_video_obj.clips,
                 id_field="clip_id",
                 doc_cls=Clip,
             )
-            updated_fields["clips"] = merged_clips
 
-        # --- ANCHORS (NEW) ---
         if "anchors" in updated_video:
-            merged_anchors = merge_embedded_docs(
+            updated_fields["anchors"] = merge_embedded_docs(
                 existing_docs=video.anchors,
                 updated_docs=updated_video_obj.anchors,
                 id_field="anchor_id",
                 doc_cls=Anchor,
             )
-            updated_fields["anchors"] = merged_anchors
 
-        # --- ALL OTHER FIELDS ---
-        for k, v in updated_video.items():
-            if k not in {"clips", "anchors"}:
-                updated_fields[k] = v
+        for key, value in updated_video.items():
+            if key not in {"clips", "anchors"}:
+                updated_fields[key] = value
 
-        playlist.videos[i] = Video(**updated_fields)
-        updated = True
-        break
+        playlist.videos[index] = Video(**updated_fields)
+        playlist.save()
+        return to_dicts(playlist)
 
-    if not updated:
-        raise ValueError("Video not found in playlist")
-
-    playlist.save()
-    return to_dicts(playlist)
+    raise ValueError("Video not found in playlist")
 
 
 def merge_embedded_docs(
@@ -377,7 +433,6 @@ def merge_embedded_docs(
     return merged_docs
 
 
-@with_user_from_token
 @invalidate_cache(
     keys=lambda playlist_id, **_: [
         "playlists:index",
@@ -389,17 +444,17 @@ def merge_embedded_docs(
     ]
 )
 def update_playlist_color(
+    *,
     playlist_id: str,
     color: str,
-    user=None,
-    **kwargs,
-):
+    user: User,
+) -> dict[str, Any]:
+    if not ObjectId.is_valid(playlist_id):
+        raise ValueError("Invalid playlist ID")
 
-    playlist = Playlist.find_one(
-        Playlist.id == ObjectId(playlist_id),
-    ).run()
+    playlist = Playlist.find_one(Playlist.id == ObjectId(playlist_id)).run()
 
-    if not playlist:
+    if playlist is None:
         raise ValueError("Playlist not found")
 
     if not can_write_playlist(user, playlist):
@@ -414,13 +469,17 @@ def update_playlist_color(
     }
 
 
-@with_user_from_token
 @invalidate_cache(keys=["cliplists"])
-def create_cliplist(name: str, filters: Dict[str, Any], user=None, **kwargs):
+def create_cliplist(
+    *,
+    name: str,
+    filters: dict[str, Any],
+    user: User,
+) -> dict[str, Any]:
     cliplist = Cliplist(
         name=name,
         filters=filters,
-        owner_id=user.id,  # inject user id
+        owner_id=user.id,
     )
     cliplist.insert()
     return to_dicts(cliplist)
@@ -439,68 +498,26 @@ def load_cliplist(cliplist_id: str):
     return None
 
 
-def get_or_create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
-    user = load_user(email)
-    if user:
-        return user
-    return create_user(email, username, oauth_provider, oauth_sub)
+# TODO: this method is for non oauth login which we dont have currently
+# if we need this, it should be updated to return user object similar to google_oauth
+def login_user(email: str, password: str) -> dict[str, str] | bool:
+    user = load_user_by_email(email)
 
-
-def create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
-    user = User(
-        username=username,
-        email=email,
-        oauth_provider=oauth_provider,
-        oauth_sub=oauth_sub,
-        hashed_password=None,
-    )
-    user.insert()
-    return to_dicts(user)
-
-
-def load_user(email: str):
-    user = User.find_one(User.email == email).run()
-    if user:
-        return to_dicts(user)
-    return None
-
-
-def verify_password(plain_password, hashed):
-    return pwd_context.verify(plain_password, hashed)
-
-
-# TODO: combine with create_access_token
-def create_service_token(service_user: User):
-    return jwt.encode(
-        {
-            "sub": str(service_user.id),
-            "role": "service",
-            "exp": datetime.utcnow() + timedelta(minutes=5),
-        },
-        SECRET_KEY,
-        algorithm=ALGORITHM,
-    )
-
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def login_user(email: str, password: str):
-    user = load_user(email)
-    if not user or not verify_password(password, user["hashed_password"]):
-        log.error("Incorrect email or password")
+    if user is None or not user.hashed_password:
+        log.warning("Incorrect email or password", email=email)
         return False
 
-    token = create_access_token({"sub": str(user["_id"])})
+    if not verify_password(password, user.hashed_password):
+        log.warning("Incorrect email or password", email=email)
+        return False
+
+    token = create_access_token({"sub": str(user.id)})
+
     return {
         "access_token": token,
-        "id": str(user["_id"]),
-        "email": user["email"],
-        "username": user["username"],
+        "id": str(user.id),
+        "email": str(user.email),
+        "username": user.username,
     }
 
 
@@ -526,7 +543,7 @@ def load_learnings(video_id: str):
     # filter first
     filtered = [_ for _ in _load_learnings() if _.get("video_id") == video_id]
 
-    # TODO: refctor this logic as a decorator or utility function of adding user info
+    # TODO: refactor this logic as a decorator or utility function of adding user info
     # collect unique author_ids (stored as strings)
     author_ids = {_["author_id"] for _ in filtered if _.get("author_id")}
 
@@ -550,33 +567,60 @@ def load_learnings(video_id: str):
     return filtered
 
 
-@with_user_from_token
-def create_learning(author_id: str, text: str, video_id: str = None, clip_id: str = None, user=None, **kwargs):
+def create_learning(
+    *,
+    text: str,
+    user: User,
+    video_id: str | None = None,
+) -> dict[str, Any]:
     learning = Learnings(
         author_id=user.id,
         text=text,
         video_id=video_id,
-        clip_id=clip_id,
     )
     learning.insert()
     return to_dicts(learning)
 
 
-@with_user_from_token
-def update_learning(learning_id: str, text: str, user=None, **kwargs):
-    learning = Learnings.find_one(Learnings.id == ObjectId(learning_id), Learnings.author_id == user.id).run()
-    if not learning:
+def update_learning(
+    *,
+    learning_id: str,
+    text: str,
+    user: User,
+) -> dict[str, Any]:
+    if not ObjectId.is_valid(learning_id):
+        raise ValueError("Invalid learning ID")
+
+    learning = Learnings.find_one(
+        Learnings.id == ObjectId(learning_id),
+        Learnings.author_id == user.id,
+    ).run()
+
+    if learning is None:
         raise ValueError("Learning not found or access denied")
+
     learning.text = text
     learning.updated_at = datetime.utcnow()
     learning.save()
+
     return to_dicts(learning)
 
 
-@with_user_from_token
-def delete_learning(learning_id: str, user=None, **kwargs):
-    learning = Learnings.find_one(Learnings.id == ObjectId(learning_id), Learnings.author_id == user.id).run()
-    if not learning:
+def delete_learning(
+    *,
+    learning_id: str,
+    user: User,
+) -> bool:
+    if not ObjectId.is_valid(learning_id):
+        raise ValueError("Invalid learning ID")
+
+    learning = Learnings.find_one(
+        Learnings.id == ObjectId(learning_id),
+        Learnings.author_id == user.id,
+    ).run()
+
+    if learning is None:
         raise ValueError("Learning not found or access denied")
+
     learning.delete()
     return True

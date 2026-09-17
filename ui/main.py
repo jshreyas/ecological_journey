@@ -1,20 +1,20 @@
 import asyncio
-import logging
 import os
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Annotated, Any, Dict, List
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
 from starlette.responses import RedirectResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from ui.data.auth import AuthError, require_api_user
 from ui.data.crud import (
     add_video_to_playlist,
     clear_cache,
@@ -24,18 +24,20 @@ from ui.data.crud import (
     load_playlist,
     load_playlists,
     load_teams,
+    require_admin_or_service,
     trigger_notion_refresh,
 )
-from ui.log import log
+from ui.data.models import User
+from ui.log import log, logging
 from ui.pages.about import about_page
-
-# from ui.pages.cliplists import cliplists_page
+from ui.pages.cliplists import cliplists_page
 from ui.pages.custom_sub_pages import custom_sub_pages
 from ui.pages.film import film_page
 from ui.pages.home import home_page
 from ui.pages.notion import notion_page
 from ui.pages.playlist import playlist_page
 from ui.pages.search import search_page
+from ui.utils.user_context import get_current_user
 from ui.utils.youtube import fetch_playlist_items
 
 load_dotenv()
@@ -79,35 +81,42 @@ def _is_valid(user_info: dict) -> bool:
 
 @app.get("/auth/google/callback")
 async def google_oauth(request: Request) -> RedirectResponse:
+    redirect_path = request.query_params.get("state") or "/"
+
     try:
         token = await oauth.google.authorize_access_token(request)
-        user_info = token.get("userinfo", {})
 
-        if _is_valid(user_info):
-            user = get_or_create_user(
-                user_info["email"],
-                user_info["name"],
-                "google",
-                user_info["sub"],
-            )
+        user_info = token.get("userinfo") or {}
 
-            jwt_token = create_access_token({"sub": str(user["_id"])})
+        if not _is_valid(user_info):
+            log.warning("Google OAuth callback received invalid user information")
+            return RedirectResponse(redirect_path)
 
-            app.storage.user.update(
-                {
-                    "authenticated": True,
-                    "user": user_info["name"],
-                    "id": str(user["_id"]),
-                    "token": jwt_token,
-                    "google_access_token": token["access_token"],
-                    "user_info": user_info,
-                }
-            )
+        email = user_info["email"]
+        username = user_info.get("name") or user_info.get("given_name") or email.split("@", maxsplit=1)[0]
 
-    except Exception:
-        logging.exception("OAuth failed")
+        user = get_or_create_user(
+            email=email,
+            username=username,
+            oauth_provider="google",
+            oauth_sub=user_info["sub"],
+        )
 
-    redirect_path = request.query_params.get("state") or "/"
+        jwt_token = create_access_token({"sub": str(user.id)})
+
+        app.storage.user.clear()
+        app.storage.user.update(
+            {
+                "authenticated": True,
+                "user_id": str(user.id),
+                "token": jwt_token,
+                "google_access_token": token.get("access_token"),
+            }
+        )
+
+    except Exception as exc:
+        log.exception("OAuth failed with exception: %s", exc)
+
     return RedirectResponse(redirect_path)
 
 
@@ -129,18 +138,13 @@ def get_playlists(full: bool = True):
 @api_router.post("/playlists/{playlist_id}/videos")
 def post_playlist_videos(
     playlist_id: str,
-    new_videos: List[Dict[str, Any]],
-    authorization: str = Header(...),
+    new_videos: list[dict[str, Any]],
+    user: Annotated[User, Depends(require_api_user)],
 ):
-    if not authorization.startswith("Bearer "):
-        raise Exception("Invalid auth header")
-
-    token = authorization.removeprefix("Bearer ").strip()
-
     return add_video_to_playlist(
         playlist_id=playlist_id,
         new_videos=new_videos,
-        token=token,
+        user=user,
     )
 
 
@@ -148,12 +152,8 @@ def post_playlist_videos(
 def delete_playlist_videos(
     playlist_id: str,
     payload: Dict[str, List[str]],
-    authorization: str = Header(...),
+    user: Annotated[User, Depends(require_api_user)],
 ):
-    if not authorization.startswith("Bearer "):
-        raise Exception("Invalid auth header")
-
-    token = authorization.removeprefix("Bearer ").strip()
     video_ids = payload.get("video_ids", [])
 
     if not video_ids:
@@ -166,7 +166,7 @@ def delete_playlist_videos(
     return delete_videos_from_playlist(
         playlist_id=playlist_id,
         video_ids=video_ids,
-        token=token,
+        user=user,
     )
 
 
@@ -212,6 +212,7 @@ def setup_landscape_mode_guard():
 
 
 # TODO: move this and playlist sync code to its own file?
+# TODO: move this to ui.log file and converge as necessary
 class LogElementHandler(logging.Handler):
     """Push logging records into one NiceGUI ui.log element."""
 
@@ -230,7 +231,6 @@ class LogElementHandler(logging.Handler):
 @ui.page("/")
 @ui.page("/{_:path}")
 async def main_page() -> None:
-    log.info("Rendering main page")
     ui.add_head_html(
         """
         <script src="https://www.youtube.com/iframe_api"></script>
@@ -268,10 +268,11 @@ async def main_page() -> None:
 
         def render_auth():
             auth_container.clear()
-            authenticated = app.storage.user.get("authenticated", False)
+            user = get_current_user()
+            # authenticated = app.storage.user.get("authenticated", False)
 
             with auth_container:
-                if not authenticated:
+                if user is None:
 
                     def login():
                         app.storage.user.setdefault("init", True)
@@ -288,153 +289,160 @@ async def main_page() -> None:
                     ).classes(
                         "text-white"
                     ).props("flat round dense")
-                else:
-                    user = app.storage.user
-                    ui.label(f"Hi, {user.get('user')}!").classes("text-sm text-white")
-                    # TODO: add a super admin role instead of these hardcoded checks
-                    if user.get("user_info").get("email") == "shreyas.jukanti@gmail.com":
-                        with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
+                    return
 
-                            async def playlistss():
-                                state = {
-                                    "reload_on_close": False,
-                                }
+                ui.label(f"Hi, {user.username}!").classes("text-sm text-white")
+                # TODO: add a super admin role instead of these hardcoded checks
 
-                                async def close_dialog() -> None:
-                                    dialog.close()
+                try:
+                    require_admin_or_service(user)
+                    with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
-                                    if state["reload_on_close"]:
-                                        await asyncio.sleep(0)
-                                        ui.navigate.reload()
+                        async def playlistss():
+                            state = {
+                                "reload_on_close": False,
+                            }
 
-                                with (
-                                    ui.dialog().props("persistent") as dialog,
-                                    ui.card().classes("w-full max-w-3xl relative"),
-                                ):
-                                    log_element = ui.log(max_lines=200).classes("w-full h-96 font-mono text-sm")
+                            async def close_dialog() -> None:
+                                dialog.close()
 
-                                    close_button = ui.button(
-                                        "Close",
-                                        on_click=close_dialog,
-                                    ).props("flat")
+                                if state["reload_on_close"]:
+                                    await asyncio.sleep(0)
+                                    ui.navigate.reload()
 
-                                    close_button.disable()
+                            with (
+                                ui.dialog().props("persistent") as dialog,
+                                ui.card().classes("w-full max-w-3xl relative"),
+                            ):
+                                log_element = ui.log(max_lines=200).classes("w-full h-96 font-mono text-sm")
 
-                                dialog.open()
+                                close_button = ui.button(
+                                    "Close",
+                                    on_click=close_dialog,
+                                ).props("flat")
 
-                                handler = LogElementHandler(log_element)
-                                handler.setFormatter(
-                                    logging.Formatter(
-                                        fmt="%(asctime)s %(levelname)s: %(message)s",
-                                        datefmt="%H:%M:%S",
-                                    )
+                                close_button.disable()
+
+                            dialog.open()
+
+                            handler = LogElementHandler(log_element)
+                            handler.setFormatter(
+                                logging.Formatter(
+                                    fmt="%(asctime)s %(levelname)s: %(message)s",
+                                    datefmt="%H:%M:%S",
+                                )
+                            )
+
+                            sync_logger = logging.getLogger(f"playlist-sync-{id(dialog)}")
+                            sync_logger.setLevel(logging.INFO)
+                            sync_logger.propagate = False
+                            sync_logger.addHandler(handler)
+
+                            ui.context.client.on_disconnect(lambda: sync_logger.removeHandler(handler))
+
+                            try:
+                                playlists = [load_playlist(p["_id"]) for p in load_playlists()]
+
+                                sync_logger.info(
+                                    "Starting sync for %s playlists.",
+                                    len(playlists),
                                 )
 
-                                sync_logger = logging.getLogger(f"playlist-sync-{id(dialog)}")
-                                sync_logger.setLevel(logging.INFO)
-                                sync_logger.propagate = False
-                                sync_logger.addHandler(handler)
+                                videos_to_sync = await fetch_playlist_items(
+                                    playlists,
+                                    logger=sync_logger,
+                                )
 
-                                ui.context.client.on_disconnect(lambda: sync_logger.removeHandler(handler))
+                                sync_logger.info(
+                                    "Fetch result contains %s playlists.",
+                                    len(videos_to_sync),
+                                )
 
-                                try:
-                                    playlists = [load_playlist(p["_id"]) for p in load_playlists()]
+                                total_videos = sum(len(videos) for videos in videos_to_sync.values())
+
+                                sync_logger.info(
+                                    "Total videos available for synchronization: %s",
+                                    total_videos,
+                                )
+
+                                if total_videos == 0:
+                                    sync_logger.info(
+                                        "No videos to synchronize. "
+                                        "You can close this dialog; the page will not reload."
+                                    )
+                                    return
+
+                                sync_logger.info("Starting synchronization of videos to playlists...")
+
+                                for playlist_id, videos in videos_to_sync.items():
+                                    add_video_to_playlist(
+                                        playlist_id=playlist_id,
+                                        new_videos=videos,
+                                        user=user,
+                                    )
 
                                     sync_logger.info(
-                                        "Starting sync for %s playlists.",
-                                        len(playlists),
+                                        "Synchronized %s videos to playlist %s.",
+                                        len(videos),
+                                        playlist_id,
                                     )
 
-                                    videos_to_sync = await fetch_playlist_items(
-                                        playlists,
-                                        logger=sync_logger,
-                                    )
+                                state["reload_on_close"] = True
 
-                                    sync_logger.info(
-                                        "Fetch result contains %s playlists.",
-                                        len(videos_to_sync),
-                                    )
+                                sync_logger.info(
+                                    "Synchronization completed successfully. " "Close this dialog to reload the page."
+                                )
+                            except asyncio.CancelledError:
+                                sync_logger.warning("Sync cancelled. You can now close the dialog.")
+                                raise
+                            except Exception:
+                                sync_logger.exception(
+                                    "Sync failed. You can close the dialog; " "the page will not reload."
+                                )
+                            finally:
+                                close_button.enable()
 
-                                    total_videos = sum(len(videos) for videos in videos_to_sync.values())
+                                sync_logger.removeHandler(handler)
+                                handler.close()
 
-                                    sync_logger.info(
-                                        "Total videos available for synchronization: %s",
-                                        total_videos,
-                                    )
+                        ui.fab_action("playlist_add_check", on_click=lambda: playlistss())
 
-                                    if total_videos == 0:
-                                        sync_logger.info(
-                                            "No videos to synchronize. "
-                                            "You can close this dialog; the page will not reload."
-                                        )
-                                        return
+                        def notion_tree_update():
+                            trigger_notion_refresh()
+                            ui.notify("Started Notion tree sync in background")
 
-                                    sync_logger.info("Starting synchronization of videos to playlists...")
+                        ui.fab_action("description", on_click=lambda: notion_tree_update())
 
-                                    for playlist_id, videos in videos_to_sync.items():
-                                        add_video_to_playlist(
-                                            playlist_id=playlist_id,
-                                            new_videos=videos,
-                                            token=user.get("token"),
-                                        )
+                        def clearc():
+                            clear_cache(user=user)
+                            ui.notify("Cache cleared successfully!", color="green")
+                            ui.navigate.reload()
 
-                                        sync_logger.info(
-                                            "Synchronized %s videos to playlist %s.",
-                                            len(videos),
-                                            playlist_id,
-                                        )
+                        ui.fab_action("delete", on_click=lambda: clearc())
 
-                                    state["reload_on_close"] = True
-
-                                    sync_logger.info(
-                                        "Synchronization completed successfully. "
-                                        "Close this dialog to reload the page."
-                                    )
-                                except asyncio.CancelledError:
-                                    sync_logger.warning("Sync cancelled. You can now close the dialog.")
-                                    raise
-                                except Exception:
-                                    sync_logger.exception(
-                                        "Sync failed. You can close the dialog; " "the page will not reload."
-                                    )
-                                finally:
-                                    close_button.enable()
-
-                                    sync_logger.removeHandler(handler)
-                                    handler.close()
-
-                            ui.fab_action("playlist_add_check", on_click=lambda: playlistss())
-
-                            def notion_tree_update():
-                                trigger_notion_refresh()
-                                ui.notify("Started Notion tree sync in background")
-
-                            ui.fab_action("description", on_click=lambda: notion_tree_update())
-
-                            def clearc(token: str):
-                                clear_cache(token=token)
-                                ui.notify("Cache cleared successfully!", color="green")
-                                ui.navigate.reload()
-
-                            ui.fab_action("delete", on_click=lambda t=user.get("token"): clearc(token=t))
-
-                    ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
+                except AuthError:
+                    log.warning("User %s does not have admin or service permissions.", user.email)
+                ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
         async def handle_logout():
             access_token = app.storage.user.get("google_access_token")
+
             if access_token:
                 try:
                     async with httpx.AsyncClient() as client:
                         await client.post(
                             "https://oauth2.googleapis.com/revoke",
                             params={"token": access_token},
-                            headers={"content-type": "application/x-www-form-urlencoded"},
+                            headers={
+                                "content-type": "application/x-www-form-urlencoded",
+                            },
                         )
                 except Exception:
-                    logging.exception("Failed to revoke Google token")
+                    log.exception("Failed to revoke Google token")
 
             app.storage.user.clear()
-            app.storage.user.update({"authenticated": False})
+            app.storage.user["authenticated"] = False
+
             render_auth()
             ui.navigate.reload()
 
@@ -445,7 +453,7 @@ async def main_page() -> None:
             "/": home_page,
             "/about": about_page,
             "/search": search_page,
-            # "/cliplists": cliplists_page,
+            "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
             "/notion": notion_page,  # TODO: the embed doesnt work
             # "/stories": stories,

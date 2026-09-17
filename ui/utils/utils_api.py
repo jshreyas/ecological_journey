@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional
 
 from ui.data.crud import add_video_to_playlist, create_cliplist
-from ui.data.crud import create_playlist as cp
-from ui.data.crud import create_team as ct
+from ui.data.crud import create_playlist as create_playlist_record
+from ui.data.crud import create_team as create_team_record
 from ui.data.crud import (
     edit_video_in_playlist,
     load_cliplist,
@@ -11,6 +11,7 @@ from ui.data.crud import (
     load_playlists,
     load_teams,
 )
+from ui.data.models import User
 from ui.utils.cache import CACHE_TTL, cache_result
 from ui.utils.utils import parse_query_expression
 
@@ -19,9 +20,8 @@ def get_notion_tree():
     return load_notion_latest()["tree"]
 
 
-def create_team(name: str, token: str, user_id: str) -> Any:
-    """Create a new team and refresh cache."""
-    return ct(name=name, token=token)
+def create_team(*, name: str, user: User) -> dict[str, Any]:
+    return create_team_record(name=name, user=user)
 
 
 def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
@@ -33,14 +33,32 @@ def fetch_teams_for_user(user_id: str) -> List[Dict[str, Any]]:
     return response
 
 
-def create_playlist(video_data: List[Dict[str, Any]], token: str, name: str, playlist_id: str) -> Any:
-    """Create a new playlist with videos."""
-    return cp(name=name, playlist_id=playlist_id, videos=video_data, token=token)
+def create_playlist(
+    *,
+    video_data: list[dict[str, Any]],
+    name: str,
+    playlist_id: str,
+    user: User,
+) -> dict[str, Any]:
+    return create_playlist_record(
+        name=name,
+        playlist_id=playlist_id,
+        videos=video_data,
+        user=user,
+    )
 
 
-def create_video(video_data: List[Dict[str, Any]], token: str, playlist_id: str) -> None:
-    """Create videos in a playlist."""
-    return add_video_to_playlist(playlist_id=playlist_id, new_videos=video_data, token=token)
+def create_video(
+    *,
+    video_data: list[dict[str, Any]],
+    playlist_id: str,
+    user: User,
+) -> dict[str, Any]:
+    return add_video_to_playlist(
+        playlist_id=playlist_id,
+        new_videos=video_data,
+        user=user,
+    )
 
 
 def load_playlists_for_user(user_id: str, filter: str = "all") -> Dict[str, List[Dict[str, Any]]]:
@@ -142,12 +160,29 @@ def load_clips() -> List[Dict[str, Any]]:
     return clips
 
 
-def save_video_metadata(video_metadata: dict, token: str) -> bool:
-    return edit_video_in_playlist(playlist_id=video_metadata["playlist_id"], updated_video=video_metadata, token=token)
+def save_video_metadata(
+    *,
+    video_metadata: dict[str, Any],
+    user: User,
+) -> dict[str, Any]:
+    return edit_video_in_playlist(
+        playlist_id=video_metadata["playlist_id"],
+        updated_video=video_metadata,
+        user=user,
+    )
 
 
-def save_cliplist(name: str, filters_state: Dict[str, Any], token: str) -> Optional[Dict[str, Any]]:
-    return create_cliplist(name=name, filters=filters_state, token=token)
+def save_cliplist(
+    *,
+    name: str,
+    filters_state: dict[str, Any],
+    user: User,
+) -> dict[str, Any]:
+    return create_cliplist(
+        name=name,
+        filters=filters_state,
+        user=user,
+    )
 
 
 def get_filtered_clips(cliplist_id: str) -> List[Dict[str, Any]]:

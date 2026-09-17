@@ -123,7 +123,7 @@ class User(Document):
     username: str
     email: EmailStr
     hashed_password: Optional[str] = None
-    team_ids: List[ObjectId] = []
+    team_ids: List[ObjectId] = Field(default_factory=list)
     role: Literal["user", "service", "admin"] = "user"
     oauth_provider: Optional[str] = None
     oauth_sub: Optional[str] = None

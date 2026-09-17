@@ -10,7 +10,7 @@ from ui.data.crud import load_video
 from ui.utils.dialog_puns import generate_funny_title
 from ui.utils.user_context import User
 from ui.utils.utils_api import load_videos as lvs
-from ui.utils.utils_api import save_video_metadata
+from ui.utils.utils_api import save_video_metadata as svm
 
 TIME_PATTERN = re.compile(r"^(\d+:[0-5]\d:[0-5]\d|\d+:[0-5]\d)$")
 
@@ -254,7 +254,7 @@ class VideoState:
         video["clips"] = self.clip_draft
 
         # ---------- SAVE ----------
-        _ = save_video_metadata(video, self.user.token)
+        _ = svm(video_metadata=video, user=self.user)
 
         # Reset dirty flags
         self._metadata_dirty = False

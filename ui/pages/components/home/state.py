@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from ui.data.crud import load_playlists as lp
 from ui.data.crud import update_playlist_color as upc
-from ui.utils.user_context import User
+from ui.utils.user_context import User, require_current_user
 from ui.utils.utils_api import create_playlist as cp
 from ui.utils.utils_api import create_video as cv
 from ui.utils.utils_api import load_playlists_for_user as lp_user
@@ -35,14 +35,14 @@ class State:
 
     def create_playlist(self, playlist_name: str, playlist_id: str) -> Optional[Dict[str, Any]]:
         """Create a new playlist and refresh state"""
-        created_playlist = cp([], self.user.token if self.user else "", playlist_name, playlist_id)
+        created_playlist = cp([], playlist_name, playlist_id, require_current_user())
         if created_playlist:
             self.refresh()
         return created_playlist
 
     def create_video(self, video_data: Dict[str, Any], playlist_id: str) -> Optional[Dict[str, Any]]:
         """Create a new video and refresh state"""
-        created_video = cv(video_data, self.user.token if self.user else "", playlist_id)
+        created_video = cv(video_data, playlist_id, require_current_user())
         if created_video:
             self.refresh()
         return created_video
@@ -87,7 +87,7 @@ class State:
         color_changed = upc(
             playlist_id=playlist_id,
             color=color,
-            token=self.user.token if self.user else "",
+            user=self.user,
         )
         if color_changed:
             self.refresh()

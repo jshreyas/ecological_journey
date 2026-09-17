@@ -1,7 +1,6 @@
 from nicegui import ui
 
 from ui.utils.dialog_puns import in_progress
-from ui.utils.user_context import User, with_user_context
 from ui.utils.utils import format_time
 from ui.utils.utils_api import get_filtered_clips
 from ui.utils.video_player import VideoPlayer
@@ -12,8 +11,7 @@ is_autoplay = True
 is_loop = True
 
 
-@with_user_context
-def playlist_page(user: User | None, cliplist_id):
+def playlist_page(cliplist_id):
 
     if not cliplist_id:
         in_progress()
@@ -51,7 +49,6 @@ def playlist_page(user: User | None, cliplist_id):
 
         card = ui.card().classes(card_tailwind).on("click", lambda idx=index: play_clip(idx))
         with card:
-            # TODO: on click play the clip doesnt work, it must be clashing with the autoplay's queue; either remove onclick or fix the logic
             ui.label(title).classes("text-md font-semibold")
             with ui.row().classes("w-full gap-2 justify-between"):
                 ui.label(f"⏱ {start_time} - {end_time}").classes("text-xs")
