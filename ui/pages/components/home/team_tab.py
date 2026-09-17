@@ -2,6 +2,7 @@ from nicegui import ui
 
 from ui.log import log
 from ui.utils.dialog_puns import caught_john_doe
+from ui.utils.user_context import require_current_user
 from ui.utils.utils_api import create_team, fetch_teams_for_user
 
 from .state import State
@@ -194,7 +195,7 @@ class TeamTab:
                     if not name:
                         ui.notify("Please enter a team name.", type="warning")
                         return
-                    create_team(name, self.home_state.user.token, self.home_state.user.id)
+                    create_team(name, require_current_user())
                     ui.notify(f'Team "{name}" created successfully!')
                     self.refresh()
                     team_name_input.value = ""

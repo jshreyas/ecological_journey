@@ -3,18 +3,19 @@ import logging
 import os
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Annotated, Any, Dict, List
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from nicegui import app, ui
 from starlette.responses import RedirectResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from ui.data.auth import require_api_user
 from ui.data.crud import (
     add_video_to_playlist,
     clear_cache,
@@ -26,6 +27,7 @@ from ui.data.crud import (
     load_teams,
     trigger_notion_refresh,
 )
+from ui.data.models import User
 from ui.log import log
 from ui.pages.about import about_page
 from ui.pages.cliplists import cliplists_page
@@ -136,18 +138,13 @@ def get_playlists(full: bool = True):
 @api_router.post("/playlists/{playlist_id}/videos")
 def post_playlist_videos(
     playlist_id: str,
-    new_videos: List[Dict[str, Any]],
-    authorization: str = Header(...),
+    new_videos: list[dict[str, Any]],
+    user: Annotated[User, Depends(require_api_user)],
 ):
-    if not authorization.startswith("Bearer "):
-        raise Exception("Invalid auth header")
-
-    token = authorization.removeprefix("Bearer ").strip()
-
     return add_video_to_playlist(
         playlist_id=playlist_id,
         new_videos=new_videos,
-        token=token,
+        user=user,
     )
 
 

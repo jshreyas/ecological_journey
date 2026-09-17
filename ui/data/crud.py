@@ -45,25 +45,6 @@ def can_write_playlist(user: User, playlist: Playlist) -> bool:
     return False
 
 
-def get_user_from_token(token: str) -> User | None:
-    """Validate an application JWT and return the canonical User document."""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-
-        if not user_id:
-            return None
-
-        return User.find_one(User.id == ObjectId(user_id)).run()
-
-    except (ValueError, TypeError) as exc:
-        log.warning("Invalid application token", error=str(exc))
-        return None
-    except Exception:
-        log.exception("Could not load user from application token")
-        return None
-
-
 def get_or_create_user(
     email: str,
     username: str,
@@ -549,19 +530,24 @@ def create_access_token(data: dict):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def login_user(email: str, password: str):
+def login_user(email: str, password: str) -> dict[str, str] | bool:
     user = load_user_by_email(email)
-    user = to_dicts(user)
-    if not user or not verify_password(password, user["hashed_password"]):
-        log.error("Incorrect email or password")
+
+    if user is None or not user.hashed_password:
+        log.warning("Incorrect email or password", email=email)
         return False
 
-    token = create_access_token({"sub": str(user["_id"])})
+    if not verify_password(password, user.hashed_password):
+        log.warning("Incorrect email or password", email=email)
+        return False
+
+    token = create_access_token({"sub": str(user.id)})
+
     return {
         "access_token": token,
-        "id": str(user["_id"]),
-        "email": user["email"],
-        "username": user["username"],
+        "id": str(user.id),
+        "email": str(user.email),
+        "username": user.username,
     }
 
 

@@ -254,7 +254,7 @@ class VideoState:
         video["clips"] = self.clip_draft
 
         # ---------- SAVE ----------
-        _ = save_video_metadata(video, self.user.token)
+        _ = save_video_metadata(video, self.user)
 
         # Reset dirty flags
         self._metadata_dirty = False

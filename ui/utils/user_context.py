@@ -5,7 +5,7 @@ from typing import ParamSpec, TypeVar
 from nicegui import app
 from structlog.contextvars import bind_contextvars
 
-from ui.data.crud import get_user_from_token
+from ui.data.auth import AuthError, require_user_from_token
 from ui.data.models import User
 
 P = ParamSpec("P")
@@ -13,38 +13,35 @@ R = TypeVar("R")
 
 
 def get_current_user() -> User | None:
-    """
-    Resolve the current NiceGUI browser session into the canonical User model.
-
-    app.storage.user contains only JSON-safe session metadata; this function
-    turns its application JWT into a database User document.
-    """
+    """Return the current NiceGUI session user, or None for anonymous visitors."""
     session = app.storage.user
-    token = session.get("token")
 
-    if not session.get("authenticated") or not token:
+    if not session.get("authenticated"):
         return None
 
-    user = get_user_from_token(token)
+    token = session.get("token")
+    if not isinstance(token, str) or not token:
+        return None
 
-    if user is None:
-        # Token is stale, invalid, expired, or its user was deleted.
-        # Do not leave the browser appearing authenticated.
+    try:
+        return require_user_from_token(token)
+    except AuthError:
         session.clear()
         session["authenticated"] = False
         return None
+
+
+def require_current_user() -> User:
+    """Return the authenticated NiceGUI user or fail explicitly."""
+    user = get_current_user()
+
+    if user is None:
+        raise AuthError("Please sign in to continue")
 
     return user
 
 
 def with_user_context(page_func: Callable[P, R]) -> Callable[P, R]:
-    """
-    Inject `user: User | None` as the first page-function argument.
-
-    Page functions receive the real database User document, never a parallel
-    dataclass or raw app.storage.user dictionary.
-    """
-
     @wraps(page_func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         user = get_current_user()
@@ -52,7 +49,6 @@ def with_user_context(page_func: Callable[P, R]) -> Callable[P, R]:
         bind_contextvars(
             user_id=str(user.id) if user else None,
             username=user.username if user else "anonymous",
-            email=str(user.email) if user else None,
             role=user.role if user else None,
         )
 
