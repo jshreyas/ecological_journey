@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import sys
 import time
@@ -15,7 +14,7 @@ from nicegui import app, ui
 from starlette.responses import RedirectResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from ui.data.auth import require_api_user
+from ui.data.auth import AuthError, require_api_user
 from ui.data.crud import (
     add_video_to_playlist,
     clear_cache,
@@ -25,9 +24,11 @@ from ui.data.crud import (
     load_playlist,
     load_playlists,
     load_teams,
+    require_admin_or_service,
     trigger_notion_refresh,
 )
 from ui.data.models import User
+from ui.log import log, logging
 from ui.pages.about import about_page
 from ui.pages.cliplists import cliplists_page
 from ui.pages.custom_sub_pages import custom_sub_pages
@@ -88,7 +89,7 @@ async def google_oauth(request: Request) -> RedirectResponse:
         user_info = token.get("userinfo") or {}
 
         if not _is_valid(user_info):
-            logging.warning("Google OAuth callback received invalid user information")
+            log.warning("Google OAuth callback received invalid user information")
             return RedirectResponse(redirect_path)
 
         email = user_info["email"]
@@ -114,7 +115,7 @@ async def google_oauth(request: Request) -> RedirectResponse:
         )
 
     except Exception as exc:
-        logging.exception("OAuth failed with exception: %s", exc)
+        log.exception("OAuth failed with exception: %s", exc)
 
     return RedirectResponse(redirect_path)
 
@@ -211,6 +212,7 @@ def setup_landscape_mode_guard():
 
 
 # TODO: move this and playlist sync code to its own file?
+# TODO: move this to ui.log file and converge as necessary
 class LogElementHandler(logging.Handler):
     """Push logging records into one NiceGUI ui.log element."""
 
@@ -292,7 +294,8 @@ async def main_page() -> None:
                 ui.label(f"Hi, {user.username}!").classes("text-sm text-white")
                 # TODO: add a super admin role instead of these hardcoded checks
 
-                if user.email == "shreyas.jukanti@gmail.com":
+                try:
+                    require_admin_or_service(user)
                     with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
                         async def playlistss():
@@ -417,6 +420,8 @@ async def main_page() -> None:
 
                         ui.fab_action("delete", on_click=lambda: clearc())
 
+                except AuthError:
+                    log.warning("User %s does not have admin or service permissions.", user.email)
                 ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
         async def handle_logout():
@@ -433,7 +438,7 @@ async def main_page() -> None:
                             },
                         )
                 except Exception:
-                    logging.exception("Failed to revoke Google token")
+                    log.exception("Failed to revoke Google token")
 
             app.storage.user.clear()
             app.storage.user["authenticated"] = False
