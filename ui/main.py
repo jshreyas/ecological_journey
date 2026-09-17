@@ -83,14 +83,13 @@ async def google_oauth(request: Request) -> RedirectResponse:
 
     try:
         token = await oauth.google.authorize_access_token(request)
+
         user_info = token.get("userinfo") or {}
 
         if not _is_valid(user_info):
             logging.warning("Google OAuth callback received invalid user information")
             return RedirectResponse(redirect_path)
-        # import pdb
 
-        # pdb.set_trace()
         email = user_info["email"]
         username = user_info.get("name") or user_info.get("given_name") or email.split("@", maxsplit=1)[0]
 
@@ -113,11 +112,8 @@ async def google_oauth(request: Request) -> RedirectResponse:
             }
         )
 
-    except Exception:  # as exc:
-        # import pdb
-
-        # pdb.set_trace()
-        logging.exception("OAuth failed")
+    except Exception as exc:
+        logging.exception("OAuth failed with exception: %s", exc)
 
     return RedirectResponse(redirect_path)
 
@@ -303,11 +299,10 @@ async def main_page() -> None:
                     return
 
                 # user = app.storage.user
-                ui.label(f"Hi, {user.get('user')}!").classes("text-sm text-white")
+                token = app.storage.user.get("token")
+                ui.label(f"Hi, {user.username}!").classes("text-sm text-white")
                 # TODO: add a super admin role instead of these hardcoded checks
-                # import pdb
 
-                # pdb.set_trace()
                 if user.email == "shreyas.jukanti@gmail.com":
                     with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
 
@@ -391,7 +386,7 @@ async def main_page() -> None:
                                     add_video_to_playlist(
                                         playlist_id=playlist_id,
                                         new_videos=videos,
-                                        token=user.get("token"),
+                                        token=token,
                                     )
 
                                     sync_logger.info(
@@ -431,7 +426,7 @@ async def main_page() -> None:
                             ui.notify("Cache cleared successfully!", color="green")
                             ui.navigate.reload()
 
-                        ui.fab_action("delete", on_click=lambda t=user.get("token"): clearc(token=t))
+                        ui.fab_action("delete", on_click=lambda t=token: clearc(token=t))
 
                 ui.button(icon="logout", on_click=handle_logout).props("flat round dense color=red")
 
