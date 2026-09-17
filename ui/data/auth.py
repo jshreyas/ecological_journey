@@ -4,13 +4,18 @@ from typing import Annotated, Any
 
 import jwt
 from bson import ObjectId
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
+from passlib.context import CryptContext
 
 from ui.data.models import User
 from ui.log import log
 
+load_dotenv()
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
@@ -74,6 +79,23 @@ def create_access_token(data: dict[str, Any]) -> str:
         SECRET_KEY,
         algorithm=ALGORITHM,
     )
+
+
+# TODO: combine with create_access_token
+def create_service_token(service_user: User):
+    return jwt.encode(
+        {
+            "sub": str(service_user.id),
+            "role": "service",
+            "exp": datetime.utcnow() + timedelta(minutes=5),
+        },
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+
+def verify_password(plain_password, hashed):
+    return pwd_context.verify(plain_password, hashed)
 
 
 bearer_scheme = HTTPBearer(

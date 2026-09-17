@@ -1,15 +1,14 @@
 import os
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, Optional, ParamSpec, TypeVar
 from uuid import uuid4
 
-import jwt
 from bson import ObjectId
 from bunnet import Document
 from dotenv import load_dotenv
-from passlib.context import CryptContext
 
+from ui.data.auth import AuthError, create_access_token, verify_password
 from ui.data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
 from ui.log import log
 from ui.utils.cache import cache_result, clear_all_caches, invalidate_cache
@@ -17,12 +16,8 @@ from ui.utils.notion import generate_tree
 
 P = ParamSpec("P")
 R = TypeVar("R")
-
 load_dotenv()
-SECRET_KEY = os.getenv("JWT_SECRET")
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
+
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
 
 
@@ -107,10 +102,6 @@ def load_user_by_oauth(
         User.oauth_provider == oauth_provider,
         User.oauth_sub == oauth_sub,
     ).run()
-
-
-class AuthError(Exception):
-    pass
 
 
 def to_dicts(obj: Any) -> Any:
@@ -506,30 +497,6 @@ def load_cliplist(cliplist_id: str):
     return None
 
 
-def verify_password(plain_password, hashed):
-    return pwd_context.verify(plain_password, hashed)
-
-
-# TODO: combine with create_access_token
-def create_service_token(service_user: User):
-    return jwt.encode(
-        {
-            "sub": str(service_user.id),
-            "role": "service",
-            "exp": datetime.utcnow() + timedelta(minutes=5),
-        },
-        SECRET_KEY,
-        algorithm=ALGORITHM,
-    )
-
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
 def login_user(email: str, password: str) -> dict[str, str] | bool:
     user = load_user_by_email(email)
 
@@ -573,7 +540,7 @@ def load_learnings(video_id: str):
     # filter first
     filtered = [_ for _ in _load_learnings() if _.get("video_id") == video_id]
 
-    # TODO: refctor this logic as a decorator or utility function of adding user info
+    # TODO: refactor this logic as a decorator or utility function of adding user info
     # collect unique author_ids (stored as strings)
     author_ids = {_["author_id"] for _ in filtered if _.get("author_id")}
 

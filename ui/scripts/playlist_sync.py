@@ -4,7 +4,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from ui.data.crud import create_service_token
+from ui.data.auth import create_service_token
 from ui.data.models import User
 from ui.utils.youtube import fetch_playlist_items
 
