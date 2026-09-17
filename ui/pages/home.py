@@ -1,12 +1,13 @@
 from nicegui import ui
 
+from ui.data.models import User
 from ui.pages.components.home.calendar_tab import CalendarTab
 from ui.pages.components.home.feed_tab import FeedTab
 from ui.pages.components.home.playlist_tab import PlaylistTab
 from ui.pages.components.home.state import State
 
 # from ui.pages.components.home.team_tab import TeamTab
-from ui.utils.user_context import User, with_user_context
+from ui.utils.user_context import with_user_context
 
 
 @with_user_context

@@ -1,12 +1,14 @@
 from nicegui import ui
 
+from ui.data.models import User
+
 # from ui.pages.components.film.learnings_tab import LearningsTab
 from ui.pages.components.film.matadata_tab import MatadataTab
 from ui.pages.components.film.player_controls_tab import PlayerControlsTab
 from ui.pages.components.film.share_dialog_tab import ShareDialogTab
 from ui.pages.components.film.timeline_tab import TimelineTab
 from ui.pages.components.film.video_state import VideoState
-from ui.utils.user_context import User, with_user_context
+from ui.utils.user_context import with_user_context
 
 
 @with_user_context

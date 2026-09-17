@@ -2,7 +2,7 @@ import os
 import threading
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, ParamSpec, TypeVar
 from uuid import uuid4
 
 import jwt
@@ -16,6 +16,9 @@ from ui.log import log
 from ui.utils.cache import cache_result, clear_all_caches, invalidate_cache
 from ui.utils.notion import generate_tree
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
 load_dotenv()
 SECRET_KEY = os.getenv("JWT_SECRET")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -24,37 +27,108 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 CACHE_TTL = int(os.getenv("CACHE_TTL", 604800))  # Cache TTL in seconds
 
 
-def get_user_from_token(token: str):
+def get_user_from_token(token: str) -> User | None:
+    """Validate an application JWT and return the canonical User document."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload["sub"]
-        user = User.find_one(User.id == ObjectId(user_id)).run()
-        if not user:
-            raise ValueError("User not found")
-        return user
-    except Exception as e:
-        log.error(f"Token error: {e}")
+        user_id = payload.get("sub")
+
+        if not user_id:
+            return None
+
+        return User.find_one(User.id == ObjectId(user_id)).run()
+
+    except (ValueError, TypeError) as exc:
+        log.warning("Invalid application token", error=str(exc))
+        return None
+    except Exception:
+        log.exception("Could not load user from application token")
         return None
 
 
-class AuthError(Exception):
-    pass
+def get_or_create_user(
+    email: str,
+    username: str,
+    oauth_provider: str,
+    oauth_sub: str,
+) -> User:
+    """Return the existing user, or create and return a User document."""
+    existing_user = load_user_by_oauth(oauth_provider, oauth_sub)
+
+    if existing_user:
+        # Optional: update display attributes from the current OAuth profile.
+        existing_user.username = username
+        existing_user.email = email
+        existing_user.save()
+        return existing_user
+
+    # If OAuth subject was not found, optionally fall back to email.
+    existing_user = load_user_by_email(email)
+    if existing_user:
+        existing_user.username = username
+        existing_user.oauth_provider = oauth_provider
+        existing_user.oauth_sub = oauth_sub
+        existing_user.save()
+        return existing_user
+
+    return create_user(
+        email=email,
+        username=username,
+        oauth_provider=oauth_provider,
+        oauth_sub=oauth_sub,
+    )
 
 
-def with_user_from_token(fn):
+def create_user(
+    email: str,
+    username: str,
+    oauth_provider: str,
+    oauth_sub: str,
+) -> User:
+    user = User(
+        username=username,
+        email=email,
+        oauth_provider=oauth_provider,
+        oauth_sub=oauth_sub,
+        hashed_password=None,
+    )
+    user.insert()
+    return user
+
+
+def load_user_by_email(email: str) -> User | None:
+    return User.find_one(User.email == email).run()
+
+
+def load_user_by_oauth(
+    oauth_provider: str,
+    oauth_sub: str,
+) -> User | None:
+    return User.find_one(
+        User.oauth_provider == oauth_provider,
+        User.oauth_sub == oauth_sub,
+    ).run()
+
+
+def with_user_from_token(fn: Callable[P, R]) -> Callable[P, R]:
+    """Inject a validated User document into service-layer functions."""
+
     @wraps(fn)
-    def wrapper(*args, token=None, **kwargs):
+    def wrapper(*args: P.args, token: str | None = None, **kwargs: P.kwargs) -> R:
         if not token:
             raise AuthError("Missing token")
 
         user = get_user_from_token(token)
-        if not user:
+        if user is None:
             raise AuthError("Invalid or expired token")
 
-        # Inject user into kwargs
         return fn(*args, user=user, **kwargs)
 
     return wrapper
+
+
+class AuthError(Exception):
+    pass
 
 
 def to_dicts(obj: Any) -> Any:
@@ -439,32 +513,6 @@ def load_cliplist(cliplist_id: str):
     return None
 
 
-def get_or_create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
-    user = load_user(email)
-    if user:
-        return user
-    return create_user(email, username, oauth_provider, oauth_sub)
-
-
-def create_user(email: str, username: str, oauth_provider: str, oauth_sub: str):
-    user = User(
-        username=username,
-        email=email,
-        oauth_provider=oauth_provider,
-        oauth_sub=oauth_sub,
-        hashed_password=None,
-    )
-    user.insert()
-    return to_dicts(user)
-
-
-def load_user(email: str):
-    user = User.find_one(User.email == email).run()
-    if user:
-        return to_dicts(user)
-    return None
-
-
 def verify_password(plain_password, hashed):
     return pwd_context.verify(plain_password, hashed)
 
@@ -490,7 +538,8 @@ def create_access_token(data: dict):
 
 
 def login_user(email: str, password: str):
-    user = load_user(email)
+    user = load_user_by_email(email)
+    user = to_dicts(user)
     if not user or not verify_password(password, user["hashed_password"]):
         log.error("Incorrect email or password")
         return False
