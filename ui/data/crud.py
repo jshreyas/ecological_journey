@@ -8,9 +8,8 @@ from bson import ObjectId
 from bunnet import Document
 from dotenv import load_dotenv
 
-from ui.data.auth import AuthError, create_access_token, verify_password
+from ui.data.auth import AuthError
 from ui.data.models import Anchor, Clip, Cliplist, Feedback, Learnings, Notion, Playlist, Team, User, Video
-from ui.log import log
 from ui.utils.cache import cache_result, clear_all_caches, invalidate_cache
 from ui.utils.notion import generate_tree
 
@@ -495,29 +494,6 @@ def load_cliplist(cliplist_id: str):
         if cliplist.get("_id") == cliplist_id:
             return cliplist
     return None
-
-
-# TODO: this method is for non oauth login which we dont have currently
-# if we need this, it should be updated to return user object similar to google_oauth
-def login_user(email: str, password: str) -> dict[str, str] | bool:
-    user = load_user_by_email(email)
-
-    if user is None or not user.hashed_password:
-        log.warning("Incorrect email or password", email=email)
-        return False
-
-    if not verify_password(password, user.hashed_password):
-        log.warning("Incorrect email or password", email=email)
-        return False
-
-    token = create_access_token(str(user.id))
-
-    return {
-        "access_token": token,
-        "id": str(user.id),
-        "email": str(user.email),
-        "username": user.username,
-    }
 
 
 def load_feedback():

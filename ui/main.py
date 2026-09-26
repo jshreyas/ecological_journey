@@ -454,23 +454,9 @@ async def main_page() -> None:
             "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
             "/notion": notion_page,
-            # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
         }
     ).classes("w-full h-full flex-grow p-4")
-
-
-OBSERVABLE_URL = os.getenv("OBSERVABLE_URL")
-
-
-# TODO: this doesnt work
-# def stories():
-#     ui.html(
-#         f"""
-#         <iframe src="{OBSERVABLE_URL}"
-#                 style="width:100%; height:110vh; border:none;"></iframe>
-#     """
-#     ).classes("w-full h-full")
 
 
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
