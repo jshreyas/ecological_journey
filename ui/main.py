@@ -14,11 +14,10 @@ from nicegui import app, ui
 from starlette.responses import RedirectResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from ui.data.auth import AuthError, require_api_user
+from ui.data.auth import AuthError, create_access_token, require_api_user
 from ui.data.crud import (
     add_video_to_playlist,
     clear_cache,
-    create_access_token,
     delete_videos_from_playlist,
     get_or_create_user,
     load_playlist,
@@ -454,23 +453,9 @@ async def main_page() -> None:
             "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
             "/notion": notion_page,
-            # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
         }
     ).classes("w-full h-full flex-grow p-4")
-
-
-OBSERVABLE_URL = os.getenv("OBSERVABLE_URL")
-
-
-# TODO: this doesnt work
-# def stories():
-#     ui.html(
-#         f"""
-#         <iframe src="{OBSERVABLE_URL}"
-#                 style="width:100%; height:110vh; border:none;"></iframe>
-#     """
-#     ).classes("w-full h-full")
 
 
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
