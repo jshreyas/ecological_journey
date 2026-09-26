@@ -18,7 +18,7 @@ service_user = User.find_one(User.role == "service").run()
 if not service_user:
     raise RuntimeError("Service user not found")
 
-token = create_service_token(service_user)
+token = create_service_token(str(service_user.id))
 
 
 def get_playlists():
