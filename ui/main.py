@@ -14,11 +14,10 @@ from nicegui import app, ui
 from starlette.responses import RedirectResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from ui.data.auth import AuthError, require_api_user
+from ui.data.auth import AuthError, create_access_token, require_api_user
 from ui.data.crud import (
     add_video_to_playlist,
     clear_cache,
-    create_access_token,
     delete_videos_from_playlist,
     get_or_create_user,
     load_playlist,
