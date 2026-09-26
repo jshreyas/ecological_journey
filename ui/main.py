@@ -292,8 +292,6 @@ async def main_page() -> None:
                     return
 
                 ui.label(f"Hi, {user.username}!").classes("text-sm text-white")
-                # TODO: add a super admin role instead of these hardcoded checks
-
                 try:
                     require_admin_or_service(user)
                     with ui.fab("settings", label="", direction="down").classes("px-1").props("fab-mini padding=0"):
