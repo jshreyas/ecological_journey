@@ -102,7 +102,7 @@ async def google_oauth(request: Request) -> RedirectResponse:
             oauth_sub=user_info["sub"],
         )
 
-        jwt_token = create_access_token({"sub": str(user.id)})
+        jwt_token = create_access_token(str(user.id))
 
         app.storage.user.clear()
         app.storage.user.update(
@@ -455,7 +455,7 @@ async def main_page() -> None:
             "/search": search_page,
             "/cliplists": cliplists_page,
             "/film/{video_id}": film_page,
-            "/notion": notion_page,  # TODO: the embed doesnt work
+            "/notion": notion_page,
             # "/stories": stories,
             "/playlist/{cliplist_id}": playlist_page,
         }

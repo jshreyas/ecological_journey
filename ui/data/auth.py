@@ -18,7 +18,7 @@ load_dotenv()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 
 class AuthError(Exception):
@@ -70,9 +70,9 @@ def require_user_from_token(token: str | None) -> User:
     return user
 
 
-def create_access_token(data: dict[str, Any]) -> str:
-    to_encode = data.copy()
-    to_encode["exp"] = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+def create_access_token(user_id: str, ttl_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
+    to_encode = {"sub": str(user_id)}
+    to_encode["exp"] = datetime.utcnow() + timedelta(minutes=ttl_minutes)
 
     return jwt.encode(
         to_encode,
@@ -81,16 +81,10 @@ def create_access_token(data: dict[str, Any]) -> str:
     )
 
 
-# TODO: combine with create_access_token
-def create_service_token(service_user: User):
-    return jwt.encode(
-        {
-            "sub": str(service_user.id),
-            "role": "service",
-            "exp": datetime.utcnow() + timedelta(minutes=5),
-        },
-        SECRET_KEY,
-        algorithm=ALGORITHM,
+def create_service_token(user_id: str) -> str:
+    return create_access_token(
+        user_id=user_id,
+        ttl_minutes=5,  # short-lived token for service user
     )
 
 

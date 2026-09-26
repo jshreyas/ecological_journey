@@ -511,7 +511,7 @@ def login_user(email: str, password: str) -> dict[str, str] | bool:
         log.warning("Incorrect email or password", email=email)
         return False
 
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token(str(user.id))
 
     return {
         "access_token": token,
