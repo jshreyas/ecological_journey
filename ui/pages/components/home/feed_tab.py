@@ -26,6 +26,7 @@ class FeedTab:
         self.theater_player_container = None
         self.active_playback_key = None
         self.playback_speed = 1.0
+        self.speed_slider = None
 
         self.home_state.add_refresh_callback(self.refresh)
 
@@ -115,6 +116,7 @@ class FeedTab:
     def clear_theater_player(self):
         self.clear_playback_checkpoint()
         self.active_video_id = None
+        self.speed_slider = None
         if self.theater_player_container is not None:
             self.theater_player_container.clear()
 
@@ -132,10 +134,14 @@ class FeedTab:
 
     def set_playback_speed(self, event):
         self.playback_speed = float(event.value)
-        ui.run_javascript(f"window.setYTSpeed({self.playback_speed});")
-
-    def toggle_playback_speed_control(self, speed_control):
-        speed_control.set_visibility(not speed_control.visible)
+        if self.speed_slider is not None and self.speed_slider.value != self.playback_speed:
+            self.speed_slider.value = self.playback_speed
+        ui.run_javascript(
+            f"""
+            if (window.ytConfig) window.ytConfig.speed = {self.playback_speed};
+            if (typeof window.setYTSpeed === 'function') window.setYTSpeed({self.playback_speed});
+            """
+        )
 
     def render_thumbnail(self, video, container):
 
@@ -298,27 +304,15 @@ class FeedTab:
 
         with container:
             fab_id = f"theater-fab-{uuid.uuid4().hex}"
-            with ui.fab("settings", direction="down").classes("absolute top-20 right-0 z-10").props(f"id={fab_id}"):
-                ui.fab_action("cancel", on_click=self.close_video_dialog)
+            with ui.fab("settings", direction="right").classes("absolute top-20 right-0 z-10").props(f"id={fab_id}"):
                 ui.fab_action("zoom_in", on_click=lambda: self.open_film_page(video["video_id"]))
-                ui.fab_action(
-                    "speed",
-                    on_click=lambda: self.toggle_playback_speed_control(speed_control),
-                )
-
-            with ui.card().classes("absolute top-20 right-16 z-20 p-2") as speed_control:
-                ui.label("Playback speed").classes("text-sm")
-                ui.knob(
+                self.speed_slider = ui.slider(
                     min=0.25,
                     max=2.0,
                     step=0.25,
                     value=self.playback_speed,
-                    track_color="grey-2",
-                    show_value=True,
-                    size="60px",
                     on_change=self.set_playback_speed,
-                )
-            speed_control.set_visibility(False)
+                ).classes("w-[min(8rem,25vw)]")
             self.enable_fab_drag(fab_id)
 
     def open_film_page(self, video_id):
