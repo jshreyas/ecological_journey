@@ -1,3 +1,6 @@
+import json
+import uuid
+
 from nicegui import ui
 
 from ui.utils.utils import format_date
@@ -21,6 +24,8 @@ class FeedTab:
         self.active_video_id = None
         self.theater_dialog = None
         self.theater_player_container = None
+        self.active_playback_key = None
+        self.playback_speed = 1.0
 
         self.home_state.add_refresh_callback(self.refresh)
 
@@ -95,7 +100,9 @@ class FeedTab:
         if self.theater_dialog is None or self.theater_player_container is None:
             raise RuntimeError("The home-page theater dialog has not been configured")
 
+        self.clear_playback_checkpoint()
         self.active_video_id = video_id
+        self.active_playback_key = uuid.uuid4().hex
         self.theater_player_container.clear()
         self.render_player(video, self.theater_player_container)
         self.theater_dialog.open()
@@ -106,9 +113,29 @@ class FeedTab:
         self.clear_theater_player()
 
     def clear_theater_player(self):
+        self.clear_playback_checkpoint()
         self.active_video_id = None
         if self.theater_player_container is not None:
             self.theater_player_container.clear()
+
+    def clear_playback_checkpoint(self):
+        if self.active_playback_key is not None:
+            playback_key = json.dumps(self.active_playback_key)
+            ui.run_javascript(
+                f"""
+                if (window.clearTheaterPlaybackPosition) {{
+                    window.clearTheaterPlaybackPosition({playback_key});
+                }}
+                """
+            )
+            self.active_playback_key = None
+
+    def set_playback_speed(self, event):
+        self.playback_speed = float(event.value)
+        ui.run_javascript(f"window.setYTSpeed({self.playback_speed});")
+
+    def toggle_playback_speed_control(self, speed_control):
+        speed_control.set_visibility(not speed_control.visible)
 
     def render_thumbnail(self, video, container):
 
@@ -261,25 +288,119 @@ class FeedTab:
         )
 
     def render_player(self, video, container):
-
-        # IMPORTANT:
-        # VideoPlayer already renders inside parent=container
         VideoPlayer(
             video["video_id"],
+            speed=self.playback_speed,
             show_speed_slider=False,
             parent=container,
+            playback_key=self.active_playback_key,
         )
 
         with container:
-            with ui.row().classes("w-full justify-end"):
-                ui.button(
-                    icon="zoom_in",
-                    on_click=lambda: self.open_film_page(video["video_id"]),
+            fab_id = f"theater-fab-{uuid.uuid4().hex}"
+            with ui.fab("settings", direction="down").classes("absolute top-20 right-0 z-10").props(f"id={fab_id}"):
+                ui.fab_action("cancel", on_click=self.close_video_dialog)
+                ui.fab_action("zoom_in", on_click=lambda: self.open_film_page(video["video_id"]))
+                ui.fab_action(
+                    "speed",
+                    on_click=lambda: self.toggle_playback_speed_control(speed_control),
                 )
-                ui.button(
-                    icon="cancel",
-                    on_click=self.close_video_dialog,
+
+            with ui.card().classes("absolute top-20 right-16 z-20 p-2") as speed_control:
+                ui.label("Playback speed").classes("text-sm")
+                ui.knob(
+                    min=0.25,
+                    max=2.0,
+                    step=0.25,
+                    value=self.playback_speed,
+                    track_color="grey-2",
+                    show_value=True,
+                    size="60px",
+                    on_change=self.set_playback_speed,
                 )
+            speed_control.set_visibility(False)
+            self.enable_fab_drag(fab_id)
 
     def open_film_page(self, video_id):
         ui.navigate.to(f"/film/{video_id}")
+
+    def enable_fab_drag(self, fab_id):
+        fab_id_json = json.dumps(fab_id)
+        ui.run_javascript(
+            f"""
+            (() => {{
+                const fabId = {fab_id_json};
+                let attempts = 0;
+
+                const attachDragHandlers = () => {{
+                    const fab = document.getElementById(fabId);
+                    const bounds = fab?.parentElement;
+                    const trigger = fab?.querySelector(':scope > .q-btn');
+                    if (!fab || !bounds || !trigger) {{
+                        if (++attempts < 60) requestAnimationFrame(attachDragHandlers);
+                        return;
+                    }}
+                    if (bounds.clientWidth === 0 || bounds.clientHeight === 0 || fab.offsetWidth === 0) {{
+                        if (++attempts < 60) requestAnimationFrame(attachDragHandlers);
+                        return;
+                    }}
+                    if (fab.dataset.dragReady) return;
+                    fab.dataset.dragReady = 'true';
+
+                    const boundsRect = bounds.getBoundingClientRect();
+                    const fabRect = fab.getBoundingClientRect();
+                    fab.style.position = 'absolute';
+                    fab.style.left = `${{fabRect.left - boundsRect.left}}px`;
+                    fab.style.top = `${{fabRect.top - boundsRect.top}}px`;
+                    fab.style.right = 'auto';
+                    fab.style.zIndex = '10';
+                    trigger.style.touchAction = 'none';
+
+                    let drag = null;
+                    let suppressClick = false;
+                    trigger.addEventListener('pointerdown', event => {{
+                        if (event.button !== 0) return;
+                        drag = {{
+                            pointerId: event.pointerId,
+                            x: event.clientX,
+                            y: event.clientY,
+                            left: parseFloat(fab.style.left) || 0,
+                            top: parseFloat(fab.style.top) || 0,
+                            moved: false,
+                        }};
+                        trigger.setPointerCapture(event.pointerId);
+                    }});
+
+                    trigger.addEventListener('pointermove', event => {{
+                        if (!drag || drag.pointerId !== event.pointerId) return;
+                        const deltaX = event.clientX - drag.x;
+                        const deltaY = event.clientY - drag.y;
+                        if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) drag.moved = true;
+                        if (!drag.moved) return;
+                        event.preventDefault();
+
+                        const maxLeft = Math.max(0, bounds.clientWidth - fab.offsetWidth);
+                        const maxTop = Math.max(0, bounds.clientHeight - fab.offsetHeight);
+                        fab.style.left = `${{Math.min(maxLeft, Math.max(0, drag.left + deltaX))}}px`;
+                        fab.style.top = `${{Math.min(maxTop, Math.max(0, drag.top + deltaY))}}px`;
+                    }});
+
+                    const finishDrag = event => {{
+                        if (!drag || drag.pointerId !== event.pointerId) return;
+                        suppressClick = drag.moved;
+                        drag = null;
+                        if (suppressClick) setTimeout(() => {{ suppressClick = false; }}, 0);
+                    }};
+                    trigger.addEventListener('pointerup', finishDrag);
+                    trigger.addEventListener('pointercancel', finishDrag);
+                    fab.addEventListener('click', event => {{
+                        if (!suppressClick) return;
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+                    }}, true);
+                }};
+
+                requestAnimationFrame(attachDragHandlers);
+            }})();
+            """
+        )
