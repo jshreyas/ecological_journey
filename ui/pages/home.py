@@ -19,6 +19,11 @@ def home_page(user: User | None):
     playlist_tab = PlaylistTab(home_state)
     # team_tab = TeamTab(home_state)
 
+    with ui.dialog().props("no-esc-dismiss") as video_dialog, ui.card().classes("w-[90vw] max-w-6xl"):
+        theater_player_container = ui.column().classes("w-full h-[70vh] relative")
+    feed_tab.set_theater_dialog(video_dialog, theater_player_container)
+    video_dialog.on("hide", lambda _: feed_tab.clear_theater_player())
+
     with ui.splitter(value=50).classes("w-full h-[600px] gap-4") as splitter:
         with splitter.before:
             with ui.tabs().classes("w-full") as tabs:

@@ -1,3 +1,4 @@
+import json
 from urllib.parse import parse_qs, urlparse
 
 from nicegui import app, ui
@@ -19,6 +20,7 @@ class VideoPlayer:
         on_end=None,
         parent=None,
         video_state=None,
+        playback_key: str | None = None,
     ):
         self.video_id = self._extract_video_id(video_url)
         self.start = start
@@ -30,6 +32,7 @@ class VideoPlayer:
         self.on_end = on_end
         self.parent = parent
         self.video_state = video_state
+        self.playback_key = playback_key
         self._render()
 
     def _extract_video_id(self, url: str) -> str:
@@ -46,6 +49,7 @@ class VideoPlayer:
         import uuid
 
         self.element_id = f"yt-player-{uuid.uuid4().hex[:8]}"
+        playback_key_json = json.dumps(self.playback_key)
 
         # 👇 Everything below happens in the right container
         context = self.parent if self.parent else ui
@@ -85,8 +89,43 @@ class VideoPlayer:
                     speed: {self.speed}
                 }};
 
+                const theaterPlaybackKey = {playback_key_json};
+                window.theaterPlaybackPositions = window.theaterPlaybackPositions || {{}};
+                window.clearTheaterPlaybackPosition = function(key) {{
+                    if (window.theaterPlaybackKey !== key) return;
+                    if (window.theaterPlaybackCleanup) window.theaterPlaybackCleanup();
+                    delete window.theaterPlaybackPositions[key];
+                    delete window.theaterPlaybackKey;
+                    delete window.theaterPlaybackCleanup;
+                    window.ytPlayer = null;
+                }};
+
+                if (window.theaterPlaybackCleanup) {{
+                    const previousKey = window.theaterPlaybackKey;
+                    window.theaterPlaybackCleanup();
+                    if (previousKey) delete window.theaterPlaybackPositions[previousKey];
+                    delete window.theaterPlaybackKey;
+                    delete window.theaterPlaybackCleanup;
+                }}
+
                 let ytPlayer;
                 let ytEndInterval;
+                let fullscreenHandler;
+                let playbackDisposed = false;
+
+                if (theaterPlaybackKey) {{
+                    window.theaterPlaybackKey = theaterPlaybackKey;
+                    window.theaterPlaybackCleanup = function() {{
+                        playbackDisposed = true;
+                        if (ytEndInterval) clearInterval(ytEndInterval);
+                        if (fullscreenHandler) {{
+                            document.removeEventListener('fullscreenchange', fullscreenHandler);
+                        }}
+                        if (ytPlayer && typeof ytPlayer.destroy === 'function') {{
+                            ytPlayer.destroy();
+                        }}
+                    }};
+                }}
 
                 window.onYouTubeIframeAPIReady = function() {{
                     ytPlayer = new YT.Player('{self.element_id}', {{
@@ -105,6 +144,17 @@ class VideoPlayer:
                 }};
 
                 function onPlayerReady(event) {{
+                    if (playbackDisposed) {{
+                        event.target.destroy();
+                        return;
+                    }}
+
+                    const savedPosition = theaterPlaybackKey
+                        ? window.theaterPlaybackPositions[theaterPlaybackKey]
+                        : null;
+                    if (Number.isFinite(savedPosition) && savedPosition > window.ytConfig.start) {{
+                        event.target.seekTo(savedPosition, true);
+                    }}
                     event.target.setPlaybackRate(window.ytConfig.speed);
                     event.target.playVideo();
 
@@ -136,12 +186,45 @@ class VideoPlayer:
                     if (ytEndInterval) clearInterval(ytEndInterval);
                     ytEndInterval = setInterval(() => {{
                         const current = ytPlayer.getCurrentTime();
+                        if (theaterPlaybackKey && Number.isFinite(current)) {{
+                            window.theaterPlaybackPositions[theaterPlaybackKey] = current;
+                        }}
                         if (current >= window.ytConfig.end) {{
                             ytPlayer.pauseVideo();
                             clearInterval(ytEndInterval);
+                            if (theaterPlaybackKey) {{
+                                delete window.theaterPlaybackPositions[theaterPlaybackKey];
+                            }}
                             {js_on_end}
                         }}
                     }}, 500);
+
+                    if (theaterPlaybackKey) {{
+                        let wasFullscreen = false;
+                        fullscreenHandler = function() {{
+                            const isFullscreen = document.fullscreenElement === event.target.getIframe();
+                            if (isFullscreen) {{
+                                const current = event.target.getCurrentTime();
+                                if (Number.isFinite(current)) {{
+                                    window.theaterPlaybackPositions[theaterPlaybackKey] = current;
+                                }}
+                            }} else if (wasFullscreen) {{
+                                const current = event.target.getCurrentTime();
+                                const saved = window.theaterPlaybackPositions[theaterPlaybackKey];
+                                const resumeAt = current > 1 || !Number.isFinite(saved) ? current : saved;
+                                window.setTimeout(() => {{
+                                    if (playbackDisposed || !window.ytPlayer || !Number.isFinite(resumeAt)) return;
+                                    const currentPosition = window.ytPlayer.getCurrentTime();
+                                    if (resumeAt > currentPosition + 1) {{
+                                        window.ytPlayer.seekTo(resumeAt, true);
+                                        window.ytPlayer.playVideo();
+                                    }}
+                                }}, 300);
+                            }}
+                            wasFullscreen = isFullscreen;
+                        }};
+                        document.addEventListener('fullscreenchange', fullscreenHandler);
+                    }}
                 }}
 
                 function onPlayerStateChange(event) {{}}
