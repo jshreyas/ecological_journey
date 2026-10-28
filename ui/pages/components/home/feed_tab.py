@@ -18,18 +18,15 @@ class FeedTab:
         self.is_loading = False
         self.last_rendered_date = None
 
-        # inline player state
         self.active_video_id = None
-
-        # {
-        #   video_id: {
-        #       "container": ui.column,
-        #       "video": video_dict,
-        #   }
-        # }
-        self.video_post_refs = {}
+        self.theater_dialog = None
+        self.theater_player_container = None
 
         self.home_state.add_refresh_callback(self.refresh)
+
+    def set_theater_dialog(self, dialog, player_container):
+        self.theater_dialog = dialog
+        self.theater_player_container = player_container
 
     def create_tab(self, container):
         self.container = container
@@ -43,8 +40,7 @@ class FeedTab:
         self.is_loading = False
         self.last_rendered_date = None
 
-        self.active_video_id = None
-        self.video_post_refs.clear()
+        self.close_video_dialog()
 
         self.container.clear()
 
@@ -58,14 +54,8 @@ class FeedTab:
 
         with ui.card().classes("w-full p-3 shadow-md"):
 
-            media_container = ui.column().classes("w-full h-[50vh]")
-
-            self.video_post_refs[video["video_id"]] = {
-                "container": media_container,
-                "video": video,
-            }
-
-            self.render_thumbnail(video, media_container)
+            thumbnail_container = ui.column().classes("w-full h-[50vh]")
+            self.render_thumbnail(video, thumbnail_container)
 
             # metadata
             with ui.column().classes("gap-1 mt-2"):
@@ -96,50 +86,29 @@ class FeedTab:
                 if partners:
                     ui.label(f"👥 {partners}").classes("w-full items-center px-2 text-sm text-gray-700")
 
-    def restore_thumbnail(self, video_id: str):
-        ref = self.video_post_refs.get(video_id)
-
-        if not ref:
-            return
-
-        container = ref["container"]
-        video = ref["video"]
-
-        container.clear()
-
-        self.render_thumbnail(video, container)
-
-    def stop_video(self, video_id: str):
-
-        if self.active_video_id == video_id:
-            self.active_video_id = None
-
-        self.restore_thumbnail(video_id)
-
     def play_video_inline(self, video):
-
         video_id = video["video_id"]
 
-        # already playing
         if self.active_video_id == video_id:
             return
 
-        # stop old player
-        if self.active_video_id and self.active_video_id in self.video_post_refs:
-            self.restore_thumbnail(self.active_video_id)
+        if self.theater_dialog is None or self.theater_player_container is None:
+            raise RuntimeError("The home-page theater dialog has not been configured")
 
         self.active_video_id = video_id
+        self.theater_player_container.clear()
+        self.render_player(video, self.theater_player_container)
+        self.theater_dialog.open()
 
-        ref = self.video_post_refs.get(video_id)
+    def close_video_dialog(self):
+        if self.theater_dialog is not None:
+            self.theater_dialog.close()
+        self.clear_theater_player()
 
-        if not ref:
-            return
-
-        container = ref["container"]
-
-        container.clear()
-
-        self.render_player(video, container)
+    def clear_theater_player(self):
+        self.active_video_id = None
+        if self.theater_player_container is not None:
+            self.theater_player_container.clear()
 
     def render_thumbnail(self, video, container):
 
@@ -305,9 +274,12 @@ class FeedTab:
             with ui.row().classes("w-full justify-end"):
                 ui.button(
                     icon="zoom_in",
-                    on_click=lambda: ui.navigate.to(f"/film/{video['video_id']}"),
+                    on_click=lambda: self.open_film_page(video["video_id"]),
                 )
                 ui.button(
                     icon="cancel",
-                    on_click=lambda: self.stop_video(video["video_id"]),
+                    on_click=self.close_video_dialog,
                 )
+
+    def open_film_page(self, video_id):
+        ui.navigate.to(f"/film/{video_id}")
