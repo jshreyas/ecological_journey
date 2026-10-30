@@ -65,6 +65,23 @@ pre-commit run --all-files
 - **prettier**: Frontend code formatting
 - **hadolint**: Dockerfile linting
 
+### Running Tests
+
+The full pytest suite runs inside the Docker test stack, using the same Python
+version and application dependencies as the UI image. MongoDB and Redis are
+started as isolated test services; no production services or credentials are
+needed. Use the same command locally and in CI:
+
+```bash
+bash scripts/test.sh
+```
+
+The script builds the test image, runs every test under `tests/`, and removes
+the test containers and volumes when it finishes. Pull requests and pushes to
+`main` run this workflow. Configure the `unit-tests` job as a required status
+check in the repository's branch protection rules or ruleset to prevent merging
+before the suite passes.
+
 #### Running Individual Checks:
 
 ```bash

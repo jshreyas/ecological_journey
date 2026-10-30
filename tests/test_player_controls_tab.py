@@ -4,8 +4,28 @@ Unit tests for PlayerControlsTab component
 
 from unittest.mock import Mock, patch
 
+import pytest
+
+from ui.pages.components.film import video_state as video_state_module
 from ui.pages.components.film.player_controls_tab import PlayerControlsTab
 from ui.pages.components.film.video_state import VideoState
+
+
+@pytest.fixture(autouse=True)
+def patch_video_state_dependencies(monkeypatch):
+    monkeypatch.setattr(
+        video_state_module,
+        "load_video",
+        Mock(
+            return_value={
+                "video_id": "test_video_123",
+                "clips": [],
+                "anchors": [],
+                "notes": "",
+            }
+        ),
+    )
+    monkeypatch.setattr(video_state_module, "lvs", Mock(return_value=[]))
 
 
 class TestPlayerControlsTab:
