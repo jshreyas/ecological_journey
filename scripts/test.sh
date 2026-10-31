@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-compose=(docker compose --file docker-compose.test.yaml)
+compose=(docker compose --project-name ecological-journey-unit-tests --file docker-compose.test.yaml)
 
 cleanup() {
     "${compose[@]}" down --volumes --remove-orphans

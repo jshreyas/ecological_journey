@@ -1,19 +1,29 @@
 services:
   mongo:
-    image: mongo:8
+    image: mongo:8.0.34
     container_name: mongo
     command: ["mongod", "--config", "/etc/mongod.conf"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     ports:
       - "27017:27017"
     networks:
       - ecological-network
     volumes:
-      - mongo_data:/data/db
+      - mongo_data_8034:/data/db
       - ./mongod.conf:/etc/mongod.conf
 
   redis:
     image: redis:7
     container_name: redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     ports:
       - "6379:6379"
     networks:
@@ -32,9 +42,16 @@ services:
       - ./ui:/app/ui
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
-      - redis
-      - mongo
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - LOKI_URL=${LOKI_URL}
       - LOKI_USER=${LOKI_USER}
@@ -114,7 +131,8 @@ services:
       - observability
 
 volumes:
-  mongo_data:
+  mongo_data_8034:
+    name: ecological_journey_mongo_data_8034
   redis_data:
 
 networks:
