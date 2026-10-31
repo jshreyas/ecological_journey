@@ -66,7 +66,7 @@ class State:
     def load_playlists_for_user(self) -> Optional[Dict[str, Any]]:
         """Get playlists for user data, loading from API if not cached"""
         if self._load_playlists_user is None:
-            self._load_playlists_user = lp_user(self.user.id) if self.user else []
+            self._load_playlists_user = lp_user(str(self.user.id)) if self.user else []
         return self._load_playlists_user
 
     def add_refresh_callback(self, callback: Callable):

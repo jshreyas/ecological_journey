@@ -65,6 +65,32 @@ pre-commit run --all-files
 - **prettier**: Frontend code formatting
 - **hadolint**: Dockerfile linting
 
+### Running Tests
+
+The full pytest suite runs inside the Docker test stack, using the same Python
+version and application dependencies as the UI image. The test stack and local
+development stack both use MongoDB 8.0.34, matching the production database
+version. Tests mock database and cache operations, and no production
+credentials are needed. The CI job uses Ubuntu 22.04 because MongoDB 8.0+
+currently fails to start on Linux kernel 6.19, which is used by newer
+GitHub-hosted runners. Use the same command locally and in CI:
+
+```bash
+bash scripts/test.sh
+```
+
+The script builds the test image, runs every test under `tests/`, and removes
+the test containers and volumes when it finishes. Pull requests and pushes to
+`main` run this workflow. Configure the `unit-tests` job as a required status
+check in the repository's branch protection rules or ruleset to prevent merging
+before the suite passes.
+
+The local development Compose stack uses a MongoDB 8.0.34-specific data volume.
+If you previously ran the floating `mongo:8` image, its existing data volume is
+left untouched; databases created by a newer MongoDB release cannot be opened
+directly by 8.0.34. The development stack starts with a fresh 8.0.34 database
+instead of deleting or silently reusing that incompatible data.
+
 #### Running Individual Checks:
 
 ```bash

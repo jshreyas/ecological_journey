@@ -1,14 +1,25 @@
-version: "3.8"
-
 services:
+  mongo:
+    image: mongo:8.0.34
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   test:
     build:
       context: .
       dockerfile: Dockerfile.test
-    container_name: ecological_test
     environment:
-      - PYTHONPATH=/app:/app/ui
+      PYTHONPATH: /app:/app/ui
+      MONGODB_URI: mongodb://mongo:27017/ecological_journey_test
+      API_KEY: test-api-key
+      JWT_SECRET: test-only-jwt-secret
+    depends_on:
+      mongo:
+        condition: service_healthy
     volumes:
       - ./tests:/app/tests
       - ./ui:/app/ui
-    command: ["python", "-m", "pytest", "tests/", "-v"]
+    command: ["python", "-m", "pytest", "tests/", "-q"]

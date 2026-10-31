@@ -1,169 +1,148 @@
-"""
-Unit tests for VideoState component
-"""
+from copy import deepcopy
+from unittest.mock import Mock
 
-from unittest.mock import Mock, patch
+import pytest
 
+from ui.pages.components.film import video_state as video_state_module
 from ui.pages.components.film.video_state import VideoState
 
 
-class TestVideoState:
-    """Test cases for VideoState class"""
+@pytest.fixture
+def video_data():
+    return {
+        "video_id": "video-1",
+        "title": "Training",
+        "duration_seconds": 3600,
+        "notes": "Original notes",
+        "partners": [],
+        "labels": [],
+        "anchors": [{"anchor_id": "anchor-1", "start": 10, "title": "Entry", "description": ""}],
+        "clips": [
+            {
+                "clip_id": "clip-1",
+                "start": 20,
+                "end": 40,
+                "title": "Sweep",
+                "description": "",
+                "speed": 1.0,
+                "labels": [],
+                "partners": [],
+            }
+        ],
+    }
 
-    def setup_method(self):
-        """Set up test fixtures"""
-        self.video_id = "test_video_123"
-        self.mock_video_data = {
-            "video_id": "test_video_123",
-            "title": "Test Video",
-            "partners": ["Alice", "Bob"],
-            "labels": ["action", "drama"],
-            "clips": [],
-        }
 
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_init(self, mock_load_video):
-        """Test VideoState initialization"""
-        mock_load_video.return_value = self.mock_video_data
+@pytest.fixture
+def video_state(monkeypatch, video_data):
+    load_video = Mock(return_value=deepcopy(video_data))
+    load_videos = Mock(return_value=[])
+    monkeypatch.setattr(video_state_module, "load_video", load_video)
+    monkeypatch.setattr(video_state_module, "lvs", load_videos)
+    return VideoState("video-1"), load_video, load_videos
 
-        video_state = VideoState(self.video_id)
 
-        assert video_state.video_id == self.video_id
-        assert video_state._refresh_callbacks == []
-        assert video_state._video_data is None  # Should start as None
+def test_initialization_loads_metadata_once(video_state):
+    state, load_video, _ = video_state
 
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_get_video(self, mock_load_video):
-        """Test getting video data"""
-        mock_load_video.return_value = self.mock_video_data
+    assert state.video_id == "video-1"
+    assert state.get_video()["title"] == "Training"
+    assert state.video_description_draft == "Original notes"
+    assert state.anchor_draft[0]["anchor_id"] == "anchor-1"
+    assert state.clip_draft[0]["clip_id"] == "clip-1"
+    load_video.assert_called_once_with("video-1")
 
-        video_state = VideoState(self.video_id)
-        video_data = video_state.get_video()
 
-        assert video_data == self.mock_video_data
-        mock_load_video.assert_called_once_with(self.video_id)
+def test_get_video_returns_cached_data(video_state):
+    state, load_video, _ = video_state
 
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_get_video_cached(self, mock_load_video):
-        """Test getting video data from cache"""
-        mock_load_video.return_value = self.mock_video_data
+    assert state.get_video() is state.get_video()
+    load_video.assert_called_once_with("video-1")
 
-        video_state = VideoState(self.video_id)
 
-        # First call should load from API
-        video_data1 = video_state.get_video()
-        # Second call should use cached data
-        video_data2 = video_state.get_video()
+def test_refresh_reloads_video_and_notifies_registered_callbacks(video_state):
+    state, load_video, load_videos = video_state
+    callback = Mock()
+    state.add_refresh_callback(callback)
 
-        assert video_data1 == video_data2 == self.mock_video_data
-        # Should only call load_video once due to caching
-        mock_load_video.assert_called_once_with(self.video_id)
+    state.refresh()
 
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_refresh(self, mock_load_video):
-        """Test refreshing video data"""
-        mock_load_video.return_value = self.mock_video_data
+    load_videos.assert_called_once_with()
+    assert load_video.call_count == 2
+    callback.assert_called_once_with()
 
-        video_state = VideoState(self.video_id)
 
-        # Add a mock callback
-        mock_callback = Mock()
-        video_state.add_refresh_callback(mock_callback)
+def test_playback_updates_active_anchor_and_clip(video_state):
+    state, _, _ = video_state
+    playback_callback = Mock()
+    timeline_callback = Mock()
+    state.add_playback_callback(playback_callback)
+    state.add_timeline_callback(timeline_callback)
 
-        # Refresh should clear cache and call callbacks
-        video_state.refresh()
+    state.set_playback_time(25)
 
-        # Should call load_video again
-        assert mock_load_video.call_count == 1  # Once in refresh
-        # Should call the callback
-        mock_callback.assert_called_once()
+    assert state.current_playback_time == 25
+    assert state.active_anchor_id == "anchor-1"
+    assert state.active_metadata_row_id == "clip-1"
+    timeline_callback.assert_called_once_with()
+    playback_callback.assert_called_once_with()
 
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_add_refresh_callback(self, mock_load_video):
-        """Test adding refresh callbacks"""
-        mock_load_video.return_value = self.mock_video_data
+    state.set_playback_time(15)
 
-        video_state = VideoState(self.video_id)
+    assert state.active_metadata_row_id == "anchor-1"
+    assert playback_callback.call_count == 2
 
-        mock_callback1 = Mock()
-        mock_callback2 = Mock()
 
-        video_state.add_refresh_callback(mock_callback1)
-        video_state.add_refresh_callback(mock_callback2)
+def test_save_video_metadata_extracts_tags_and_clears_dirty_flags(video_state, monkeypatch):
+    state, _, _ = video_state
+    save_metadata = Mock()
+    monkeypatch.setattr(video_state_module, "svm", save_metadata)
+    state.video_description_draft = "Notes #guard @Alice"
+    state.clip_draft[0]["description"] = "Sweep #transition @Bob"
+    state.mark_metadata_dirty()
 
-        assert len(video_state._refresh_callbacks) == 2
-        assert mock_callback1 in video_state._refresh_callbacks
-        assert mock_callback2 in video_state._refresh_callbacks
+    state.save_video_metadata()
 
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_remove_refresh_callback(self, mock_load_video):
-        """Test removing refresh callbacks"""
-        mock_load_video.return_value = self.mock_video_data
+    saved_video = save_metadata.call_args.kwargs["video_metadata"]
+    assert saved_video["notes"] == "Notes #guard @Alice"
+    assert set(saved_video["labels"]) == {"guard"}
+    assert set(saved_video["partners"]) == {"Alice"}
+    assert set(saved_video["clips"][0]["labels"]) == {"transition"}
+    assert set(saved_video["clips"][0]["partners"]) == {"Bob"}
+    assert state._metadata_dirty is False
+    assert state.video_description_dirty is False
+    save_metadata.assert_called_once()
 
-        video_state = VideoState(self.video_id)
 
-        mock_callback = Mock()
-        video_state.add_refresh_callback(mock_callback)
+@pytest.mark.parametrize(
+    ("timestamp", "expected"),
+    [
+        ("1:02", 62),
+        ("1:02:03", 3723),
+    ],
+)
+def test_parse_timestamp_accepts_supported_formats(video_state, timestamp, expected):
+    state, _, _ = video_state
 
-        assert len(video_state._refresh_callbacks) == 1
+    assert state._parse_timestamp(timestamp, "test time") == expected
 
-        video_state.remove_refresh_callback(mock_callback)
 
-        assert len(video_state._refresh_callbacks) == 0
-        assert mock_callback not in video_state._refresh_callbacks
+def test_parse_timestamp_rejects_malformed_values(video_state):
+    state, _, _ = video_state
 
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_refresh_with_multiple_callbacks(self, mock_load_video):
-        """Test refresh with multiple callbacks"""
-        mock_load_video.return_value = self.mock_video_data
+    with pytest.raises(ValueError, match="Expected mm:ss or hh:mm:ss"):
+        state._parse_timestamp("1:2", "clip start")
 
-        video_state = VideoState(self.video_id)
 
-        mock_callback1 = Mock()
-        mock_callback2 = Mock()
-        mock_callback3 = Mock()
+def test_convert_anchor_to_clip_moves_draft_and_notifies_refresh(video_state):
+    state, _, _ = video_state
+    state.anchor_draft[0]["id"] = "anchor-row-1"
+    callback = Mock()
+    state.add_refresh_callback(callback)
 
-        video_state.add_refresh_callback(mock_callback1)
-        video_state.add_refresh_callback(mock_callback2)
-        video_state.add_refresh_callback(mock_callback3)
+    state.convert_anchor_to_clip("anchor-row-1", end_time=30)
 
-        video_state.refresh()
-
-        # All callbacks should be called
-        mock_callback1.assert_called_once()
-        mock_callback2.assert_called_once()
-        mock_callback3.assert_called_once()
-
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_get_video_no_data(self, mock_load_video):
-        """Test getting video when no data is available"""
-        mock_load_video.return_value = None
-
-        video_state = VideoState(self.video_id)
-        video_data = video_state.get_video()
-
-        assert video_data is None
-
-    @patch("ui.pages.components.film.video_state.load_video")
-    def test_refresh_clears_cache(self, mock_load_video):
-        """Test that refresh clears the cache"""
-        mock_load_video.return_value = self.mock_video_data
-
-        video_state = VideoState(self.video_id)
-
-        # Get video data (should cache it)
-        video_state.get_video()
-
-        # Change the mock to return different data
-        updated_video_data = self.mock_video_data.copy()
-        updated_video_data["title"] = "Updated Title"
-        mock_load_video.return_value = updated_video_data
-
-        # Refresh should clear cache and load new data
-        video_state.refresh()
-
-        # Get video data again
-        video_data = video_state.get_video()
-
-        # Should return the updated data
-        assert video_data["title"] == "Updated Title"
+    assert state.anchor_draft == []
+    assert state.clip_draft[-1]["start"] == 10
+    assert state.clip_draft[-1]["end"] == 30
+    assert state._metadata_dirty is True
+    callback.assert_called_once_with()
